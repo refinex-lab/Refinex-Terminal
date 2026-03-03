@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pull Request template
 - Contributing guide
 - VS Code workspace configuration
+- **Phase 0.1**: Cargo Workspace structure with 5 crates:
+  - `crates/refinex-app` (binary entry point)
+  - `crates/refinex-core` (PTY engine, VT emulation)
+  - `crates/refinex-ai` (AI CLI integration, Block detection)
+  - `crates/refinex-workspace` (file tree, file watcher, git status)
+  - `crates/refinex-ui` (shared UI types)
+- **Phase 0.1**: Workspace-level `[workspace.dependencies]` for all shared crates
+- **Phase 0.1**: MIT license headers on all Rust source files
+- **Phase 0.1**: `tracing_subscriber` initialized in `refinex-app`
 
 ---
 
