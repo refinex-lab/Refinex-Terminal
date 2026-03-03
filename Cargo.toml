@@ -4,7 +4,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "src-tauri",
+    "crates/refinex-app/src-tauri",
     "crates/refinex-app",
     "crates/refinex-core",
     "crates/refinex-ai",
@@ -52,3 +52,17 @@ refinex-core = { path = "crates/refinex-core" }
 refinex-ai = { path = "crates/refinex-ai" }
 refinex-workspace = { path = "crates/refinex-workspace" }
 refinex-ui = { path = "crates/refinex-ui" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+# Pedantic group — highest quality bar
+pedantic = { level = "warn", priority = -1 }
+# Nursery — experimental but valuable
+nursery = { level = "warn", priority = -1 }
+# Allow a few pedantic lints that produce too many false positives in practice
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"

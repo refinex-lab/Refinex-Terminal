@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 0.2**: `@xterm/xterm` v5 with `addon-fit` and `addon-web-links` integrated
 - **Phase 0.2**: Tokyo Night theme applied to xterm.js terminal
 - **Phase 0.2**: `cargo tauri dev` launches window with xterm.js render area
+- **Phase 0.3**: `rustfmt.toml` — edition 2021, max_width 100, import grouping
+- **Phase 0.3**: `clippy.toml` — pedantic + nursery threshold config
+- **Phase 0.3**: `.cargo/config.toml` — CN mirror stubs (commented), dev opt-level 2 for deps, release LTO/strip, platform linker flags
+- **Phase 0.3**: `[workspace.lints]` in root `Cargo.toml` — pedantic + nursery enabled, `lints.workspace = true` in every crate
+- **Phase 0.3**: All placeholder functions updated to `#[must_use] const fn`
+- **Phase 0.3**: `cargo fmt --all --check` passes (exit 0)
+- **Phase 0.3**: `cargo clippy --workspace -- -D warnings` passes (0 errors, 0 warnings)
 
 ---
 

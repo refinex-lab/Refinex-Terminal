@@ -4,7 +4,8 @@
 //! `refinex-ui` — Shared UI types and components (Rust side).
 
 /// Placeholder function until shared UI types are implemented.
-pub fn add(left: u64, right: u64) -> u64 {
+#[must_use]
+pub const fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
@@ -18,4 +19,3 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
-

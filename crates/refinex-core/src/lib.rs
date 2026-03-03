@@ -5,7 +5,8 @@
 
 /// Returns the sum of two numbers.
 /// Placeholder until PTY and VT emulation are implemented.
-pub fn add(left: u64, right: u64) -> u64 {
+#[must_use]
+pub const fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 

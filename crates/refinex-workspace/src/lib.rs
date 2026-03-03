@@ -4,7 +4,8 @@
 //! `refinex-workspace` — File tree, file watcher, and git status integration.
 
 /// Placeholder function until workspace management is implemented.
-pub fn add(left: u64, right: u64) -> u64 {
+#[must_use]
+pub const fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
@@ -18,4 +19,3 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
-

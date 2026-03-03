@@ -1,0 +1,20 @@
+# Refinex Terminal — Clippy configuration
+# https://doc.rust-lang.org/clippy/configuration.html
+
+# Enable pedantic lints for the highest code quality.
+# Individual lints can be allowed in-source with #[allow(clippy::...)]
+# when there is a justified reason.
+
+# Maximum complexity thresholds
+cognitive-complexity-threshold = 15
+too-many-arguments-threshold = 7
+too-many-lines-threshold = 100
+
+# Type complexity
+type-complexity-threshold = 250
+
+# Allow common abbreviations that are idiomatic in Rust / terminal code
+allowed-idents-below-min-chars = ["i", "j", "k", "x", "y", "id", "tx", "rx", "io", "fd", "os", "cwd", "pid", "pty", "row", "col", "buf"]
+
+# Avoid false positives on large future sizes in async code
+avoid-breaking-exported-api = true

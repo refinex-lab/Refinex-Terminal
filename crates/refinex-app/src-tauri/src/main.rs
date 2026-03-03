@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 refinex-lab
 
+//! Tauri application binary entry point for Refinex Terminal.
+//!
+//! Initialises structured logging, then delegates to [`app_lib::run`] for all
+//! Tauri window management and command registration.
+
 // Prevents an additional console window from appearing on Windows in release,
 // DO NOT REMOVE this attribute.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
