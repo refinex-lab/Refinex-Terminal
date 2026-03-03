@@ -62,3 +62,8 @@ pnpm-debug.log*
 # AI Tools Folder Or Files
 # ========================
 CLAUDE.md
+
+# ========================
+# AI Plan Files
+# ========================
+PLAN.md
