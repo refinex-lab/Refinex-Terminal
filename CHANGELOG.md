@@ -58,6 +58,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `concurrency` group to cancel stale runs
   - Improved Cargo cache path granularity (registry/index, registry/cache, git/db)
 - **Phase 0.5**: `.cargo/config.toml` macOS linker flags cleaned up (removed invalid `-undefined dynamic_lookup` flags)
+- **Phase 1.1**: `PtyManager` implemented in `refinex-core`:
+  - `create(&str, &str, u16, u16)` — opens PTY pair, spawns shell, starts background read thread
+  - `write(PtyId, &str)` — writes keystrokes to PTY stdin
+  - `resize(PtyId, u16, u16)` — sends `TIOCSWINSZ` resize via `portable-pty`
+  - `kill(PtyId)` — drops session; master PTY close sends SIGHUP to child
+  - Background read thread reaps child process and emits `PtyEvent::Exit` on EOF
+- **Phase 1.1**: `PtyEvent` enum (`Output { id, data: Vec<u8> }` | `Exit { id }`) for Rust→Tauri event bridging
+- **Phase 1.1**: `crates/refinex-app/src-tauri/src/commands.rs` — four Tauri commands registered:
+  - `create_pty` (optional shell/cwd/cols/rows, defaults: `$SHELL`/home/80/24)
+  - `write_pty`, `resize_pty`, `kill_pty`
+- **Phase 1.1**: PTY output forwarded as `pty-output` Tauri event (Base64-encoded bytes)
+- **Phase 1.1**: PTY process exit forwarded as `pty-exit` Tauri event
+- **Phase 1.1**: `base64 = "0.22"` added to workspace dependencies
 
 ---
 

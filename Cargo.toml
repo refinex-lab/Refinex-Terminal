@@ -43,6 +43,9 @@ dirs = "5"
 # Terminal / PTY
 portable-pty = "0.8"
 
+# Encoding
+base64 = "0.22"
+
 # Filesystem
 notify = "6"
 ignore = "0.4"
