@@ -56,8 +56,8 @@ panic = "abort"
 # ─────────────────────────────────────────────
 
 [target.aarch64-apple-darwin]
-# Use the system linker; no extra flags needed on Apple Silicon
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+# Use the system linker; standard flags work fine on Apple Silicon
+rustflags = []
 
 [target.x86_64-pc-windows-msvc]
 # Subsystem flag handled by #![windows_subsystem] in main.rs; no extra flags

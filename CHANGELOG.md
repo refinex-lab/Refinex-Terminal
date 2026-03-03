@@ -44,6 +44,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 0.3**: All placeholder functions updated to `#[must_use] const fn`
 - **Phase 0.3**: `cargo fmt --all --check` passes (exit 0)
 - **Phase 0.3**: `cargo clippy --workspace -- -D warnings` passes (0 errors, 0 warnings)
+- **Phase 0.4**: All workspace dependencies declared in `[workspace.dependencies]`:
+  - `tokio`, `serde`, `serde_json`, `anyhow`, `thiserror`, `tracing`, `tracing-subscriber`
+  - `toml`, `dirs`, `portable-pty`, `notify`, `ignore`
+- **Phase 0.4**: `tracing_subscriber` with env-filter initialized in `refinex-app/src/main.rs`
+- **Phase 0.5**: `cargo build --workspace` passes with zero errors and zero warnings
+- **Phase 0.5**: `cargo tauri dev` verified launching on macOS ARM (window initialises successfully)
+- **Phase 0.5**: GitHub Actions CI workflow rewritten:
+  - `lint` job migrated from `ubuntu-latest` → `macos-14` (Apple Silicon runner)
+  - All build jobs now include Node.js 20 setup and `npm ci` step
+  - Clippy command corrected to `cargo clippy --workspace -- -D warnings`
+  - Build commands updated to `cargo build --workspace --target <target>`
+  - Added `concurrency` group to cancel stale runs
+  - Improved Cargo cache path granularity (registry/index, registry/cache, git/db)
+- **Phase 0.5**: `.cargo/config.toml` macOS linker flags cleaned up (removed invalid `-undefined dynamic_lookup` flags)
 
 ---
 
