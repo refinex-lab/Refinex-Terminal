@@ -71,6 +71,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 1.1**: PTY output forwarded as `pty-output` Tauri event (Base64-encoded bytes)
 - **Phase 1.1**: PTY process exit forwarded as `pty-exit` Tauri event
 - **Phase 1.1**: `base64 = "0.22"` added to workspace dependencies
+- **Phase 1.2**: `src/lib/pty.ts` — typed Tauri IPC wrappers (`createPty`, `writePty`, `resizePty`, `killPty`) with full JSDoc
+- **Phase 1.2**: `src/components/TerminalPane.tsx` — live PTY terminal component:
+  - Calls `create_pty` on mount; `kill_pty` on unmount
+  - Listens to `pty-output` (Base64 decode → `terminal.write(Uint8Array)`)
+  - Listens to `pty-exit` → shows "Session ended" banner, calls `onExit` prop
+  - `xterm.onData` → `write_pty` for all keystrokes and paste
+  - `ResizeObserver` (not `window.resize`) for per-pane resize tracking
+  - Props: `shell?`, `cwd?`, `theme?` (`"tokyo-night"`), `onExit?`
+  - Theme map pattern ready for future system-theme integration
+- **Phase 1.2**: `App.tsx` refactored to render single `<TerminalPane />`
+- **Phase 1.2**: `App.css` — `.terminal-pane` styles added; old `.terminal-container` retained for compatibility
 
 ---
 
