@@ -82,6 +82,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Theme map pattern ready for future system-theme integration
 - **Phase 1.2**: `App.tsx` refactored to render single `<TerminalPane />`
 - **Phase 1.2**: `App.css` — `.terminal-pane` styles added; old `.terminal-container` retained for compatibility
+- **Phase 1.3**: `src/hooks/useTabs.ts` — `useTabs` reducer hook (ADD / CLOSE / ACTIVATE / RENAME actions, initial tab on mount)
+- **Phase 1.3**: `src/components/TabBar.tsx` — tab strip component:
+  - Click to activate, double-click title for inline rename (`Enter`/`Escape`/blur to commit/cancel)
+  - `×` close button (opacity: 0 → 1 on hover/active)
+  - `+` new-tab button
+  - Tokyo Night dark styling with active-tab bottom border indicator
+- **Phase 1.3**: `App.tsx` — global `keydown` shortcuts: `Cmd/Ctrl+T` (new tab), `Cmd/Ctrl+W` (close active), `Cmd/Ctrl+1–9` (jump to tab)
+- **Phase 1.3**: All `TerminalPane` instances mounted simultaneously; inactive panes hidden via `display: none` to preserve live PTY sessions
+- **Phase 1.3**: `onExit` prop — tab auto-closes when PTY process exits
+- **Phase 1.3**: `App.css` fully rewritten: tab-bar, tab-item, tab-pane, terminal-pane styles
 
 ---
 
