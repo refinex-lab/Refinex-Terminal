@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 0.1**: Workspace-level `[workspace.dependencies]` for all shared crates
 - **Phase 0.1**: MIT license headers on all Rust source files
 - **Phase 0.1**: `tracing_subscriber` initialized in `refinex-app`
+- **Phase 0.2**: Tauri v2 integration with `src-tauri/` at repo root
+  - `tauri.conf.json`: productName, identifier, 1280×800 frameless window
+  - `src-tauri/src/lib.rs` + `main.rs` wired to `app_lib::run()`
+  - `src-tauri/capabilities/default.json` with core:default permissions
+  - Platform icons generated via `cargo tauri icon`
+- **Phase 0.2**: Vite 6 + React 19 + TypeScript frontend (`src/`)
+- **Phase 0.2**: `@xterm/xterm` v5 with `addon-fit` and `addon-web-links` integrated
+- **Phase 0.2**: Tokyo Night theme applied to xterm.js terminal
+- **Phase 0.2**: `cargo tauri dev` launches window with xterm.js render area
 
 ---
 

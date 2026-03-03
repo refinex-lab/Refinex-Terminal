@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 refinex-lab
 
-use tracing::info;
+// Prevents an additional console window from appearing on Windows in release,
+// DO NOT REMOVE this attribute.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-fn main() -> anyhow::Result<()> {
-    // Initialize tracing subscriber for structured logging
+fn main() {
+    // Initialise structured logging before anything else.
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -12,7 +14,5 @@ fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    info!("Refinex Terminal starting up");
-
-    Ok(())
+    app_lib::run();
 }

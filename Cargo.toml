@@ -4,6 +4,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "src-tauri",
     "crates/refinex-app",
     "crates/refinex-core",
     "crates/refinex-ai",
