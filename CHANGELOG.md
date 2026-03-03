@@ -10,7 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial repository setup
+- **Phase 1.4**: Split pane system with recursive `PaneTree` data structure
+  - `src/types/paneTree.ts` — immutable `LeafNode | SplitNode` tree with pure utilities (`splitLeaf`, `removeLeaf`, `updateRatio`, `neighborLeaf`)
+  - `src/components/SplitPane.tsx` — recursive renderer with draggable dividers using Pointer Capture API
+  - `src/hooks/useTabs.ts` — extended `Tab` with `tree: PaneNode` + `focusedPaneId`; new reducer actions: `SPLIT_PANE`, `CLOSE_PANE`, `FOCUS_PANE`, `RESIZE_SPLIT`, `NAV_PANE`
+  - Keyboard shortcuts: `Cmd+D` (h-split), `Cmd+Shift+D` (v-split), `Cmd+Shift+W` (close pane), `Cmd+Alt+Arrow` (navigate focus)
+  - CSS: `.pane-split`, `.pane-divider`, `.pane-leaf`, `.pane-leaf--focused`, `.pane-close-btn`
 - Project architecture design and documentation
 - README with full feature overview, roadmap, and tech stack
 - MIT License
