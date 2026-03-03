@@ -1,0 +1,59 @@
+# ========================
+# Rust
+# ========================
+/target/
+**/*.rs.bk
+*.pdb
+
+# ========================
+# Tauri / Node.js
+# ========================
+node_modules/
+dist/
+.output/
+src-tauri/target/
+src-tauri/gen/
+
+# ========================
+# Build outputs
+# ========================
+*.dmg
+*.app
+*.exe
+*.msi
+*.deb
+*.AppImage
+
+# ========================
+# IDE & Editors
+# ========================
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.suo
+*.sw?
+.DS_Store
+Thumbs.db
+
+# ========================
+# Environment / Secrets
+# ========================
+.env
+.env.local
+*.key
+*.pem
+
+# ========================
+# Logs
+# ========================
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ========================
+# Misc
+# ========================
+.cache/
+*.tmp
+*.bak
