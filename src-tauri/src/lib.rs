@@ -3,11 +3,28 @@ mod commands;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill};
+use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[cfg(target_os = "macos")]
+fn disable_webview_drag_drop(webview: &tauri::WebviewWindow) {
+    use cocoa::appkit::NSView;
+    use cocoa::base::id;
+    use objc::runtime::Object;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let ns_window: id = webview.ns_window().unwrap() as _;
+        let ns_view: id = msg_send![ns_window, contentView];
+
+        // Unregister drag types to disable Tauri's file drop handler
+        let _: () = msg_send![ns_view, unregisterDraggedTypes];
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -26,6 +43,17 @@ pub fn run() {
             pty_resize,
             pty_kill
         ])
+        .setup(|app| {
+            #[cfg(target_os = "macos")]
+            {
+                // Disable Tauri's drag-drop handler on macOS to allow HTML5 drag and drop
+                if let Some(window) = app.get_webview_window("main") {
+                    disable_webview_drag_drop(&window);
+                    println!("macOS: Disabled Tauri drag-drop handler for HTML5 compatibility");
+                }
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

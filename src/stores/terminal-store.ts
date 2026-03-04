@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { arrayMove } from "@dnd-kit/sortable";
 
 /**
  * Terminal session type
@@ -21,6 +22,7 @@ interface TerminalStore {
   removeSession: (id: string) => void;
   setActiveSession: (id: string) => void;
   updateSessionTitle: (id: string, title: string) => void;
+  reorderSessions: (oldIndex: number, newIndex: number) => void;
 }
 
 /**
@@ -77,5 +79,10 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
       sessions: state.sessions.map((s) =>
         s.id === id ? { ...s, title } : s
       ),
+    })),
+
+  reorderSessions: (oldIndex, newIndex) =>
+    set((state) => ({
+      sessions: arrayMove(state.sessions, oldIndex, newIndex),
     })),
 }));
