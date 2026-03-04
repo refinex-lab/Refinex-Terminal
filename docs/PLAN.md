@@ -137,7 +137,7 @@
 
 ### Tasks
 
-- [ ] **2.1 — Implement Rust config manager**
+- [x] **2.1 — Implement Rust config manager**
 
   > **Prompt**: In `src-tauri/src/config/`, create a configuration module. Add `toml` and `serde` to Cargo.toml. Define Rust structs mirroring the `config.toml` schema (AppConfig, Appearance, Terminal, AI, Git, Keybindings — all with `#[derive(Serialize, Deserialize, Clone, Default)]`). Implement:
   > - `load_config(path: PathBuf) -> AppConfig`: reads and parses TOML, returns defaults for missing fields.

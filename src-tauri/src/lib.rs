@@ -1,8 +1,10 @@
 mod pty;
 mod commands;
+mod config;
 
 use pty::PtyManager;
-use commands::{pty_spawn, pty_write, pty_resize, pty_kill};
+use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, ConfigState};
+use config::{load_config, get_config_path};
 use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -29,6 +31,10 @@ fn disable_webview_drag_drop(webview: &tauri::WebviewWindow) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load configuration on startup
+    let config_path = get_config_path().expect("Failed to get config path");
+    let config = load_config(config_path).unwrap_or_default();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
@@ -36,12 +42,17 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(PtyManager::new())
+        .manage(ConfigState::new(config))
         .invoke_handler(tauri::generate_handler![
             greet,
             pty_spawn,
             pty_write,
             pty_resize,
-            pty_kill
+            pty_kill,
+            get_config,
+            update_config,
+            reset_config,
+            get_config_file_path
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
