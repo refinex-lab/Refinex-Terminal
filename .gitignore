@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI generated files
+CLAUDE.md
+docs/PLAN.md
+docs/PLAN.zh-CN.md
