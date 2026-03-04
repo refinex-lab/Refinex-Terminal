@@ -6,5 +6,25 @@
  * defining them inline in components.
  */
 
-// Placeholder - types will be added as features are implemented
-export {};
+// Re-export store types
+export type {
+  TerminalSession,
+} from "@/stores/terminal-store";
+
+export type {
+  Project,
+} from "@/stores/sidebar-store";
+
+export type {
+  GitStatus,
+  FileChange,
+} from "@/stores/git-store";
+
+export type {
+  AppConfig,
+  AppearanceConfig,
+  TerminalConfig,
+  AIConfig,
+  GitConfig,
+  KeybindingsConfig,
+} from "@/stores/config-store";
