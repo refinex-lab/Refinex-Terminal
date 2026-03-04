@@ -1,7 +1,0 @@
-{
-  "$schema": "https://schema.tauri.app/config/2",
-  "identifier": "default",
-  "description": "Default capabilities for Refinex Terminal — allows core Tauri APIs",
-  "windows": ["main"],
-  "permissions": ["core:default"]
-}

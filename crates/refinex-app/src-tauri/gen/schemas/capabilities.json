@@ -1,1 +1,0 @@
-{"default":{"identifier":"default","description":"Default capabilities for Refinex Terminal — allows core Tauri APIs","local":true,"windows":["main"],"permissions":["core:default"]}}
