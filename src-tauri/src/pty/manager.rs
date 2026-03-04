@@ -5,6 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Emitter};
 
+use super::shell::detect_shell;
+
 /// PTY session data
 pub struct PtySession {
     pub pair: PtyPair,
@@ -55,12 +57,22 @@ impl PtyManager {
             })
             .map_err(|e| format!("Failed to open PTY: {}", e))?;
 
-        // Determine shell to use
-        let shell = Self::get_default_shell();
+        // Detect shell and get configuration
+        let shell_config = detect_shell(None); // TODO: Read from config
 
         // Create command builder
-        let mut cmd = CommandBuilder::new(&shell);
+        let mut cmd = CommandBuilder::new(&shell_config.program);
         cmd.cwd(&cwd);
+
+        // Add shell arguments
+        for arg in &shell_config.args {
+            cmd.arg(arg);
+        }
+
+        // Set environment variables
+        for (key, value) in &shell_config.env {
+            cmd.env(key, value);
+        }
 
         // Spawn the shell process
         let _child = pair
@@ -167,24 +179,6 @@ impl PtyManager {
             Ok(())
         } else {
             Err(format!("PTY session {} not found", id))
-        }
-    }
-
-    /// Get the default shell for the current platform
-    fn get_default_shell() -> String {
-        #[cfg(target_os = "macos")]
-        {
-            std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            std::env::var("COMSPEC").unwrap_or_else(|_| "powershell.exe".to_string())
-        }
-
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-        {
-            std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string())
         }
     }
 }
