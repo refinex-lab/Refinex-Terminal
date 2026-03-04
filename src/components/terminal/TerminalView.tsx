@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
@@ -8,6 +8,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { listen } from "@tauri-apps/api/event";
 import { ptySpawn, ptyWrite, ptyResize } from "@/lib/tauri-pty";
 import { useTerminalStore } from "@/stores/terminal-store";
+import { TerminalSearch } from "./TerminalSearch";
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalViewProps {
@@ -19,6 +20,8 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const searchAddonRef = useRef<SearchAddon | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
   const { sessions } = useTerminalStore();
 
   const session = sessions.find((s) => s.id === sessionId);
@@ -65,6 +68,11 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
     terminal.loadAddon(searchAddon);
     terminal.loadAddon(webLinksAddon);
     terminal.loadAddon(unicode11Addon);
+
+    // Store refs
+    terminalRef.current = terminal;
+    fitAddonRef.current = fitAddon;
+    searchAddonRef.current = searchAddon;
 
     // Activate unicode11
     terminal.unicode.activeVersion = "11";
@@ -191,10 +199,24 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       resizeObserver.observe(containerRef.current);
     }
 
+    // Handle Cmd/Ctrl+F to open search
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modifier && e.key === "f") {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
     // Cleanup
     return () => {
       disposable.dispose();
       resizeObserver.disconnect();
+      window.removeEventListener("keydown", handleKeyDown);
       if (cleanupListeners) {
         cleanupListeners();
       }
@@ -208,14 +230,31 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
 
   return (
     <div
-      ref={containerRef}
-      className={`terminal-container ${className}`}
+      className="relative"
       style={{
         width: "100%",
         height: "100%",
         display: session.isActive ? "block" : "none",
       }}
-    />
+    >
+      <div
+        ref={containerRef}
+        className={`terminal-container ${className}`}
+        style={{
+          width: "100%",
+          height: "100%",
+        }}
+      />
+      {showSearch && session.isActive && (
+        <TerminalSearch
+          searchAddon={searchAddonRef.current}
+          onClose={() => {
+            setShowSearch(false);
+            searchAddonRef.current?.clearDecorations();
+          }}
+        />
+      )}
+    </div>
   );
 }
 
