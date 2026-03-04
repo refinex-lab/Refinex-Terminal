@@ -16,7 +16,7 @@
 
   > **Prompt**: Create a new Tauri 2 project in the current directory. Use `pnpm create tauri-app` with the following options: package name `refinex-terminal`, identifier `com.refinex.terminal`, frontend language TypeScript, frontend framework React (with Vite). After scaffolding, verify the project structure includes `src/` (frontend) and `src-tauri/` (backend). Update `src-tauri/tauri.conf.json` to set the window title to "Refinex Terminal", default size 1280x800, minSize 800x600, and `decorations: true`. Run `pnpm install` and `pnpm tauri dev` to confirm the empty app launches successfully. Fix any issues.
 
-- [ ] **0.2 — Configure TypeScript strict mode and path aliases**
+- [x] **0.2 — Configure TypeScript strict mode and path aliases**
 
   > **Prompt**: Update `tsconfig.json` to enable strict mode (`strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`). Add path aliases: `@/*` mapping to `./src/*`. Update `vite.config.ts` to resolve these path aliases. Create `src/types/index.ts` as the central type export file. Verify no TypeScript errors exist with `pnpm tsc --noEmit`.
 
