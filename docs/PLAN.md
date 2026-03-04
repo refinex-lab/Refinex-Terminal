@@ -105,7 +105,7 @@
   >
   > Verify that on macOS, zsh launches with correct prompt, and on Windows, PowerShell launches correctly. Verify `echo $TERM` outputs `xterm-256color`.
 
-- [ ] **1.5 — Implement terminal search**
+- [x] **1.5 — Implement terminal search**
 
   > **Prompt**: Create `src/components/terminal/TerminalSearch.tsx` — a search overlay that appears when `Cmd/Ctrl + F` is pressed while a terminal is focused. It should have:
   > - A text input for the search query.
@@ -117,7 +117,7 @@
   >
   > Verify: type a command with repeated output (e.g., `cat` a file), open search, type a term, verify highlights appear and navigation works.
 
-- [ ] **1.6 — Implement copy/paste and selection**
+- [x] **1.6 — Implement copy/paste and selection**
 
   > **Prompt**: Configure xterm.js to support:
   > - **Copy on select**: When text is selected in the terminal, automatically copy to clipboard (configurable via `terminal.copy_on_select`).

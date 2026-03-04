@@ -9,6 +9,7 @@ import { listen } from "@tauri-apps/api/event";
 import { ptySpawn, ptyWrite, ptyResize } from "@/lib/tauri-pty";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { TerminalSearch } from "./TerminalSearch";
+import { TerminalContextMenu } from "./TerminalContextMenu";
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalViewProps {
@@ -91,8 +92,15 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
     // Fit terminal to container
     fitAddon.fit();
 
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+    // Configure copy on select (TODO: make configurable via settings)
+    terminal.onSelectionChange(() => {
+      if (terminal.hasSelection()) {
+        const selection = terminal.getSelection();
+        navigator.clipboard.writeText(selection).catch((error) => {
+          console.error("Failed to copy selection:", error);
+        });
+      }
+    });
 
     // Spawn PTY if not already spawned
     const initPty = async () => {
@@ -199,14 +207,77 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       resizeObserver.observe(containerRef.current);
     }
 
-    // Handle Cmd/Ctrl+F to open search
+    // Handle Cmd/Ctrl+F to open search and copy/paste shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
+      // Cmd/Ctrl + F: Open search
       if (modifier && e.key === "f") {
         e.preventDefault();
         setShowSearch(true);
+        return;
+      }
+
+      // Cmd/Ctrl + C: Copy selection (if text is selected)
+      if (modifier && e.key === "c" && !e.shiftKey) {
+        if (terminal.hasSelection()) {
+          e.preventDefault();
+          const selection = terminal.getSelection();
+          navigator.clipboard.writeText(selection).catch((error) => {
+            console.error("Failed to copy:", error);
+          });
+        }
+        // If no selection, let Ctrl+C pass through to send SIGINT
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + C: Always copy selection
+      if (modifier && e.shiftKey && e.key === "C") {
+        e.preventDefault();
+        if (terminal.hasSelection()) {
+          const selection = terminal.getSelection();
+          navigator.clipboard.writeText(selection).catch((error) => {
+            console.error("Failed to copy:", error);
+          });
+        }
+        return;
+      }
+
+      // Cmd/Ctrl + V: Paste from clipboard
+      if (modifier && e.key === "v" && !e.shiftKey) {
+        e.preventDefault();
+        navigator.clipboard.readText().then((text) => {
+          terminal.paste(text);
+        }).catch((error) => {
+          console.error("Failed to paste:", error);
+        });
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + V: Always paste
+      if (modifier && e.shiftKey && e.key === "V") {
+        e.preventDefault();
+        navigator.clipboard.readText().then((text) => {
+          terminal.paste(text);
+        }).catch((error) => {
+          console.error("Failed to paste:", error);
+        });
+        return;
+      }
+
+      // Cmd/Ctrl + A: S
+      if (modifier && e.key === "a") {
+        e.preventDefault();
+        terminal.selectAll();
+        return;
+      }
+
+      // Cmd/Ctrl + K: Clear terminal
+      if (modifier && e.key === "k") {
+        e.preventDefault();
+        terminal.clear();
+        return;
       }
     };
 
@@ -229,32 +300,34 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   }
 
   return (
-    <div
-      className="relative"
-      style={{
-        width: "100%",
-        height: "100%",
-        display: session.isActive ? "block" : "none",
-      }}
-    >
+    <TerminalContextMenu terminal={terminalRef.current}>
       <div
-        ref={containerRef}
-        className={`terminal-container ${className}`}
+        className="relative"
         style={{
           width: "100%",
           height: "100%",
+          display: session.isActive ? "block" : "none",
         }}
-      />
-      {showSearch && session.isActive && (
-        <TerminalSearch
-          searchAddon={searchAddonRef.current}
-          onClose={() => {
-            setShowSearch(false);
-            searchAddonRef.current?.clearDecorations();
+      >
+        <div
+          ref={containerRef}
+          className={`terminal-container ${className}`}
+          style={{
+            width: "100%",
+            height: "100%",
           }}
         />
-      )}
-    </div>
+        {showSearch && session.isActive && (
+          <TerminalSearch
+            searchAddon={searchAddonRef.current}
+            onClose={() => {
+              setShowSearch(false);
+              searchAddonRef.current?.clearDecorations();
+            }}
+          />
+        )}
+      </div>
+    </TerminalContextMenu>
   );
 }
 
