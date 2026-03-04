@@ -13,7 +13,7 @@
 
 <img src="docs/assets/banner.png" alt="Refinex Terminal Banner" width="800" />
 
-[Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Configuration](#-configuration) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+[中文](README.zh-CN.md) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Configuration](#-configuration) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
 </div>
 
