@@ -48,7 +48,7 @@ src-tauri/              → Backend (Rust / Tauri 2)
 
 themes/                 → Built-in theme TOML files
 docs/                   → Documentation
-  PPLAN.md              → Implementation plan (the source of truth for tasks)
+  PLAN.md              → Implementation plan (the source of truth for tasks)
 ```
 
 ## Build Commands
@@ -64,11 +64,12 @@ cargo clippy -- -D warnings   # Rust lint (run from src-tauri/)
 
 ## Implementation Plan
 
-**Read `docs/PPLAN.md`** — it contains the full phased implementation plan with every task and its AI prompt. Tasks are organized into numbered phases (0–8). Work through them sequentially. **After completing each task, update `docs/PPLAN.md` to mark it as done** by changing `[ ]` to `[x]`.
+**Read `docs/PLAN.md`** — it contains the full phased implementation plan with every task and its AI prompt. Tasks are organized into numbered phases (0–8). Work through them sequentially. **After completing each task, update `docs/PLAN.md` to mark it as done** by changing `[ ]` to `[x]`.
 
 ## Code Style
 
 ### TypeScript / React
+
 - Strict mode: no `any` types, no `@ts-ignore`. Use proper generics and type narrowing.
 - Functional components only. Use hooks, not class components.
 - Named exports (not default) for components and utilities. Default export only for page-level components.
@@ -80,6 +81,7 @@ cargo clippy -- -D warnings   # Rust lint (run from src-tauri/)
 - Error handling: wrap all Tauri `invoke()` calls in try/catch.
 
 ### Rust
+
 - Follow Rust 2021 edition idioms. Use `clippy` with `-D warnings`.
 - All public functions must have doc comments (`///`).
 - Use `Result<T, E>` for fallible operations, never `unwrap()` in production code (only in tests).
@@ -89,6 +91,7 @@ cargo clippy -- -D warnings   # Rust lint (run from src-tauri/)
 - Prefer `Arc<Mutex<>>` for shared state, `tokio::sync` for async locks.
 
 ### CSS / Styling
+
 - Use Tailwind utility classes. No custom CSS unless absolutely necessary (e.g., xterm.js overrides).
 - shadcn/ui components for all standard UI elements (buttons, inputs, dialogs, etc.).
 - Responsive-aware where applicable, but primarily optimized for desktop viewport.
@@ -139,5 +142,5 @@ After every significant change:
 - Do not skip error handling. Every Tauri command must handle errors gracefully.
 - Do not use `unwrap()` in Rust production code.
 - Do not introduce new dependencies without justification. Prefer the existing stack.
-- Do not modify `docs/PPLAN.md` structure — only update task completion checkboxes.
+- Do not modify `docs/PLAN.md` structure — only update task completion checkboxes.
 - Do not commit code that fails `tsc` or `clippy` checks.
