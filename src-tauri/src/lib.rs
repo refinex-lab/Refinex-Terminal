@@ -1,3 +1,9 @@
+mod pty;
+mod commands;
+
+use pty::PtyManager;
+use commands::{pty_spawn, pty_write, pty_resize, pty_kill};
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -12,7 +18,14 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(PtyManager::new())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            pty_spawn,
+            pty_write,
+            pty_resize,
+            pty_kill
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
