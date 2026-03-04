@@ -1,5 +1,7 @@
 # Environment Setup Guide
 
+> Language: **English** · [中文](SETUP.zh-CN.md)
+
 This document walks through every prerequisite needed to build and develop Refinex Terminal from source on macOS (Apple Silicon primary) and Windows.
 
 ---
