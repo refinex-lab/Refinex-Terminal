@@ -254,7 +254,6 @@ interface AIBlockStore {
   trackers: Map<string, BlockTracker>;
   getTracker: (sessionId: string) => BlockTracker;
   removeTracker: (sessionId: string) => void;
-  getBlocks: (sessionId: string) => AIBlock[];
   toggleCollapse: (sessionId: string, blockId: string) => void;
 }
 
@@ -278,11 +277,6 @@ export const useAIBlockStore = create<AIBlockStore>((set, get) => ({
     set({ trackers: new Map(trackers) });
   },
 
-  getBlocks: (sessionId: string) => {
-    const tracker = get().getTracker(sessionId);
-    return tracker.getBlocks();
-  },
-
   toggleCollapse: (sessionId: string, blockId: string) => {
     const tracker = get().getTracker(sessionId);
     tracker.toggleCollapse(blockId);
@@ -294,7 +288,9 @@ export const useAIBlockStore = create<AIBlockStore>((set, get) => ({
  * React hook to get AI blocks for a terminal session
  */
 export function useAIBlocks(sessionId: string): AIBlock[] {
-  return useAIBlockStore((state) => state.getBlocks(sessionId));
+  const trackers = useAIBlockStore((state) => state.trackers);
+  const tracker = trackers.get(sessionId);
+  return tracker ? tracker.getBlocks() : [];
 }
 
 /**

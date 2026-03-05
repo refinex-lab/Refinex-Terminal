@@ -21,7 +21,7 @@ function App() {
       initializedRef.current = true;
       addSession({
         id: `terminal-${Date.now()}`,
-        title: "Terminal 1",
+        title: "⌘ 1",
         cwd: "~",
         ptyId: null,
       });
