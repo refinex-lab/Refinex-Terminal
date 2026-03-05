@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { ChevronDown, ChevronUp, Copy, ArrowDown } from "lucide-react";
 import { useAIBlocks, useBlockTracker, type AIBlock, type CLIType } from "@/lib/ai-block-detector";
 import { Terminal } from "@xterm/xterm";
+import { CLIIcon } from "@/components/ui/cli-icon";
 
 interface AIBlockOverlayProps {
   sessionId: string;
@@ -9,24 +10,24 @@ interface AIBlockOverlayProps {
 }
 
 /**
- * Color mapping for different CLI types
+ * Color mapping for different CLI types (brand colors)
  */
 const CLI_COLORS: Record<CLIType, string> = {
-  "claude-code": "#3b82f6", // blue
-  "codex": "#10b981", // green
-  "copilot": "#a855f7", // purple
-  "gemini": "#f59e0b", // amber
-  "generic": "#6b7280", // gray
+  "claude": "#D97706", // Anthropic orange
+  "codex": "#10A37F", // OpenAI green
+  "gemini": "#4285F4", // Google blue
+  "copilot": "#8B5CF6", // GitHub Copilot purple
+  "generic": "#6B7280", // gray
 };
 
 /**
  * CLI display names
  */
 const CLI_NAMES: Record<CLIType, string> = {
-  "claude-code": "Claude Code",
+  "claude": "Claude Code",
   "codex": "Codex CLI",
-  "copilot": "GitHub Copilot",
   "gemini": "Gemini CLI",
+  "copilot": "GitHub Copilot",
   "generic": "AI Output",
 };
 
@@ -123,10 +124,13 @@ export function AIBlockOverlay({ sessionId, terminal }: AIBlockOverlayProps) {
               height: block.isCollapsed ? "auto" : `${position.height}px`,
             }}
           >
-            {/* Left border indicator */}
+            {/* Left border indicator (3px wide) */}
             <div
-              className="absolute left-0 top-0 bottom-0 w-1"
-              style={{ backgroundColor: color }}
+              className="absolute left-0 top-0 bottom-0"
+              style={{
+                width: "3px",
+                backgroundColor: color
+              }}
             />
 
             {/* Block header with controls */}
@@ -139,13 +143,20 @@ export function AIBlockOverlay({ sessionId, terminal }: AIBlockOverlayProps) {
                 boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)",
               }}
             >
+              {/* CLI Icon */}
+              {block.cliType !== "generic" && (
+                <CLIIcon type={block.cliType} size={14} className="opacity-70" />
+              )}
+
               {/* Block info */}
               {block.isCollapsed && (
                 <span
                   className="text-xs font-medium mr-2"
                   style={{ color: "var(--terminal-foreground)" }}
                 >
-                  {name} — {lineCount} lines (collapsed)
+                  {lineCount > 50000
+                    ? `${name} — Block is very large (${lineCount.toLocaleString()} lines) — click to expand`
+                    : `${name} — ${lineCount.toLocaleString()} lines (collapsed)`}
                 </span>
               )}
 

@@ -191,68 +191,428 @@
 
 ---
 
-## Phase 3: AI-First Features
+# Phase 3: AI-First Features
 
-**Goal**: Implement intelligent AI output handling, CLI detection, and agent-aware UI elements.
+**Goal**: 实现智能 AI 输出处理、CLI 检测、Agent 感知 UI 元素。
 
-### Tasks
+**支持的 AI CLI 工具**(精确到二进制名与包名):
 
-- [x] **3.1 — Implement AI output block detection**
+| CLI 工具           | 二进制/命令名          | npm 包名                                             | 官方仓库                                                                | 官方安装文档                                                                                                           |
+| ------------------ | ---------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Claude Code        | `claude`               | `@anthropic-ai/claude-code` (已废弃，改用原生二进制) | [anthropics/claude-code](https://github.com/anthropics/claude-code)     | [code.claude.com/docs/en/setup](https://code.claude.com/docs/en/setup)                                                 |
+| Codex CLI          | `codex`                | — (Rust 二进制，通过 GitHub Releases 分发)           | [openai/codex](https://github.com/openai/codex)                         | [github.com/openai/codex/blob/main/codex-cli/README.md](https://github.com/openai/codex/blob/main/codex-cli/README.md) |
+| Gemini CLI         | `gemini`               | `@google/gemini-cli`                                 | [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli)                                     |
+| GitHub Copilot CLI | `gh copilot` (gh 扩展) | — (gh extension)                                     | [github/gh-copilot](https://github.com/github/gh-copilot)               | [docs.github.com/en/copilot/github-copilot-in-the-cli](https://docs.github.com/en/copilot/github-copilot-in-the-cli)   |
 
-  > **Prompt**: Create `src/lib/ai-block-detector.ts` — a module that analyzes terminal output streams to detect AI CLI output boundaries. Implement heuristics for:
-  >
-  > - **Claude Code**: Detect the `╭─` / `╰─` box-drawing boundaries, `Claude` header markers, and thinking indicators.
-  > - **Codex CLI**: Detect Codex prompt markers, tool-use blocks, and code output fences.
-  > - **Generic**: Detect markdown-style code fences, long unbroken text blocks (>20 lines without shell prompt), and ANSI sequences common to AI CLIs.
-  >
-  > Define `AIBlock = { id: string, cliType: string, startLine: number, endLine: number, isCollapsed: boolean, isStreaming: boolean }`. Create a `BlockTracker` class that maintains a list of detected blocks for a terminal session, updated as new output arrives. Export hooks: `useAIBlocks(sessionId: string)`.
+---
 
-- [x] **3.2 — Build AI block overlay UI**
+## 3.1 — AI 输出块检测 (`src/lib/ai-block-detector.ts`)
 
-  > **Prompt**: Create `src/components/terminal/AIBlockOverlay.tsx` — an overlay rendered on top of the terminal viewport that adds visual indicators to detected AI blocks:
-  >
-  > - A thin colored left-border on AI output blocks (color-coded by CLI type: blue for Claude, green for Codex, purple for Copilot).
-  > - A collapse/expand toggle button at the top-right of each block.
-  > - When collapsed, show a summary line: "Claude Code — 247 lines (collapsed)" with expand button.
-  > - A "Copy block" button to copy the entire block content to clipboard.
-  > - A "Scroll to bottom" floating button when the user scrolls up during streaming.
-  >
-  > The overlay must not interfere with terminal input. Use absolute positioning and pointer-events management. Verify with a mock AI output stream of 500+ lines — confirm no jank during streaming, collapse/expand works, and copy works.
+### 数据结构
 
-- [x] **3.3 — Implement streaming-safe rendering pipeline**
+```typescript
+interface AIBlock {
+  id: string; // 唯一标识，uuid
+  cliType: "claude" | "codex" | "gemini" | "copilot" | "generic";
+  startLine: number; // 块起始行号（终端 buffer 行号）
+  endLine: number; // 块结束行号（-1 表示仍在流式输出）
+  isCollapsed: boolean;
+  isStreaming: boolean; // 块尚未关闭
+  blockKind:
+    | "message"
+    | "thinking"
+    | "tool_call"
+    | "approval_request"
+    | "plan"
+    | "diff"
+    | "generic";
+}
+```
 
-  > **Prompt**: Optimize the terminal rendering pipeline for high-throughput AI output:
-  >
-  > - In `src/components/terminal/TerminalView.tsx`, implement output batching: collect all `pty-output` events in a buffer, flush to xterm.js at most every 16ms (one frame at 60fps) using `requestAnimationFrame`.
-  > - Implement backpressure: if xterm.js write queue exceeds 10,000 bytes, delay the next flush by an additional frame.
-  > - Add a config option `ai.streaming_throttle_ms` (default 16) to control the flush interval.
-  > - When AI block mode is active and a block exceeds `ai.max_block_lines` (default 50,000), auto-collapse it and show a "Block is very large — click to expand" message.
-  > - Implement virtualized scrollback: configure xterm.js `scrollback` to the user's `terminal.scrollback_lines` setting, and enable the `OverviewRulerAddon` for scrollbar minimap.
-  >
-  > Benchmark: pipe 100,000 lines through the terminal (e.g., `seq 100000`) and verify no frame drops, memory stays under 200MB, and the terminal remains responsive to input throughout.
+### 3.1.1 Claude Code 块检测规则
 
-- [ ] **3.4 — Build AI CLI configuration wizard**
+**来源**: Claude Code 使用 Ink (React for CLI) 渲染终端 UI，输出使用 Unicode 圆角 box-drawing 字符绘制边框。
 
-  > **Prompt**: Create `src/components/ai/CLISetupWizard.tsx` — a step-by-step dialog that helps users configure their AI CLI tools. It should:
-  >
-  > 1. **Detection step**: Scan the system PATH for known CLI binaries (`claude`, `codex`, `gh copilot`, `gemini`). Display which are found and which are missing with install links.
-  > 2. **Configuration step**: For each detected CLI, show its current config status (e.g., is Claude Code authenticated? Is Codex API key set?). Provide "Open docs" links for each CLI's setup.
-  > 3. **Shell integration step**: Offer to add shell aliases or PATH modifications to the user's shell profile (`.zshrc`, `.bashrc`, PowerShell profile).
-  > 4. **Test step**: Run a simple test command for each CLI (e.g., `claude --version`) and show the result.
-  >
-  > Also implement `src-tauri/src/cli/detector.rs` — a Rust module that scans PATH for known binaries and returns their paths and versions. Expose as Tauri command `detect_ai_clis`. Trigger the wizard on first launch or via settings.
+**块边界检测**:
 
-- [ ] **3.5 — Implement agent status indicator**
+| 规则 ID  | 模式       | 正则表达式 | 说明                                                            |
+| -------- | ---------- | ---------- | --------------------------------------------------------------- |
+| CC-START | 圆角上边框 | `/^╭─/`    | 块起始：行首为 `╭` + `─`，这是 Claude Code 所有输出框的顶部边界 |
+| CC-END   | 圆角下边框 | `/^╰─/`    | 块结束：行首为 `╰` + `─`，这是 Claude Code 输出框的底部边界     |
+| CC-BODY  | 左侧竖线   | `/^│\s/`   | 块体内容行：行首为 `│` + 空格                                   |
 
-  > **Prompt**: Create `src/components/terminal/AgentStatus.tsx` — a small status badge shown in the tab bar and terminal bottom-right corner that indicates the current AI agent state:
-  >
-  > - **Idle** (gray dot): No AI CLI is running.
-  > - **Thinking** (pulsing yellow dot): AI CLI is processing (detected by output patterns like spinner characters, "Thinking..." text, or lack of output after prompt submission).
-  > - **Writing** (green dot with animation): AI is actively streaming output.
-  > - **Error** (red dot): AI CLI exited with non-zero code.
-  > - **Waiting for input** (blue dot): AI CLI is asking for user confirmation.
-  >
-  > The detection is based on output pattern analysis from `ai-block-detector.ts`. Verify the status updates in real-time during a Claude Code session.
+**CLI 身份识别** (确认当前进程是 Claude Code):
+
+| 规则 ID | 模式       | 正则表达式                           | 说明                              |
+| ------- | ---------- | ------------------------------------ | --------------------------------- |
+| CC-ID-1 | 进程名匹配 | 检测 PTY 子进程名是否为 `claude`     | 最可靠的识别方式                  |
+| CC-ID-2 | 头部标记   | `/Claude\s+Code/` 或 `/claude\s+>/i` | 启动时 Claude Code 会打印品牌标识 |
+| CC-ID-3 | 版本输出   | `/Claude Code CLI version/`          | `claude --version` 的输出格式     |
+
+**Thinking 状态检测**:
+
+Claude Code 在思考时并不输出纯文本 "Thinking..."，而是在 box 框内使用 ANSI spinner 动画 + 光标控制序列。检测方式:
+
+| 规则 ID    | 模式                                                                          | 说明                    |
+| ---------- | ----------------------------------------------------------------------------- | ----------------------- |
+| CC-THINK-1 | 块已打开（检测到 `╭─`）但尚未收到 `╰─` 关闭，且最近 2 秒内无新可见文本输出    | 推断为 thinking 状态    |
+| CC-THINK-2 | 检测连续的 ANSI 光标移动序列 (`\x1b[?25l`, `\x1b[A`, `\x1b[K`) 且无可打印字符 | Ink 的 spinner 重绘特征 |
+
+### 3.1.2 Codex CLI 块检测规则
+
+**来源**: Codex CLI 是 Rust 编写的 TUI 应用 (仓库 `openai/codex`)。其终端输出通过 `owo-colors` 进行着色，使用特定的文本标记和颜色方案来区分不同类型的输出。**Codex 不使用 box-drawing 字符绘制边框**，而是使用带时间戳的结构化文本行。
+
+**块边界检测** (基于 `codex-rs/exec/src/event_processor_with_human_output.rs` 源码):
+
+| 规则 ID       | 模式         | 正则表达式                                                     | 说明                                                   |
+| ------------- | ------------ | -------------------------------------------------------------- | ------------------------------------------------------ |
+| CX-SESSION    | 会话开始     | `/codex session\s+[0-9a-f-]+/`                                 | 带品红色的 "codex session" + UUID，标志会话开始        |
+| CX-MODEL      | 模型声明     | `/^model:\s+\S+/`                                              | 紧随会话标记后的模型名声明行                           |
+| CX-THINKING   | 思考块       | `/^thinking$/` (品红+斜体样式)                                 | AgentReasoning 事件输出，以斜体品红 "thinking" 为标记  |
+| CX-PLAN       | 计划更新     | `/^Plan update$/` (品红色)                                     | 后续行以 `✓`(绿)/ `→`(青)/ `•`(灰) 开头的步骤列表      |
+| CX-EXEC-START | 命令执行开始 | 检测 ANSI 着色的命令行，通常为灰色或青色的 shell 命令文本      | ExecCommandBegin 事件                                  |
+| CX-EXEC-END   | 命令执行结束 | `/exited \d+( in .+)?:/`                                       | 如 `apply_patch(auto_approved=true) exited 0 in 1.2s:` |
+| CX-DIFF       | 差异输出     | `/^file update:/` (品红+斜体)                                  | TurnDiff 事件，后续行为 unified diff 格式              |
+| CX-APPROVAL   | 审批请求     | 检测到 `ExecApprovalRequest` 模式：显示命令内容 + 等待用户确认 | 用户输入等待状态                                       |
+| CX-MESSAGE    | Agent 消息   | 非以上任何标记的连续文本输出块                                 | AgentMessage 事件                                      |
+
+**CLI 身份识别**:
+
+| 规则 ID | 模式       | 说明                                          |
+| ------- | ---------- | --------------------------------------------- |
+| CX-ID-1 | 进程名匹配 | 检测 PTY 子进程名是否为 `codex`               |
+| CX-ID-2 | 会话标记   | 检测到 `codex session` + UUID 模式            |
+| CX-ID-3 | 版本输出   | `codex --version` 输出含 Codex CLI 版本字符串 |
+
+**状态检测**:
+
+| 状态                 | 检测方式                                                  |
+| -------------------- | --------------------------------------------------------- |
+| Thinking             | 出现 "thinking" 斜体标记行（AgentReasoning 事件）         |
+| Writing              | 持续接收到新行输出（AgentMessage/AgentMessageDelta 事件） |
+| Waiting for approval | 出现 ExecApprovalRequest 模式后无后续输出                 |
+| Executing tool       | 出现命令执行开始但未出现执行结束标记                      |
+
+### 3.1.3 Gemini CLI 块检测规则
+
+**来源**: Gemini CLI 使用 Ink (React for CLI) 渲染，与 Claude Code 类似使用 `╭─` / `╰─` 圆角 box-drawing 字符。但关键区别：**Gemini CLI 的 box 边框用于包裹工具调用 (tool call) 结果**，而非整个 Agent 回复。
+
+**块边界检测** (基于 `google-gemini/gemini-cli` 源码快照):
+
+| 规则 ID          | 模式       | 正则表达式                     | 说明                 |
+| ---------------- | ---------- | ------------------------------ | -------------------- | ---------- | -------------------------------------------------- |
+| GM-TOOLBOX-START | 工具框顶部 | `/^╭─+╮$/`                     | 工具调用结果的上边框 |
+| GM-TOOLBOX-END   | 工具框底部 | `/^╰─+╯$/`                     | 工具调用结果的下边框 |
+| GM-TOOLBOX-BODY  | 工具框内容 | `/^│\s/`                       | 框内行首 `│`         |
+| GM-TOOL-HEADER   | 工具名标记 | `/^│\s+(✓                      | x                    | ⊶)\s+\S+/` | 框内工具状态指示符：`✓` 成功、`x` 失败、`⊶` 执行中 |
+| GM-SEPARATOR     | 框内分隔线 | `/^│─+│$/` 或 `/^──+$/` (框内) | sticky header 分隔线 |
+
+**CLI 身份识别**:
+
+| 规则 ID | 模式      | 正则表达式              | 说明                                    |
+| ------- | --------- | ----------------------- | --------------------------------------- |
+| GM-ID-1 | 进程名    | PTY 子进程名为 `gemini` | 最可靠                                  |
+| GM-ID-2 | 品牌 Logo | `/▝▜▄\s+Gemini CLI/`    | Gemini CLI 启动时的 ASCII art logo 标识 |
+| GM-ID-3 | 版本      | `/Gemini CLI v[\d.]+/`  | 品牌 logo 旁的版本号                    |
+
+**状态检测** (基于 `StreamingState` 枚举和 `LoadingIndicator` 组件源码):
+
+| 状态                   | 检测方式                                                                                           |
+| ---------------------- | -------------------------------------------------------------------------------------------------- |
+| Idle                   | 无 spinner 输出，用户输入提示符可见                                                                |
+| Thinking/Responding    | spinner 动画活跃 (`dots` 类型的 Braille spinner: `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`)，可能伴随 `💬` emoji 和思考主题文字 |
+| WaitingForConfirmation | 静态字符 `⠏` 显示，并且出现确认提示文本                                                            |
+| Executing tool         | 工具框 (`╭─╮`) 已打开，内部显示 `⊶` + 工具名 + "Running command..." / "Searching..." 等文字        |
+| Error                  | 工具框内出现 `x` 状态指示符                                                                        |
+
+**Gemini CLI 与 Claude Code 的 box 区分**:
+
+两者都使用 `╭─` / `╰─`，通过以下方式区分:
+
+1. **优先检测 CLI 进程名** (`gemini` vs `claude`)
+2. **Gemini 特有标识**: 框内出现 `✓` / `x` / `⊶` 工具状态指示符
+3. **Gemini ASCII Logo**: `▝▜▄` 字符序列
+
+### 3.1.4 GitHub Copilot CLI 块检测规则
+
+**来源**: GitHub Copilot CLI 是 `gh` CLI 的扩展 (`github/gh-copilot`)，通过 `gh copilot suggest` 和 `gh copilot explain` 子命令工作。其输出格式相对简单，主要是纯文本 + 交互式选择器。
+
+**块边界检测**:
+
+| 规则 ID      | 模式     | 正则表达式                                   | 说明                    |
+| ------------ | -------- | -------------------------------------------- | ----------------------- | ----------- | -------- | ---------- | ---------------------------- |
+| GC-SUGGEST   | 建议标记 | `/^▸\s+Suggestion/` 或 `/^▸\s+/`             | Copilot 建议块起始      |
+| GC-EXPLAIN   | 解释标记 | `/^▸\s+Explanation/`                         | 解释结果块起始          |
+| GC-SEPARATOR | 分隔线   | `/^-{20,}$/`                                 | 代码/文本块的上下分隔线 |
+| GC-ACTION    | 操作栏   | `/^\[Accept\]                                | \[Next                  | \[Explain\] | \[Quit\] | \[Done\]/` | 交互操作行，也作为块结束标记 |
+| GC-END       | 块结束   | 遇到下一个 `▸` 标记或 shell 提示符 `$` / `>` | 块结束                  |
+
+**CLI 身份识别**:
+
+| 规则 ID | 模式     | 说明                                             |
+| ------- | -------- | ------------------------------------------------ |
+| GC-ID-1 | 进程名   | PTY 子进程树中包含 `gh` 且参数含 `copilot`       |
+| GC-ID-2 | 扩展标记 | 输出中包含 `gh copilot` 或 `GitHub Copilot` 字样 |
+
+### 3.1.5 通用 (Generic) 块检测规则
+
+当无法确认具体 CLI 类型时的回退检测:
+
+| 规则 ID       | 模式              | 正则表达式                                                     | 说明                          |
+| ------------- | ----------------- | -------------------------------------------------------------- | ----------------------------- |
+| GN-FENCE      | Markdown 代码围栏 | `/^```\w*$/`                                                   | 匹配开始和结束的 ``` 围栏     |
+| GN-LONGBLOCK  | 长文本块          | 连续 >20 行无 shell 提示符 (`$`, `>`, `#`, `%`) 的输出         | 可能是 AI 输出                |
+| GN-ANSI-HEAVY | ANSI 密集段       | 短时间内 ANSI 转义序列 (`\x1b[`) 的密度显著高于正常 shell 使用 | AI CLI 通常重度使用 ANSI 着色 |
+
+### 3.1.6 BlockTracker 类
+
+```typescript
+class BlockTracker {
+  private blocks: Map<string, AIBlock> = new Map();
+  private activeCLI: AIBlock["cliType"] | null = null;
+
+  /**
+   * 在每次新的 PTY 输出到达时调用。
+   * @param sessionId - 终端会话 ID
+   * @param lineNumber - 当前行号
+   * @param lineContent - 行的纯文本内容（已剥离 ANSI）
+   * @param rawContent - 行的原始内容（含 ANSI）
+   */
+  processLine(
+    sessionId: string,
+    lineNumber: number,
+    lineContent: string,
+    rawContent: string,
+  ): void;
+
+  /** 获取当前会话的所有检测到的块 */
+  getBlocks(): AIBlock[];
+
+  /** 获取当前活跃（正在流式输出）的块 */
+  getStreamingBlock(): AIBlock | null;
+
+  /** 通过进程名设置当前 CLI 类型（最可靠） */
+  setActiveCLI(cliType: AIBlock["cliType"]): void;
+}
+```
+
+**检测优先级**: 进程名检测 > 品牌标识检测 > 块边界模式检测 > 通用回退
+
+**导出 Hook**:
+
+```typescript
+function useAIBlocks(sessionId: string): {
+  blocks: AIBlock[];
+  streamingBlock: AIBlock | null;
+  activeCLI: AIBlock["cliType"] | null;
+};
+```
+
+---
+
+## 3.2 — AI 块覆盖 UI (`src/components/terminal/AIBlockOverlay.tsx`)
+
+在终端视口上方渲染覆盖层，为检测到的 AI 块添加视觉指示:
+
+**颜色编码** (严格绑定 CLI 类型):
+
+| CLI 类型    | 左边框颜色                   | 色值      |
+| ----------- | ---------------------------- | --------- |
+| Claude Code | 橙色 (Anthropic 品牌色)      | `#D97706` |
+| Codex CLI   | 绿色 (OpenAI 品牌色)         | `#10A37F` |
+| Gemini CLI  | 蓝色 (Google 品牌色)         | `#4285F4` |
+| Copilot CLI | 紫色 (GitHub Copilot 品牌色) | `#8B5CF6` |
+| Generic     | 灰色                         | `#6B7280` |
+
+**功能要求**:
+
+- 每个块左侧 3px 宽的颜色条
+- 块右上角折叠/展开按钮
+- 折叠状态显示: `"{CLI名称} — {行数} lines (collapsed)"` + 展开按钮
+- "Copy block" 按钮复制整块内容到剪贴板
+- 流式输出时用户向上滚动后显示 "Scroll to bottom" 浮动按钮
+- 覆盖层不得拦截终端输入事件 (`pointer-events: none`，仅按钮区域设为 `pointer-events: auto`)
+
+**验证**: 使用 500+ 行的模拟 AI 输出流，确认流式输出期间无卡顿，折叠/展开正常，复制功能正常。
+
+---
+
+## 3.3 — 流式安全渲染管线
+
+在 `src/components/terminal/TerminalView.tsx` 中优化终端渲染:
+
+- **输出批处理**: 收集所有 `pty-output` 事件到缓冲区，使用 `requestAnimationFrame` 以最多每 16ms（60fps 一帧）刷新到 xterm.js
+- **背压控制**: 当 xterm.js 写入队列超过 10,000 字节时，延迟一帧再刷新
+- **配置项**: `ai.streaming_throttle_ms`（默认 16）控制刷新间隔
+- **超大块自动折叠**: 当 AI block 模式激活且块超过 `ai.max_block_lines`（默认 50,000）行时，自动折叠并显示 "Block is very large — click to expand"
+- **虚拟化回滚**: 配置 xterm.js `scrollback` 为用户的 `terminal.scrollback_lines` 设置，启用 `OverviewRulerAddon` 作为滚动条缩略图
+
+**基准测试**: 通过终端 pipe 100,000 行（`seq 100000`），验证无丢帧，内存 < 200MB，终端始终响应输入。
+
+---
+
+## 3.4 — AI CLI 配置向导
+
+### 3.4.1 前端: `src/components/ai/CLISetupWizard.tsx`
+
+**步骤 1: 检测 (Detection)**
+
+调用 Tauri 命令 `detect_ai_clis`，展示结果表格:
+
+| CLI 工具    | 状态                  | 路径                    | 版本    | 安装链接                                                             |
+| ----------- | --------------------- | ----------------------- | ------- | -------------------------------------------------------------------- |
+| Claude Code | ✅ 已安装 / ❌ 未找到 | `/usr/local/bin/claude` | `2.1.x` | [安装](https://code.claude.com/docs/en/setup)                        |
+| Codex CLI   | ✅ / ❌               | `/usr/local/bin/codex`  | `0.x.x` | [安装](https://github.com/openai/codex)                              |
+| Gemini CLI  | ✅ / ❌               | `~/.npm/.../gemini`     | `1.x.x` | [安装](https://github.com/google-gemini/gemini-cli)                  |
+| Copilot CLI | ✅ / ❌               | (gh extension)          | `1.x.x` | [安装](https://docs.github.com/en/copilot/github-copilot-in-the-cli) |
+
+**步骤 2: 配置 (Configuration)**
+
+针对每个已检测到的 CLI 展示认证状态与配置指引:
+
+| CLI 工具    | 认证检测方式                                                    | 所需环境变量/配置                                                 | 文档链接                                                                           |
+| ----------- | --------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Claude Code | 运行 `claude doctor`，检查退出码与输出                          | `ANTHROPIC_API_KEY` 或 OAuth 登录 (`~/.claude/` 目录下的凭据文件) | [code.claude.com/docs/en/setup](https://code.claude.com/docs/en/setup)             |
+| Codex CLI   | 运行 `codex login --status` 或检查 `~/.codex/` 下的凭据         | `OPENAI_API_KEY` 或 OpenAI OAuth                                  | [github.com/openai/codex](https://github.com/openai/codex)                         |
+| Gemini CLI  | 检查 `GEMINI_API_KEY` 环境变量，或 `~/.gemini/` 下的 OAuth 凭据 | `GEMINI_API_KEY` 或 Google OAuth                                  | [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) |
+| Copilot CLI | 运行 `gh auth status`，检查 GitHub 认证状态                     | GitHub CLI 已认证 (`gh auth login`)                               | [docs.github.com](https://docs.github.com/en/copilot/github-copilot-in-the-cli)    |
+
+**步骤 3: Shell 集成 (Shell Integration)**
+
+提供选项将路径/别名添加到 shell 配置文件 (`.zshrc`, `.bashrc`, PowerShell `$PROFILE`)。
+
+**步骤 4: 测试 (Test)**
+
+对每个 CLI 运行测试命令并显示结果:
+
+| CLI 工具    | 测试命令               | 成功判断               |
+| ----------- | ---------------------- | ---------------------- |
+| Claude Code | `claude --version`     | 退出码 0，输出含版本号 |
+| Codex CLI   | `codex --version`      | 退出码 0，输出含版本号 |
+| Gemini CLI  | `gemini --version`     | 退出码 0，输出含版本号 |
+| Copilot CLI | `gh copilot --version` | 退出码 0，输出含版本号 |
+
+### 3.4.2 后端: `src-tauri/src/cli/detector.rs`
+
+```rust
+/// 单个 AI CLI 的检测结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CLIDetectionResult {
+    pub name: String,           // "claude" | "codex" | "gemini" | "gh-copilot"
+    pub found: bool,
+    pub path: Option<String>,   // 二进制完整路径
+    pub version: Option<String>,
+    pub authenticated: Option<bool>,
+    pub error: Option<String>,
+}
+```
+
+**检测逻辑** (Rust, 暴露为 Tauri command `detect_ai_clis`):
+
+```rust
+// 检测策略（按 CLI）:
+//
+// 1. Claude Code:
+//    - 搜索 PATH 中的 `claude` 二进制
+//    - 备选: 检查 ~/.claude/bin/claude (原生安装默认路径)
+//    - 版本: 执行 `claude --version`
+//    - 认证: 检查 ~/.claude/ 目录下是否存在凭据文件
+//
+// 2. Codex CLI:
+//    - 搜索 PATH 中的 `codex` 二进制
+//    - 版本: 执行 `codex --version`
+//    - 认证: 检查 OPENAI_API_KEY 环境变量或 ~/.codex/ 下凭据
+//
+// 3. Gemini CLI:
+//    - 搜索 PATH 中的 `gemini` 二进制
+//    - 备选: npm global bin 目录下查找
+//    - 版本: 执行 `gemini --version`
+//    - 认证: 检查 GEMINI_API_KEY 环境变量或 ~/.gemini/ 下凭据
+//
+// 4. GitHub Copilot CLI:
+//    - 先检测 `gh` 是否在 PATH 中
+//    - 再执行 `gh extension list` 检查是否包含 `github/gh-copilot`
+//    - 版本: 执行 `gh copilot --version`
+//    - 认证: 执行 `gh auth status` 检查退出码
+```
+
+在首次启动或通过设置触发向导。
+
+---
+
+## 3.5 — Agent 状态指示器 (`src/components/terminal/AgentStatus.tsx`)
+
+在标签栏和终端右下角显示状态徽标:
+
+### 状态定义与检测规则
+
+| 状态                  | 显示     | 颜色      | 动画                      |
+| --------------------- | -------- | --------- | ------------------------- |
+| **Idle**              | 灰色圆点 | `#6B7280` | 无                        |
+| **Thinking**          | 黄色圆点 | `#EAB308` | 脉冲动画 (pulse)          |
+| **Writing**           | 绿色圆点 | `#22C55E` | 流式动画 (streaming dots) |
+| **Error**             | 红色圆点 | `#EF4444` | 无                        |
+| **Waiting for input** | 蓝色圆点 | `#3B82F6` | 闪烁 (blink)              |
+
+### 每个 CLI 的状态推断规则
+
+**Claude Code**:
+
+| 目标状态          | 检测条件                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Idle              | `claude` 进程存在但无 box 块打开，无输出活动                                                                                 |
+| Thinking          | 检测到 `╭─` 块打开后 >1.5 秒无可见文本输出（仅有 ANSI 光标控制序列）；或 Ink spinner 的 Braille 字符 (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) 循环出现 |
+| Writing           | 检测到 `╭─` 块打开后，持续接收到可见文本内容（排除 ANSI 控制序列）                                                           |
+| Error             | `claude` 进程以非零退出码退出                                                                                                |
+| Waiting for input | 块已关闭（`╰─` 出现），且出现输入提示符（`claude >`）或 `[Y/n]` 样式的确认提示                                               |
+
+**Codex CLI**:
+
+| 目标状态          | 检测条件                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| Idle              | `codex` 进程存在，输出含 `codex session` 标记但当前无活跃 turn                                 |
+| Thinking          | 输出中出现品红色斜体 `thinking` 标记行（AgentReasoning 事件）                                  |
+| Writing           | 持续接收 AgentMessage 文本输出（非 thinking、非命令执行）                                      |
+| Error             | `codex` 进程非零退出，或输出中出现 `Error` 事件标记                                            |
+| Waiting for input | 出现 ExecApprovalRequest 模式（命令 + 等待审批）；或出现 Plan 模式下的 `RequestUserInput` 提示 |
+
+**Gemini CLI**:
+
+| 目标状态          | 检测条件                                                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Idle              | 检测到 Gemini Logo (`▝▜▄`) 后无 spinner 活动                                                                                        |
+| Thinking          | 检测到 Ink `dots` spinner 的 Braille 字符循环 (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`)，可能伴随 `💬` emoji 和思考主题文本，以及 "(esc to cancel, Ns)" 倒计时 |
+| Writing           | 工具框内容持续增长，或工具框外接收到持续的 markdown 文本流                                                                          |
+| Error             | 工具框内出现 `x` 状态指示符，或 `gemini` 进程非零退出                                                                               |
+| Waiting for input | 检测到静态 `⠏` 字符（`WaitingForConfirmation` 状态的非响应显示），伴随确认提示文本                                                  |
+
+**Copilot CLI**:
+
+| 目标状态          | 检测条件                                                         |
+| ----------------- | ---------------------------------------------------------------- |
+| Idle              | `gh` 进程存在但无 Copilot 相关输出                               |
+| Thinking          | 出现 `▸ Suggestion` 标记但内容尚未完成输出                       |
+| Writing           | `▸` 标记后持续接收文本内容                                       |
+| Error             | `gh copilot` 命令非零退出                                        |
+| Waiting for input | 出现 `[Accept]` / `[Next Suggestion]` / `[Explain]` 等交互选项行 |
+
+### 状态更新机制
+
+```typescript
+// 由 ai-block-detector.ts 的 BlockTracker 驱动
+// 每次 processLine 后重新计算当前 agent 状态
+function deriveAgentStatus(
+  tracker: BlockTracker,
+  processInfo: { exitCode?: number; isRunning: boolean },
+): AgentStatusType {
+  if (!processInfo.isRunning) {
+    return processInfo.exitCode !== 0 ? "error" : "idle";
+  }
+  // ... 基于上表规则推断
+}
+```
+
+验证: 在实际 Claude Code / Codex CLI / Gemini CLI 会话中确认状态实时更新
 
 ---
 

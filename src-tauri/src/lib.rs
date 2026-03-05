@@ -2,10 +2,12 @@ mod pty;
 mod commands;
 mod config;
 mod menu;
+mod cli;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, ConfigState};
 use config::{load_config, get_config_path};
+use cli::{detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile};
 use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -54,7 +56,12 @@ pub fn run() {
             get_config_file_path,
             read_theme_file,
             list_fonts,
-            set_title_bar_theme
+            set_title_bar_theme,
+            detect_ai_clis,
+            test_cli,
+            get_shell_profile_path,
+            add_to_shell_profile,
+            pty::detect_pty_cli
         ])
         .setup(|app| {
             // Create and set menu

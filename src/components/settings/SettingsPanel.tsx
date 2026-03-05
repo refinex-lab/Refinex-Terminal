@@ -11,6 +11,7 @@ import { useConfigStore } from "@/stores/config-store";
 import { invoke } from "@tauri-apps/api/core";
 import { BUILTIN_THEMES, loadBuiltinTheme, type Theme } from "@/lib/theme-engine";
 import { listSystemFonts } from "@/lib/font-manager";
+import { CLISetupWizard } from "@/components/ai/CLISetupWizard";
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const { config, updateConfig } = useConfigStore();
 
   // Load system fonts on mount
@@ -437,6 +439,19 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   />
                   <p className="text-xs text-muted-foreground">Lower = faster updates, higher CPU usage</p>
                 </div>
+
+                {/* CLI Setup Wizard Button */}
+                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <Button
+                    onClick={() => setWizardOpen(true)}
+                    className="w-full"
+                  >
+                    Configure AI CLI Tools
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Set up Claude Code, GitHub Copilot, and other AI CLI tools
+                  </p>
+                </div>
               </div>
             )}
 
@@ -513,6 +528,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           </div>
         </div>
       </div>
+
+      {/* CLI Setup Wizard */}
+      <CLISetupWizard isOpen={wizardOpen} onClose={() => setWizardOpen(false)} />
     </div>
   );
 }

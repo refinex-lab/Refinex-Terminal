@@ -11,6 +11,7 @@ use super::shell::detect_shell;
 pub struct PtySession {
     pub pair: PtyPair,
     pub writer: Box<dyn Write + Send>,
+    pub child_pid: Option<u32>,
 }
 
 /// PTY manager state
@@ -75,10 +76,13 @@ impl PtyManager {
         }
 
         // Spawn the shell process
-        let _child = pair
+        let child = pair
             .slave
             .spawn_command(cmd)
             .map_err(|e| format!("Failed to spawn shell: {}", e))?;
+
+        // Get child PID for process detection
+        let child_pid = child.process_id();
 
         // Get reader and writer
         let mut reader = pair
@@ -99,9 +103,19 @@ impl PtyManager {
                 PtySession {
                     pair,
                     writer,
+                    child_pid,
                 },
             );
         }
+
+        // Emit PTY spawn event with child PID for CLI detection
+        let _ = app_handle.emit(
+            &format!("pty-spawn-{}", id),
+            serde_json::json!({
+                "id": id,
+                "pid": child_pid,
+            }),
+        );
 
         // Spawn reader thread
         let session_id = id;

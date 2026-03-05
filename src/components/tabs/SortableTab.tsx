@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import { useState } from "react";
+import { AgentStatus } from "@/components/terminal/AgentStatus";
 
 interface SortableTabProps {
   id: string;
@@ -59,6 +60,12 @@ export function SortableTab({
       <span className="text-xs font-medium truncate pointer-events-none">
         {title}
       </span>
+
+      {/* Agent status indicator */}
+      <div className="pointer-events-none">
+        <AgentStatus sessionId={id} variant="tab" />
+      </div>
+
       <button
         onClick={(e) => {
           e.stopPropagation();

@@ -35,3 +35,10 @@ export async function ptyResize(
 export async function ptyKill(id: number): Promise<void> {
   return await invoke<void>("pty_kill", { id });
 }
+
+/**
+ * Detect CLI type from PTY process
+ */
+export async function detectPtyCli(ptyPid: number): Promise<string | null> {
+  return await invoke<string | null>("detect_pty_cli", { ptyPid });
+}

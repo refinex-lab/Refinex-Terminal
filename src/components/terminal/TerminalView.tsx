@@ -6,13 +6,14 @@ import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { listen } from "@tauri-apps/api/event";
-import { ptySpawn, ptyWrite, ptyResize } from "@/lib/tauri-pty";
+import { ptySpawn, ptyWrite, ptyResize, detectPtyCli } from "@/lib/tauri-pty";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { TerminalSearch } from "./TerminalSearch";
 import { TerminalContextMenu } from "./TerminalContextMenu";
 import { AIBlockOverlay } from "./AIBlockOverlay";
-import { useBlockTracker } from "@/lib/ai-block-detector";
+import { AgentStatus } from "./AgentStatus";
+import { useBlockTracker, type CLIType } from "@/lib/ai-block-detector";
 import { createFontZoomHandler, applyFont } from "@/lib/font-manager";
 import { loadBuiltinTheme, applyTheme, themeToXtermTheme } from "@/lib/theme-engine";
 import "@xterm/xterm/css/xterm.css";
@@ -287,6 +288,25 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         );
         store.sessions = updatedSessions;
 
+        // Detect CLI type from PTY process and set it in block tracker
+        // Poll periodically to detect CLI tools launched after shell starts
+        const detectCLI = async () => {
+          try {
+            const cliType = await detectPtyCli(id);
+            if (cliType) {
+              blockTracker.setActiveCLI(cliType as CLIType);
+            }
+          } catch (error) {
+            console.error("Failed to detect CLI type:", error);
+          }
+        };
+
+        // Initial detection
+        detectCLI();
+
+        // Poll every 2 seconds to detect newly launched CLI tools
+        const cliDetectionInterval = setInterval(detectCLI, 2000);
+
         // Listen for PTY output with batching
         const unlisten = await listen<number[]>(
           `pty-output-${id}`,
@@ -299,11 +319,13 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         // Listen for PTY exit
         const unlistenExit = await listen(`pty-exit-${id}`, () => {
           terminal.write("\r\n\r\n[Process completed]\r\n");
+          clearInterval(cliDetectionInterval);
         });
 
         return () => {
           unlisten();
           unlistenExit();
+          clearInterval(cliDetectionInterval);
         };
       } catch (error) {
         console.error("Failed to spawn PTY:", error);
@@ -494,6 +516,12 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         {/* AI Block Overlay */}
         {session.isActive && config.ai.blockMode && (
           <AIBlockOverlay sessionId={sessionId} terminal={terminalRef.current} />
+        )}
+        {/* Agent Status Indicator */}
+        {session.isActive && config.ai.detectCLI && (
+          <div className="absolute bottom-4 right-4 pointer-events-auto">
+            <AgentStatus sessionId={sessionId} variant="terminal" />
+          </div>
         )}
         {showSearch && session.isActive && (
           <TerminalSearch
