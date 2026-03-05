@@ -9,7 +9,7 @@ interface SortableTabProps {
   isActive: boolean;
   onActivate: () => void;
   onClose: () => void;
-  totalTabs: number;
+  totalTabs?: number; // Optional, not currently used but may be needed for future features
 }
 
 export function SortableTab({
@@ -18,7 +18,6 @@ export function SortableTab({
   isActive,
   onActivate,
   onClose,
-  totalTabs,
 }: SortableTabProps) {
   const {
     attributes,

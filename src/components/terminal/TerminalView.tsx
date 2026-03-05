@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { SearchAddon } from "@xterm/addon-search";
@@ -11,6 +11,8 @@ import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { TerminalSearch } from "./TerminalSearch";
 import { TerminalContextMenu } from "./TerminalContextMenu";
+import { AIBlockOverlay } from "./AIBlockOverlay";
+import { useBlockTracker } from "@/lib/ai-block-detector";
 import { createFontZoomHandler, applyFont } from "@/lib/font-manager";
 import { loadBuiltinTheme, applyTheme, themeToXtermTheme } from "@/lib/theme-engine";
 import "@xterm/xterm/css/xterm.css";
@@ -29,6 +31,13 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   const [fontSize, setFontSize] = useState(14);
   const { sessions } = useTerminalStore();
   const { config } = useConfigStore();
+  const blockTracker = useBlockTracker(sessionId);
+
+  // Output batching for streaming performance
+  const outputBufferRef = useRef<Uint8Array[]>([]);
+  const flushScheduledRef = useRef(false);
+  const lastFlushTimeRef = useRef(0);
+  const writeQueueSizeRef = useRef(0);
 
   const session = sessions.find((s) => s.id === sessionId);
 
@@ -109,6 +118,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       cursorWidth: 1,
       cursorStyle: config.appearance.cursorStyle,
       theme: initialTheme,
+      scrollback: config.terminal.scrollbackLines || 10000,
       allowProposedApi: true,
     });
 
@@ -162,6 +172,82 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       }
     });
 
+    // Batched output flushing for streaming performance
+    const flushOutputBuffer = () => {
+      if (outputBufferRef.current.length === 0) {
+        flushScheduledRef.current = false;
+        return;
+      }
+
+      // Concatenate all buffered data
+      const totalLength = outputBufferRef.current.reduce((sum, arr) => sum + arr.length, 0);
+      const combined = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of outputBufferRef.current) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      // Write to terminal
+      terminal.write(combined);
+
+      // Process for AI block detection
+      const decoder = new TextDecoder();
+      const text = decoder.decode(combined);
+      const lines = text.split(/\r?\n/);
+      const currentLine = terminal.buffer.active.cursorY + terminal.buffer.active.baseY;
+
+      lines.forEach((line, index) => {
+        if (line.trim()) {
+          blockTracker.processLine(line, currentLine + index);
+        }
+      });
+
+      // Check for large blocks and auto-collapse
+      if (config.ai.blockMode) {
+        const blocks = blockTracker.getBlocks();
+        const maxLines = config.ai.maxBlockLines || 50000;
+        blocks.forEach((block) => {
+          const lineCount = block.endLine - block.startLine + 1;
+          if (lineCount > maxLines && !block.isCollapsed) {
+            blockTracker.toggleCollapse(block.id);
+          }
+        });
+      }
+
+      // Clear buffer and update metrics
+      outputBufferRef.current = [];
+      writeQueueSizeRef.current = 0;
+      lastFlushTimeRef.current = performance.now();
+      flushScheduledRef.current = false;
+    };
+
+    const scheduleFlush = () => {
+      if (flushScheduledRef.current) return;
+
+      flushScheduledRef.current = true;
+      const throttleMs = config.ai.streamingThrottle || 16;
+      const timeSinceLastFlush = performance.now() - lastFlushTimeRef.current;
+
+      // Implement backpressure: delay if write queue is large
+      const hasBackpressure = writeQueueSizeRef.current > 10000;
+      const delay = hasBackpressure ? throttleMs * 2 : Math.max(0, throttleMs - timeSinceLastFlush);
+
+      if (delay > 0) {
+        setTimeout(() => {
+          requestAnimationFrame(flushOutputBuffer);
+        }, delay);
+      } else {
+        requestAnimationFrame(flushOutputBuffer);
+      }
+    };
+
+    const queueOutput = (data: Uint8Array) => {
+      outputBufferRef.current.push(data);
+      writeQueueSizeRef.current += data.length;
+      scheduleFlush();
+    };
+
     // Spawn PTY if not already spawned
     const initPty = async () => {
       if (session.ptyId !== null) {
@@ -170,7 +256,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
           `pty-output-${session.ptyId}`,
           (event) => {
             const data = new Uint8Array(event.payload);
-            terminal.write(data);
+            queueOutput(data);
           }
         );
 
@@ -201,12 +287,12 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         );
         store.sessions = updatedSessions;
 
-        // Listen for PTY output
+        // Listen for PTY output with batching
         const unlisten = await listen<number[]>(
           `pty-output-${id}`,
           (event) => {
             const data = new Uint8Array(event.payload);
-            terminal.write(data);
+            queueOutput(data);
           }
         );
 
@@ -405,6 +491,10 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
             backgroundColor: "var(--terminal-background)",
           }}
         />
+        {/* AI Block Overlay */}
+        {session.isActive && config.ai.blockMode && (
+          <AIBlockOverlay sessionId={sessionId} terminal={terminalRef.current} />
+        )}
         {showSearch && session.isActive && (
           <TerminalSearch
             searchAddon={searchAddonRef.current}
