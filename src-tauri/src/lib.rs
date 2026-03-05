@@ -1,9 +1,10 @@
 mod pty;
 mod commands;
 mod config;
+mod menu;
 
 use pty::PtyManager;
-use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, ConfigState};
+use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, ConfigState};
 use config::{load_config, get_config_path};
 use tauri::Manager;
 
@@ -52,9 +53,17 @@ pub fn run() {
             reset_config,
             get_config_file_path,
             read_theme_file,
-            list_fonts
+            list_fonts,
+            set_title_bar_theme
         ])
         .setup(|app| {
+            // Create and set menu
+            let menu = menu::create_menu(app.handle())?;
+            app.set_menu(menu)?;
+
+            // Handle menu events
+            app.on_menu_event(menu::handle_menu_event);
+
             #[cfg(target_os = "macos")]
             {
                 // Disable Tauri's drag-drop handler on macOS to allow HTML5 drag and drop

@@ -8,9 +8,11 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { listen } from "@tauri-apps/api/event";
 import { ptySpawn, ptyWrite, ptyResize } from "@/lib/tauri-pty";
 import { useTerminalStore } from "@/stores/terminal-store";
+import { useConfigStore } from "@/stores/config-store";
 import { TerminalSearch } from "./TerminalSearch";
 import { TerminalContextMenu } from "./TerminalContextMenu";
-import { createFontZoomHandler, getDefaultFontConfig, applyFont } from "@/lib/font-manager";
+import { createFontZoomHandler, applyFont } from "@/lib/font-manager";
+import { loadBuiltinTheme, applyTheme, themeToXtermTheme } from "@/lib/theme-engine";
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalViewProps {
@@ -26,45 +28,87 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const { sessions } = useTerminalStore();
+  const { config } = useConfigStore();
 
   const session = sessions.find((s) => s.id === sessionId);
+
+  // Apply config changes to terminal in real-time
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+
+    // Apply font settings
+    applyFont({
+      family: config.appearance.fontFamily,
+      size: config.appearance.fontSize,
+      lineHeight: config.appearance.lineHeight,
+      ligatures: config.appearance.ligatures,
+    }, terminal);
+
+    // Apply cursor style
+    terminal.options.cursorStyle = config.appearance.cursorStyle;
+
+    // Apply theme
+    loadBuiltinTheme(config.appearance.theme)
+      .then((theme) => {
+        applyTheme(theme);
+        terminal.options.theme = themeToXtermTheme(theme);
+      })
+      .catch(console.error);
+
+    // Refit terminal after changes
+    if (fitAddonRef.current) {
+      fitAddonRef.current.fit();
+      if (session?.ptyId !== null && session?.ptyId !== undefined) {
+        ptyResize(session.ptyId, terminal.cols, terminal.rows).catch(console.error);
+      }
+    }
+  }, [
+    config.appearance.fontFamily,
+    config.appearance.fontSize,
+    config.appearance.lineHeight,
+    config.appearance.ligatures,
+    config.appearance.cursorStyle,
+    config.appearance.theme,
+    session?.ptyId,
+  ]);
+
+  // Refit terminal when tab becomes active
+  useEffect(() => {
+    if (!session?.isActive || !terminalRef.current || !fitAddonRef.current) return;
+
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      if (fitAddonRef.current && terminalRef.current) {
+        fitAddonRef.current.fit();
+        if (session.ptyId !== null && session.ptyId !== undefined) {
+          const terminal = terminalRef.current;
+          ptyResize(session.ptyId, terminal.cols, terminal.rows).catch(console.error);
+        }
+      }
+    });
+  }, [session?.isActive, session?.ptyId]);
 
   useEffect(() => {
     if (!containerRef.current || !session) return;
 
-    // Get default font config
-    const fontConfig = getDefaultFontConfig();
+    // Load theme synchronously before terminal initialization
+    let initialTheme: ITheme = {
+      background: "transparent",
+      foreground: "#d4d4d4",
+      cursor: "#d4d4d4",
+    };
 
-    // Initialize terminal
+    // Initialize terminal with config
     const terminal = new Terminal({
       cursorBlink: true,
-      fontSize: fontConfig.size,
+      fontSize: config.appearance.fontSize,
       fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-      lineHeight: fontConfig.lineHeight,
+      lineHeight: config.appearance.lineHeight,
       letterSpacing: 0,
       cursorWidth: 1,
-      cursorStyle: "block",
-      theme: {
-        background: "transparent",
-        foreground: "#d4d4d4",
-        cursor: "#d4d4d4",
-        black: "#000000",
-        red: "#cd3131",
-        green: "#0dbc79",
-        yellow: "#e5e510",
-        blue: "#2472c8",
-        magenta: "#bc3fbc",
-        cyan: "#11a8cd",
-        white: "#e5e5e5",
-        brightBlack: "#666666",
-        brightRed: "#f14c4c",
-        brightGreen: "#23d18b",
-        brightYellow: "#f5f543",
-        brightBlue: "#3b8eea",
-        brightMagenta: "#d670d6",
-        brightCyan: "#29b8db",
-        brightWhite: "#ffffff",
-      },
+      cursorStyle: config.appearance.cursorStyle,
+      theme: initialTheme,
       allowProposedApi: true,
     });
 
@@ -89,6 +133,13 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
 
     // Open terminal in container
     terminal.open(containerRef.current);
+
+    // Apply theme immediately after opening
+    loadBuiltinTheme(config.appearance.theme)
+      .then((theme) => {
+        terminal.options.theme = themeToXtermTheme(theme);
+      })
+      .catch(console.error);
 
     // Load WebGL addon (must be after open)
     try {
@@ -288,13 +339,6 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         terminal.clear();
         return;
       }
-
-      // Cmd/Ctrl + ,: Open settings (TODO: implement settings panel)
-      if (modifier && e.key === ",") {
-        e.preventDefault();
-        console.log("Settings panel not yet implemented");
-        return;
-      }
     };
 
     // Handle font zoom (Cmd/Ctrl + Plus/Minus/0)
@@ -302,9 +346,12 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       () => fontSize,
       (newSize) => {
         setFontSize(newSize);
-        const fontConfig = getDefaultFontConfig();
-        fontConfig.size = newSize;
-        applyFont(fontConfig, terminal);
+        applyFont({
+          family: config.appearance.fontFamily,
+          size: newSize,
+          lineHeight: config.appearance.lineHeight,
+          ligatures: config.appearance.ligatures,
+        }, terminal);
         // Refit terminal after font size change
         if (fitAddonRef.current) {
           fitAddon.fit();
@@ -344,7 +391,9 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         style={{
           width: "100%",
           height: "100%",
-          display: session.isActive ? "block" : "none",
+          visibility: session.isActive ? "visible" : "hidden",
+          position: session.isActive ? "relative" : "absolute",
+          backgroundColor: "var(--terminal-background)",
         }}
       >
         <div
@@ -353,6 +402,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
           style={{
             width: "100%",
             height: "100%",
+            backgroundColor: "var(--terminal-background)",
           }}
         />
         {showSearch && session.isActive && (

@@ -87,7 +87,21 @@ export function TerminalContextMenu({
       <ContextMenuTrigger asChild onContextMenu={handleContextMenu}>
         {children}
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent
+        className="w-48"
+        style={{
+          backgroundColor: "var(--ui-background)",
+          borderColor: "var(--ui-border)",
+          color: "var(--ui-foreground)",
+        }}
+      >
+        <style>{`
+          [data-slot="context-menu-item"]:hover,
+          [data-slot="context-menu-item"]:focus {
+            background-color: var(--ui-button-background) !important;
+            color: var(--ui-foreground) !important;
+          }
+        `}</style>
         <ContextMenuItem
           onSelect={handleCopy}
           disabled={!hasSelection}
@@ -95,30 +109,39 @@ export function TerminalContextMenu({
         >
           <Copy className="size-4" />
           Copy
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-xs" style={{ opacity: 0.6 }}>
             ⌘C
           </span>
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handlePaste} className="gap-2">
+        <ContextMenuItem
+          onSelect={handlePaste}
+          className="gap-2"
+        >
           <Clipboard className="size-4" />
           Paste
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-xs" style={{ opacity: 0.6 }}>
             ⌘V
           </span>
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onSelect={handleSelectAll} className="gap-2">
+        <ContextMenuSeparator style={{ backgroundColor: "var(--ui-border)" }} />
+        <ContextMenuItem
+          onSelect={handleSelectAll}
+          className="gap-2"
+        >
           <MousePointer className="size-4" />
           Select All
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-xs" style={{ opacity: 0.6 }}>
             ⌘A
           </span>
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onSelect={handleClear} className="gap-2">
+        <ContextMenuSeparator style={{ backgroundColor: "var(--ui-border)" }} />
+        <ContextMenuItem
+          onSelect={handleClear}
+          className="gap-2"
+        >
           <Trash2 className="size-4" />
           Clear Terminal
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-xs" style={{ opacity: 0.6 }}>
             ⌘K
           </span>
         </ContextMenuItem>

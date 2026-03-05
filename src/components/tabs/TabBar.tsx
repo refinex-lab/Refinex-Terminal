@@ -77,7 +77,7 @@ export function TabBar() {
   const handleNewTab = () => {
     const newSession = {
       id: `terminal-${Date.now()}`,
-      title: `Terminal ${sessions.length + 1}`,
+      title: `⌘ ${sessions.length + 1}`, // Will be renumbered by store
       cwd: "~",
       ptyId: null,
     };
@@ -112,7 +112,7 @@ export function TabBar() {
   }
 
   return (
-    <div className="tab-bar-container flex items-center h-10 bg-background border-b border-border/40 px-2 gap-0.5">
+    <div className="tab-bar-container flex items-center h-10 border-b px-3 gap-1.5" style={{ backgroundColor: "var(--ui-tab-background)", borderColor: "var(--ui-border)" }}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -120,21 +120,30 @@ export function TabBar() {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sessionIds} strategy={horizontalListSortingStrategy}>
-          {sessions.map((session) => (
-            <SortableTab
-              key={session.id}
-              id={session.id}
-              title={session.title}
-              isActive={session.isActive}
-              onActivate={() => setActiveSession(session.id)}
-              onClose={() => handleCloseTab(session.id)}
-            />
-          ))}
+          <div className="flex items-center gap-1.5 flex-1">
+            {sessions.map((session) => (
+              <SortableTab
+                key={session.id}
+                id={session.id}
+                title={session.title}
+                isActive={session.isActive}
+                onActivate={() => setActiveSession(session.id)}
+                onClose={() => handleCloseTab(session.id)}
+                totalTabs={sessions.length}
+              />
+            ))}
+          </div>
         </SortableContext>
 
         <DragOverlay>
           {activeId ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-t-md bg-secondary/80 text-foreground border-t border-x border-border/40 shadow-lg cursor-grabbing min-w-[120px] max-w-[200px]">
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full shadow-lg cursor-grabbing min-w-[100px] max-w-[180px]"
+              style={{
+                backgroundColor: "var(--ui-tab-background-active)",
+                color: "var(--ui-tab-foreground-active)",
+              }}
+            >
               <span className="text-xs font-medium truncate flex-1">
                 {sessions.find((s) => s.id === activeId)?.title}
               </span>
@@ -145,11 +154,24 @@ export function TabBar() {
 
       <button
         onClick={handleNewTab}
-        className="flex items-center justify-center size-7 rounded hover:bg-secondary/60 transition-colors ml-1"
+        className="flex items-center justify-center size-7 rounded-full transition-all duration-200 flex-shrink-0"
+        style={{
+          backgroundColor: "var(--ui-button-background)",
+          color: "var(--ui-foreground)",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.05)";
+          e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
+        }}
         aria-label="New tab"
         title="New tab (Cmd/Ctrl+T)"
       >
-        <Plus className="size-3.5 text-muted-foreground" />
+        <Plus className="size-4" />
       </button>
     </div>
   );

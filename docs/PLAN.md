@@ -167,7 +167,7 @@
   >
   > Verify font changes apply immediately to the terminal without reconnecting the PTY.
 
-- [ ] **2.4 — Create settings UI panel**
+- [x] **2.4 — Create settings UI panel**
 
   > **Prompt**: Create `src/components/settings/SettingsPanel.tsx` — a full-screen modal (triggered by `Cmd/Ctrl + ,`) with a left-nav sidebar containing sections: Appearance, Terminal, AI, Git, Keybindings. Each section renders form controls:
   > - **Appearance**: theme dropdown, font family dropdown, font size slider, line height slider, ligatures toggle, opacity slider, vibrancy toggle, cursor style radio group.

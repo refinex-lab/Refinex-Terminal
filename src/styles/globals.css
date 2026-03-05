@@ -31,13 +31,49 @@
       "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-background text-foreground;
+    background-color: var(--ui-background);
+    color: var(--ui-foreground);
+  }
+
+  /* Root element background */
+  html {
+    background-color: var(--ui-background);
+  }
+
+  #root {
+    background-color: var(--ui-background);
+  }
+
+  /* Settings panel input/select borders for light theme */
+  input, select, textarea {
+    border: 1px solid var(--ui-input-border) !important;
+  }
+
+  /* Ensure shadcn components use theme borders */
+  [data-slot="select-trigger"],
+  [data-slot="input"] {
+    border-color: var(--ui-input-border) !important;
+  }
+
+  /* Fix xterm.js viewport background to match terminal theme */
+  .xterm .xterm-viewport {
+    background-color: transparent !important;
+  }
+
+  /* Fix xterm.js screen background */
+  .xterm .xterm-screen {
+    background-color: transparent !important;
+  }
+
+  /* Fix xterm.js scrollable element background */
+  .xterm .xterm-scrollable-element {
+    background-color: transparent !important;
   }
 
   /* Custom scrollbar styles for terminal */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -45,21 +81,76 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(128, 128, 128, 0.5);
-    border-radius: 5px;
+    background: var(--ui-border);
+    border-radius: 3px;
+    transition: background 0.2s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(128, 128, 128, 0.7);
+    background: var(--ui-border-active);
   }
 
-  /* Terminal-specific scrollbar (will be applied to .terminal class) */
-  .terminal::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+  /* Terminal-specific scrollbar */
+  .xterm .xterm-viewport::-webkit-scrollbar {
+    width: 6px;
   }
 
-  .terminal::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+  .xterm .xterm-viewport::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+    background: var(--ui-border);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+
+  .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: var(--ui-border-active);
+  }
+
+  /* xterm.js custom scrollbar overlay */
+  .xterm .scrollbar {
+    width: 6px !important;
+    opacity: 0.6;
+  }
+
+  .xterm .scrollbar.vertical {
+    width: 6px !important;
+    right: 2px !important;
+  }
+
+  .xterm .scrollbar .slider {
+    width: 6px !important;
+    background: var(--ui-border) !important;
+    border-radius: 3px !important;
+  }
+
+  .xterm .scrollbar:hover .slider {
+    background: var(--ui-border-active) !important;
+  }
+
+  .xterm .scrollbar.fade {
+    transition: opacity 0.2s ease;
+  }
+
+  /* Settings panel scrollbar */
+  .settings-panel::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .settings-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .settings-panel::-webkit-scrollbar-thumb {
+    background: var(--ui-border);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+
+  .settings-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--ui-border-active);
   }
   * {
     @apply border-border outline-ring/50;

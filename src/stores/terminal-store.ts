@@ -33,24 +33,38 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
   activeSessionId: null,
 
   addSession: (session) =>
-    set((state) => ({
-      sessions: [
+    set((state) => {
+      const newSessions = [
         ...state.sessions.map((s) => ({ ...s, isActive: false })),
         { ...session, isActive: true },
-      ],
-      activeSessionId: session.id,
-    })),
+      ];
+      // Renumber all sessions to be sequential
+      const renumberedSessions = newSessions.map((s, index) => ({
+        ...s,
+        title: `⌘ ${index + 1}`,
+      }));
+      return {
+        sessions: renumberedSessions,
+        activeSessionId: session.id,
+      };
+    }),
 
   removeSession: (id) =>
     set((state) => {
       const newSessions = state.sessions.filter((s) => s.id !== id);
       const wasActive = state.activeSessionId === id;
 
-      if (wasActive && newSessions.length > 0) {
-        const lastSession = newSessions[newSessions.length - 1];
+      // Renumber remaining sessions to be sequential
+      const renumberedSessions = newSessions.map((s, index) => ({
+        ...s,
+        title: `⌘ ${index + 1}`,
+      }));
+
+      if (wasActive && renumberedSessions.length > 0) {
+        const lastSession = renumberedSessions[renumberedSessions.length - 1];
         if (lastSession) {
           return {
-            sessions: newSessions.map((s) => ({
+            sessions: renumberedSessions.map((s) => ({
               ...s,
               isActive: s.id === lastSession.id,
             })),
@@ -60,7 +74,7 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
       }
 
       return {
-        sessions: newSessions,
+        sessions: renumberedSessions,
         activeSessionId: wasActive ? null : state.activeSessionId,
       };
     }),
@@ -82,7 +96,15 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
     })),
 
   reorderSessions: (oldIndex, newIndex) =>
-    set((state) => ({
-      sessions: arrayMove(state.sessions, oldIndex, newIndex),
-    })),
+    set((state) => {
+      const reordered = arrayMove(state.sessions, oldIndex, newIndex);
+      // Renumber after reordering to maintain sequential numbers
+      const renumberedSessions = reordered.map((s, index) => ({
+        ...s,
+        title: `⌘ ${index + 1}`,
+      }));
+      return {
+        sessions: renumberedSessions,
+      };
+    }),
 }));

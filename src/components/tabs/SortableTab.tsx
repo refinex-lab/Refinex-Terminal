@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
+import { useState } from "react";
 
 interface SortableTabProps {
   id: string;
@@ -8,6 +9,7 @@ interface SortableTabProps {
   isActive: boolean;
   onActivate: () => void;
   onClose: () => void;
+  totalTabs: number;
 }
 
 export function SortableTab({
@@ -16,6 +18,7 @@ export function SortableTab({
   isActive,
   onActivate,
   onClose,
+  totalTabs,
 }: SortableTabProps) {
   const {
     attributes,
@@ -26,11 +29,17 @@ export function SortableTab({
     isDragging,
   } = useSortable({ id });
 
+  const [isHovered, setIsHovered] = useState(false);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : undefined,
     zIndex: isDragging ? 10 : "auto",
+    backgroundColor: isActive ? "var(--ui-tab-background-active)" : isHovered ? "var(--ui-button-background)" : "transparent",
+    color: isActive ? "var(--ui-tab-foreground-active)" : "var(--ui-tab-foreground)",
+    boxShadow: isActive ? "0 1px 3px rgba(0, 0, 0, 0.1)" : "none",
+    flex: 1,
   };
 
   return (
@@ -40,18 +49,15 @@ export function SortableTab({
       {...attributes}
       {...listeners}
       className={`
-        group relative flex items-center gap-1.5 px-3 py-1.5 rounded-t-md cursor-grab
-        transition-all duration-150 min-w-[120px] max-w-[200px]
-        ${
-          isActive
-            ? "bg-secondary/80 text-foreground border-t border-x border-border/40"
-            : "bg-transparent text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
-        }
+        group relative flex items-center justify-center gap-2 px-3 py-1.5 rounded-full cursor-grab
+        transition-all duration-200
         ${isDragging ? "cursor-grabbing" : ""}
       `}
       onClick={onActivate}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <span className="text-xs font-medium truncate flex-1 pointer-events-none">
+      <span className="text-xs font-medium truncate pointer-events-none">
         {title}
       </span>
       <button
@@ -61,10 +67,18 @@ export function SortableTab({
         }}
         onPointerDown={(e) => e.stopPropagation()}
         className={`
-          flex items-center justify-center size-4 rounded hover:bg-muted-foreground/20
-          transition-all duration-150 cursor-pointer
-          ${isActive ? "opacity-60 hover:opacity-100" : "opacity-0 group-hover:opacity-60 group-hover:hover:opacity-100"}
+          absolute right-2 flex items-center justify-center size-4 rounded-full transition-all duration-200 cursor-pointer
+          ${isActive || isHovered ? "opacity-70 hover:opacity-100" : "opacity-0"}
         `}
+        style={{
+          backgroundColor: "transparent",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "rgba(128, 128, 128, 0.2)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "transparent";
+        }}
         aria-label="Close tab"
       >
         <X className="size-3 pointer-events-none" />

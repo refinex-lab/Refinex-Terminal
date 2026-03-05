@@ -119,7 +119,14 @@ export function TerminalSearch({
   };
 
   return (
-    <div className="absolute top-2 right-2 z-50 flex items-center gap-2 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg px-3 py-2">
+    <div
+      className="absolute top-2 right-2 z-50 flex items-center gap-2 backdrop-blur-sm border rounded-lg shadow-lg px-3 py-2"
+      style={{
+        backgroundColor: "var(--ui-background)",
+        borderColor: "var(--ui-border)",
+        color: "var(--ui-foreground)",
+      }}
+    >
       {/* Search input */}
       <input
         ref={inputRef}
@@ -127,12 +134,16 @@ export function TerminalSearch({
         value={searchQuery}
         onChange={(e) => handleSearchChange(e.target.value)}
         placeholder="Find in terminal..."
-        className="w-64 px-2 py-1 text-sm bg-transparent border border-border rounded focus:outline-none focus:ring-1 focus:ring-ring"
+        className="w-64 px-2 py-1 text-sm bg-transparent border rounded focus:outline-none focus:ring-1"
+        style={{
+          borderColor: "var(--ui-border)",
+          color: "var(--ui-foreground)",
+        }}
       />
 
       {/* Match count */}
       {searchQuery && (
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
+        <span className="text-xs whitespace-nowrap" style={{ color: "var(--ui-foreground)", opacity: 0.7 }}>
           {totalMatches === -1 ? "Searching..." : totalMatches === 0 ? "No matches" : `${currentMatch} of many`}
         </span>
       )}
@@ -142,7 +153,19 @@ export function TerminalSearch({
         <button
           onClick={handlePrevious}
           disabled={!searchQuery}
-          className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: "transparent",
+            color: "var(--ui-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            if (!e.currentTarget.disabled) {
+              e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
           title="Previous match (Shift+Enter)"
         >
           <ChevronUp className="size-4" />
@@ -150,7 +173,19 @@ export function TerminalSearch({
         <button
           onClick={handleNext}
           disabled={!searchQuery}
-          className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: "transparent",
+            color: "var(--ui-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            if (!e.currentTarget.disabled) {
+              e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
           title="Next match (Enter)"
         >
           <ChevronDown className="size-4" />
@@ -158,25 +193,45 @@ export function TerminalSearch({
       </div>
 
       {/* Toggles */}
-      <div className="flex items-center gap-1 border-l border-border pl-2">
+      <div className="flex items-center gap-1 border-l pl-2" style={{ borderColor: "var(--ui-border)" }}>
         <button
           onClick={handleMatchCaseToggle}
-          className={`px-2 py-1 text-xs rounded ${
-            matchCase
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-secondary"
-          }`}
+          className="px-2 py-1 text-xs rounded"
+          style={{
+            backgroundColor: matchCase ? "var(--ui-border-active)" : "transparent",
+            color: "var(--ui-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            if (!matchCase) {
+              e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!matchCase) {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }
+          }}
           title="Match case"
         >
           Aa
         </button>
         <button
           onClick={handleRegexToggle}
-          className={`px-2 py-1 text-xs rounded font-mono ${
-            useRegex
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-secondary"
-          }`}
+          className="px-2 py-1 text-xs rounded font-mono"
+          style={{
+            backgroundColor: useRegex ? "var(--ui-border-active)" : "transparent",
+            color: "var(--ui-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            if (!useRegex) {
+              e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!useRegex) {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }
+          }}
           title="Use regular expression"
         >
           .*
@@ -186,7 +241,17 @@ export function TerminalSearch({
       {/* Close button */}
       <button
         onClick={onClose}
-        className="p-1 rounded hover:bg-secondary"
+        className="p-1 rounded"
+        style={{
+          backgroundColor: "transparent",
+          color: "var(--ui-foreground)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "transparent";
+        }}
         title="Close (Escape)"
       >
         <X className="size-4" />
