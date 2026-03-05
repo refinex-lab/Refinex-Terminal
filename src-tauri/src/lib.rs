@@ -64,11 +64,14 @@ pub fn run() {
             add_to_shell_profile,
             pty::detect_pty_cli,
             fs::reader::read_directory,
+            fs::reader::read_file,
             fs::writer::fs_rename,
             fs::writer::fs_delete,
             fs::writer::fs_create_file,
             fs::writer::fs_create_folder,
-            fs::reveal::reveal_in_finder
+            fs::writer::write_file,
+            fs::reveal::reveal_in_finder,
+            fs::metadata::get_file_metadata
         ])
         .setup(|app| {
             // Create and set menu

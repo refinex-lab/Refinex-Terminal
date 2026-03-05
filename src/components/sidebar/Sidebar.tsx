@@ -3,6 +3,7 @@ import { FolderOpen, FolderPlus, MoreVertical, Terminal, Copy, X, FilePlus, Fold
 import { useSidebarStore, type Project } from "@/stores/sidebar-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useTerminalStore } from "@/stores/terminal-store";
+import { useFileEditorStore } from "@/stores/file-editor-store";
 import { Logo } from "@/components/ui/Logo";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileTree } from "./FileTree";
@@ -15,11 +16,16 @@ export function Sidebar({ className = "" }: SidebarProps) {
   const { isVisible, width, projects, activeProjectId, setWidth, addProject, removeProject, setActiveProject } = useSidebarStore();
   const { config, updateConfig } = useConfigStore();
   const { addSession } = useTerminalStore();
+  const { addTab } = useFileEditorStore();
   const [isResizing, setIsResizing] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null);
   const [triggerCreate, setTriggerCreate] = useState<{ type: "file" | "folder" } | null>(null);
   const [triggerCollapseAll, setTriggerCollapseAll] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  const handleFileClick = (filePath: string, fileName: string) => {
+    addTab(filePath, fileName);
+  };
 
   // Handle resize
   const handleMouseDown = () => {
@@ -262,6 +268,7 @@ export function Sidebar({ className = "" }: SidebarProps) {
                   triggerCreate={triggerCreate}
                   onCreateComplete={() => setTriggerCreate(null)}
                   triggerCollapseAll={triggerCollapseAll}
+                  onFileClick={handleFileClick}
                 />
               )}
             </>

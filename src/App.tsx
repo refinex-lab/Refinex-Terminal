@@ -3,9 +3,11 @@ import { TabBar } from "@/components/tabs/TabBar";
 import { TerminalView } from "@/components/terminal/TerminalView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { Sidebar } from "@/components/sidebar/Sidebar";
+import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useFileEditorStore } from "@/stores/file-editor-store";
 import { loadBuiltinTheme, applyTheme } from "@/lib/theme-engine";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -14,8 +16,11 @@ import "./App.css";
 function App() {
   const { sessions, addSession } = useTerminalStore();
   const { isVisible: sidebarVisible } = useSidebarStore();
+  const { tabs: fileTabs } = useFileEditorStore();
   const initializedRef = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editorWidth, setEditorWidth] = useState(600);
+  const [isResizingEditor, setIsResizingEditor] = useState(false);
   const { config } = useConfigStore();
 
   // Initialize with one terminal session
@@ -101,6 +106,29 @@ function App() {
     };
   }, []);
 
+  // Handle editor resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingEditor) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setEditorWidth(Math.max(300, Math.min(1200, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingEditor(false);
+    };
+
+    if (isResizingEditor) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingEditor]);
+
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--ui-background)" }}>
       <TabBar />
@@ -114,6 +142,38 @@ function App() {
             <TerminalView key={session.id} sessionId={session.id} />
           ))}
         </div>
+
+        {/* File Editor Panel */}
+        {fileTabs.length > 0 && (
+          <div
+            style={{
+              width: `${editorWidth}px`,
+              minWidth: "300px",
+              maxWidth: "1200px",
+              borderLeft: "1px solid var(--ui-border)",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+            }}
+          >
+            {/* Resize Handle */}
+            <div
+              onMouseDown={() => setIsResizingEditor(true)}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: "4px",
+                cursor: "col-resize",
+                backgroundColor: isResizingEditor ? "rgba(59, 130, 246, 0.5)" : "transparent",
+                zIndex: 10,
+              }}
+              className="hover:bg-blue-500/50 transition-colors"
+            />
+            <FileEditorPanel />
+          </div>
+        )}
       </div>
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>

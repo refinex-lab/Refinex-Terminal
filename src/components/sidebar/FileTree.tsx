@@ -44,12 +44,13 @@ interface FileTreeProps {
   triggerCreate?: { type: "file" | "folder" } | null;
   onCreateComplete?: () => void;
   triggerCollapseAll?: boolean;
+  onFileClick?: (filePath: string, fileName: string) => void;
 }
 
 /**
  * File tree component with lazy loading
  */
-export function FileTree({ projectPath, className = "", triggerCreate, onCreateComplete, triggerCollapseAll }: FileTreeProps) {
+export function FileTree({ projectPath, className = "", triggerCreate, onCreateComplete, triggerCollapseAll, onFileClick }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -381,6 +382,15 @@ export function FileTree({ projectPath, className = "", triggerCreate, onCreateC
     const hasChildren = node.is_directory;
     const isExpanded = node.isExpanded;
 
+    const handleNodeClick = () => {
+      if (node.is_directory) {
+        toggleDirectory(node);
+      } else {
+        // Open file preview
+        onFileClick?.(node.path, node.name);
+      }
+    };
+
     return (
       <div key={node.path}>
         <div
@@ -388,7 +398,7 @@ export function FileTree({ projectPath, className = "", triggerCreate, onCreateC
           style={{
             paddingLeft: `${node.depth * 12 + 8}px`,
           }}
-          onClick={() => toggleDirectory(node)}
+          onClick={handleNodeClick}
           onContextMenu={(e) => handleContextMenu(e, node)}
         >
           {/* Expand/Collapse Icon */}

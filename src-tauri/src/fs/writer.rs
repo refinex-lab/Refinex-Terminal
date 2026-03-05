@@ -70,3 +70,14 @@ pub async fn fs_create_folder(path: String) -> Result<(), String> {
 
     Ok(())
 }
+
+/// Write content to a file
+#[tauri::command]
+pub async fn write_file(path: String, content: String) -> Result<(), String> {
+    let file_path = Path::new(&path);
+
+    fs::write(file_path, content)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    Ok(())
+}

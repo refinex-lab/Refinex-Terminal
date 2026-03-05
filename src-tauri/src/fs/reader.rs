@@ -110,6 +110,31 @@ pub async fn read_directory(path: String) -> Result<Vec<FileEntry>, String> {
     Ok(file_entries)
 }
 
+/// Read file content as string
+#[tauri::command]
+pub async fn read_file(path: String) -> Result<String, String> {
+    let file_path = Path::new(&path);
+
+    if !file_path.exists() {
+        return Err(format!("File does not exist: {}", path));
+    }
+
+    if !file_path.is_file() {
+        return Err(format!("Path is not a file: {}", path));
+    }
+
+    // Check file size (limit to 1MB for text preview)
+    let metadata = fs::metadata(file_path)
+        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+
+    if metadata.len() > 1_048_576 {
+        return Err("File is too large (>1MB)".to_string());
+    }
+
+    fs::read_to_string(file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
