@@ -272,9 +272,13 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       }
 
       try {
-        const cwd = await import("@tauri-apps/api/path").then((m) =>
-          m.homeDir()
-        );
+        // Use session's cwd if specified, otherwise use home directory
+        let cwd = session.cwd;
+        if (!cwd) {
+          cwd = await import("@tauri-apps/api/path").then((m) =>
+            m.homeDir()
+          );
+        }
         const id = await ptySpawn(
           cwd || "~",
           terminal.cols,

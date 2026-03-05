@@ -3,6 +3,7 @@ mod commands;
 mod config;
 mod menu;
 mod cli;
+mod fs;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, ConfigState};
@@ -61,7 +62,13 @@ pub fn run() {
             test_cli,
             get_shell_profile_path,
             add_to_shell_profile,
-            pty::detect_pty_cli
+            pty::detect_pty_cli,
+            fs::reader::read_directory,
+            fs::writer::fs_rename,
+            fs::writer::fs_delete,
+            fs::writer::fs_create_file,
+            fs::writer::fs_create_folder,
+            fs::reveal::reveal_in_finder
         ])
         .setup(|app| {
             // Create and set menu

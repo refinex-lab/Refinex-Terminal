@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { TabBar } from "@/components/tabs/TabBar";
 import { TerminalView } from "@/components/terminal/TerminalView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import { Sidebar } from "@/components/sidebar/Sidebar";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { loadBuiltinTheme, applyTheme } from "@/lib/theme-engine";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -11,6 +13,7 @@ import "./App.css";
 
 function App() {
   const { sessions, addSession } = useTerminalStore();
+  const { isVisible: sidebarVisible } = useSidebarStore();
   const initializedRef = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { config } = useConfigStore();
@@ -58,7 +61,7 @@ function App() {
     return luminance < 0.5;
   };
 
-  // Global keyboard shortcut for settings
+  // Global keyboard shortcut for settings and sidebar
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -68,6 +71,12 @@ function App() {
       if (modifier && e.key === ",") {
         e.preventDefault();
         setSettingsOpen(true);
+      }
+
+      // Cmd/Ctrl + B: Toggle sidebar
+      if (modifier && e.key === "b") {
+        e.preventDefault();
+        useSidebarStore.getState().toggleVisibility();
       }
 
       // Escape: Close settings
@@ -95,10 +104,16 @@ function App() {
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--ui-background)" }}>
       <TabBar />
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {sessions.map((session) => (
-          <TerminalView key={session.id} sessionId={session.id} />
-        ))}
+      <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
+        {/* Sidebar */}
+        {sidebarVisible && <Sidebar />}
+
+        {/* Terminal Area */}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+          {sessions.map((session) => (
+            <TerminalView key={session.id} sessionId={session.id} />
+          ))}
+        </div>
       </div>
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>

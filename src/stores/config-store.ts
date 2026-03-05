@@ -61,6 +61,13 @@ export interface KeybindingsConfig {
 }
 
 /**
+ * Projects configuration
+ */
+export interface ProjectsConfig {
+  paths: string[];
+}
+
+/**
  * Application configuration type
  */
 export interface AppConfig {
@@ -69,6 +76,7 @@ export interface AppConfig {
   ai: AIConfig;
   git: GitConfig;
   keybindings: KeybindingsConfig;
+  projects: ProjectsConfig;
 }
 
 /**
@@ -124,6 +132,9 @@ const defaultConfig: AppConfig = {
     splitHorizontal: "Cmd+D",
     splitVertical: "Cmd+Shift+D",
   },
+  projects: {
+    paths: [],
+  },
 };
 
 /**
@@ -156,6 +167,10 @@ export const useConfigStore = create<ConfigStore>((set) => ({
         keybindings: {
           ...state.config.keybindings,
           ...(updates.keybindings ?? {}),
+        },
+        projects: {
+          ...state.config.projects,
+          ...(updates.projects ?? {}),
         },
       },
     })),

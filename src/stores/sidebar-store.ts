@@ -1,53 +1,90 @@
 import { create } from "zustand";
 
 /**
- * Project type
+ * Project information
  */
 export interface Project {
-  path: string;
+  id: string;
   name: string;
+  path: string;
 }
 
 /**
  * Sidebar store state
  */
 interface SidebarStore {
-  isOpen: boolean;
+  isVisible: boolean;
+  width: number;
   projects: Project[];
-  activeProject: Project | null;
-  toggleSidebar: () => void;
-  addProject: (project: Project) => void;
-  removeProject: (path: string) => void;
-  setActiveProject: (project: Project | null) => void;
+  activeProjectId: string | null;
+
+  // Actions
+  toggleVisibility: () => void;
+  setWidth: (width: number) => void;
+  addProject: (path: string) => void;
+  removeProject: (id: string) => void;
+  setActiveProject: (id: string | null) => void;
+  loadProjects: (paths: string[]) => void;
 }
 
 /**
- * Sidebar store - manages sidebar state (open/closed, active project, file tree)
+ * Sidebar store - manages sidebar state and projects
  */
-export const useSidebarStore = create<SidebarStore>((set) => ({
-  isOpen: true,
+export const useSidebarStore = create<SidebarStore>((set, get) => ({
+  isVisible: true,
+  width: 260,
   projects: [],
-  activeProject: null,
+  activeProjectId: null,
 
-  toggleSidebar: () =>
-    set((state) => ({
-      isOpen: !state.isOpen,
-    })),
+  toggleVisibility: () =>
+    set((state) => ({ isVisible: !state.isVisible })),
 
-  addProject: (project) =>
-    set((state) => ({
-      projects: [...state.projects, project],
-    })),
+  setWidth: (width: number) =>
+    set({ width: Math.max(200, Math.min(400, width)) }),
 
-  removeProject: (path) =>
-    set((state) => ({
-      projects: state.projects.filter((p) => p.path !== path),
-      activeProject:
-        state.activeProject?.path === path ? null : state.activeProject,
-    })),
+  addProject: (path: string) => {
+    const { projects } = get();
 
-  setActiveProject: (project) =>
+    // Check if project already exists
+    if (projects.some((p) => p.path === path)) {
+      return;
+    }
+
+    // Extract project name from path
+    const name = path.split("/").pop() || path.split("\\").pop() || path;
+
+    const newProject: Project = {
+      id: `project-${Date.now()}`,
+      name,
+      path,
+    };
+
+    set({ projects: [...projects, newProject] });
+  },
+
+  removeProject: (id: string) => {
+    const { projects, activeProjectId } = get();
+    const newProjects = projects.filter((p) => p.id !== id);
+
     set({
-      activeProject: project,
-    }),
+      projects: newProjects,
+      activeProjectId: activeProjectId === id ? null : activeProjectId,
+    });
+  },
+
+  setActiveProject: (id: string | null) =>
+    set({ activeProjectId: id }),
+
+  loadProjects: (paths: string[]) => {
+    const projects = paths.map((path, index) => {
+      const name = path.split("/").pop() || path.split("\\").pop() || path;
+      return {
+        id: `project-${index}`,
+        name,
+        path,
+      };
+    });
+
+    set({ projects });
+  },
 }));
