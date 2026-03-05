@@ -157,7 +157,7 @@
   >
   > Create 5 built-in themes as TOML files in `themes/`: `refinex-dark.toml` (default — deep blue-gray), `refinex-light.toml`, `tokyo-night.toml`, `catppuccin-mocha.toml`, `github-dark.toml`. Each theme must define all required color fields. Apply the theme to both xterm.js options and the UI CSS variables. Verify theme switching works live without restart.
 
-- [ ] **2.3 — Implement font management**
+- [x] **2.3 — Implement font management**
 
   > **Prompt**: Create `src/lib/font-manager.ts` that:
   > - Queries available system fonts via a Tauri command (implement `list_fonts` in Rust using the `font-kit` crate or by reading system font directories).

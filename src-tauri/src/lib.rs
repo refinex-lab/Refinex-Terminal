@@ -3,7 +3,7 @@ mod commands;
 mod config;
 
 use pty::PtyManager;
-use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, ConfigState};
+use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, ConfigState};
 use config::{load_config, get_config_path};
 use tauri::Manager;
 
@@ -51,7 +51,8 @@ pub fn run() {
             update_config,
             reset_config,
             get_config_file_path,
-            read_theme_file
+            read_theme_file,
+            list_fonts
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]

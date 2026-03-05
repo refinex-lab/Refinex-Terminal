@@ -10,6 +10,7 @@ import { ptySpawn, ptyWrite, ptyResize } from "@/lib/tauri-pty";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { TerminalSearch } from "./TerminalSearch";
 import { TerminalContextMenu } from "./TerminalContextMenu";
+import { createFontZoomHandler, getDefaultFontConfig, applyFont } from "@/lib/font-manager";
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalViewProps {
@@ -23,6 +24,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [fontSize, setFontSize] = useState(14);
   const { sessions } = useTerminalStore();
 
   const session = sessions.find((s) => s.id === sessionId);
@@ -30,11 +32,18 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   useEffect(() => {
     if (!containerRef.current || !session) return;
 
+    // Get default font config
+    const fontConfig = getDefaultFontConfig();
+
     // Initialize terminal
     const terminal = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: fontConfig.size,
       fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
+      lineHeight: fontConfig.lineHeight,
+      letterSpacing: 0,
+      cursorWidth: 1,
+      cursorStyle: "block",
       theme: {
         background: "transparent",
         foreground: "#d4d4d4",
@@ -207,7 +216,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       resizeObserver.observe(containerRef.current);
     }
 
-    // Handle Cmd/Ctrl+F to open search and copy/paste shortcuts
+    // Handle Cmd/Ctrl+F to open search, copy/paste shortcuts, and font zoom
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
@@ -266,7 +275,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         return;
       }
 
-      // Cmd/Ctrl + A: S
+      // Cmd/Ctrl + A: Select all
       if (modifier && e.key === "a") {
         e.preventDefault();
         terminal.selectAll();
@@ -279,15 +288,44 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         terminal.clear();
         return;
       }
+
+      // Cmd/Ctrl + ,: Open settings (TODO: implement settings panel)
+      if (modifier && e.key === ",") {
+        e.preventDefault();
+        console.log("Settings panel not yet implemented");
+        return;
+      }
     };
 
+    // Handle font zoom (Cmd/Ctrl + Plus/Minus/0)
+    const fontZoomHandler = createFontZoomHandler(
+      () => fontSize,
+      (newSize) => {
+        setFontSize(newSize);
+        const fontConfig = getDefaultFontConfig();
+        fontConfig.size = newSize;
+        applyFont(fontConfig, terminal);
+        // Refit terminal after font size change
+        if (fitAddonRef.current) {
+          fitAddon.fit();
+          if (session.ptyId !== null) {
+            ptyResize(session.ptyId, terminal.cols, terminal.rows).catch((error) => {
+              console.error("Failed to resize PTY:", error);
+            });
+          }
+        }
+      }
+    );
+
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", fontZoomHandler);
 
     // Cleanup
     return () => {
       disposable.dispose();
       resizeObserver.disconnect();
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", fontZoomHandler);
       if (cleanupListeners) {
         cleanupListeners();
       }
