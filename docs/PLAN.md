@@ -147,7 +147,7 @@
   >
   > Expose Tauri commands: `get_config`, `update_config`, `reset_config`, `get_config_path`. On app startup, load config and inject into managed state. Verify with `cargo check`.
 
-- [ ] **2.2 — Build theme engine**
+- [x] **2.2 — Build theme engine**
 
   > **Prompt**: Create `src/lib/theme-engine.ts` that:
   > - Defines a `Theme` type with all terminal colors (background, foreground, cursor, selection, ansi 0-15, plus UI colors for sidebar, tabs, borders).

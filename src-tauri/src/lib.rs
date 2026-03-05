@@ -3,7 +3,7 @@ mod commands;
 mod config;
 
 use pty::PtyManager;
-use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, ConfigState};
+use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, ConfigState};
 use config::{load_config, get_config_path};
 use tauri::Manager;
 
@@ -15,9 +15,7 @@ fn greet(name: &str) -> String {
 
 #[cfg(target_os = "macos")]
 fn disable_webview_drag_drop(webview: &tauri::WebviewWindow) {
-    use cocoa::appkit::NSView;
     use cocoa::base::id;
-    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
@@ -52,7 +50,8 @@ pub fn run() {
             get_config,
             update_config,
             reset_config,
-            get_config_file_path
+            get_config_file_path,
+            read_theme_file
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
