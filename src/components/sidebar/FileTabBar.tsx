@@ -1,8 +1,86 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, ChevronDown, MoreVertical, Save, Search, ExternalLink } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useFileEditorStore, type FileTab } from "@/stores/file-editor-store";
 import { getFileIcon } from "@/lib/file-icons";
+
+interface SortableTabProps {
+  tab: FileTab;
+  onClose: (e: React.MouseEvent, tabId: string) => void;
+  onContextMenu: (e: React.MouseEvent, tab: FileTab) => void;
+  onActivate: (tabId: string) => void;
+}
+
+function SortableTab({ tab, onClose, onContextMenu, onActivate }: SortableTabProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tab.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    borderColor: "var(--ui-border)",
+    backgroundColor: tab.isActive ? "var(--ui-button-background)" : "transparent",
+    maxWidth: "200px",
+  };
+
+  const iconConfig = getFileIcon(tab.name, false);
+  const Icon = iconConfig.icon;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="group flex items-center gap-2 px-3 py-2 border-r cursor-grab active:cursor-grabbing hover:bg-white/5 transition-colors flex-shrink-0"
+      onClick={() => onActivate(tab.id)}
+      onContextMenu={(e) => onContextMenu(e, tab)}
+    >
+      <Icon
+        className="size-4 flex-shrink-0"
+        style={{ color: iconConfig.color, opacity: 0.9 }}
+      />
+      <span
+        className="text-xs truncate flex-1"
+        style={{ color: "var(--ui-foreground)" }}
+        title={tab.path}
+      >
+        {tab.name}
+      </span>
+      <button
+        onClick={(e) => onClose(e, tab.id)}
+        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-all"
+        style={{ color: "var(--ui-foreground)" }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <X className="size-3" />
+      </button>
+    </div>
+  );
+}
 
 interface FileTabBarProps {
   className?: string;
@@ -12,12 +90,37 @@ interface FileTabBarProps {
 }
 
 export function FileTabBar({ className = "", onSaveAll, onSearchToggle }: FileTabBarProps) {
-  const { tabs, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeTabsToRight } = useFileEditorStore();
+  const { tabs, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeTabsToRight, reorderTabs } = useFileEditorStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: FileTab } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [confirmClose, setConfirmClose] = useState<{ tabId: string; tabName: string } | null>(null);
   const tabBarRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = tabs.findIndex((tab) => tab.id === active.id);
+      const newIndex = tabs.findIndex((tab) => tab.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        reorderTabs(oldIndex, newIndex);
+      }
+    }
+  };
 
   // Close context menu on click outside
   useEffect(() => {
@@ -77,51 +180,33 @@ export function FileTabBar({ className = "", onSaveAll, onSearchToggle }: FileTa
 
   return (
     <>
-      <div
-        ref={tabBarRef}
-        className={`flex items-center border-b ${className}`}
-        style={{ borderColor: "var(--ui-border)", backgroundColor: "var(--ui-background)" }}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
       >
-        {/* Scrollable tab list */}
-        <div className="flex items-center overflow-x-auto scrollbar-thin" style={{ scrollbarWidth: "thin", flex: "1 1 0", minWidth: 0 }}>
-          {tabs.map((tab) => {
-            const iconConfig = getFileIcon(tab.name, false);
-            const Icon = iconConfig.icon;
-
-            return (
-              <div
-                key={tab.id}
-                className="group flex items-center gap-2 px-3 py-2 border-r cursor-pointer hover:bg-white/5 transition-colors flex-shrink-0"
-                style={{
-                  borderColor: "var(--ui-border)",
-                  backgroundColor: tab.isActive ? "var(--ui-button-background)" : "transparent",
-                  maxWidth: "200px",
-                }}
-                onClick={() => setActiveTab(tab.id)}
-                onContextMenu={(e) => handleContextMenu(e, tab)}
-              >
-                <Icon
-                  className="size-4 flex-shrink-0"
-                  style={{ color: iconConfig.color, opacity: 0.9 }}
+        <div
+          ref={tabBarRef}
+          className={`flex items-center border-b ${className}`}
+          style={{ borderColor: "var(--ui-border)", backgroundColor: "var(--ui-background)" }}
+        >
+          {/* Scrollable tab list */}
+          <SortableContext
+            items={tabs.map((tab) => tab.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            <div className="flex items-center overflow-x-auto scrollbar-thin" style={{ scrollbarWidth: "thin", flex: "1 1 0", minWidth: 0 }}>
+              {tabs.map((tab) => (
+                <SortableTab
+                  key={tab.id}
+                  tab={tab}
+                  onClose={handleCloseTab}
+                  onContextMenu={handleContextMenu}
+                  onActivate={setActiveTab}
                 />
-                <span
-                  className="text-xs truncate flex-1"
-                  style={{ color: "var(--ui-foreground)" }}
-                  title={tab.path}
-                >
-                  {tab.name}
-                </span>
-                <button
-                  onClick={(e) => handleCloseTab(e, tab.id)}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-all"
-                  style={{ color: "var(--ui-foreground)" }}
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </SortableContext>
 
         {/* Action buttons - always visible */}
         <div className="flex items-center flex-shrink-0" style={{ flex: "0 0 auto" }}>
@@ -201,6 +286,7 @@ export function FileTabBar({ className = "", onSaveAll, onSearchToggle }: FileTa
           </button>
         </div>
       </div>
+      </DndContext>
 
       {/* Context Menu */}
       {contextMenu && (

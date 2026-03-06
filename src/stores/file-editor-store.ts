@@ -27,6 +27,7 @@ interface FileEditorStore {
   closeAllTabs: () => void;
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
+  reorderTabs: (oldIndex: number, newIndex: number) => void;
 }
 
 /**
@@ -149,6 +150,19 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
       return {
         tabs: state.tabs.slice(0, tabIndex + 1),
         activeTabId: state.activeTabId,
+      };
+    }),
+
+  reorderTabs: (oldIndex, newIndex) =>
+    set((state) => {
+      const newTabs = [...state.tabs];
+      const [movedTab] = newTabs.splice(oldIndex, 1);
+      if (movedTab) {
+        newTabs.splice(newIndex, 0, movedTab);
+      }
+
+      return {
+        tabs: newTabs,
       };
     }),
 }));
