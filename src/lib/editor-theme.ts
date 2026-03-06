@@ -24,14 +24,23 @@ export function createRefinexTheme() {
       backgroundColor: "transparent",
     },
     ".cm-gutters": {
-      backgroundColor: "var(--ui-background)",
+      backgroundColor: "var(--ui-background) !important",
       color: "var(--ui-muted-foreground)",
       border: "none",
       paddingRight: "8px",
     },
+    ".cm-gutter": {
+      backgroundColor: "var(--ui-background) !important",
+    },
+    ".cm-lineNumbers": {
+      backgroundColor: "var(--ui-background) !important",
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      backgroundColor: "var(--ui-background) !important",
+    },
     ".cm-activeLineGutter": {
-      backgroundColor: "var(--ui-accent)",
-      color: "var(--ui-accent-foreground)",
+      backgroundColor: "transparent !important",
+      color: "var(--ui-foreground)",
     },
     ".cm-activeLine": {
       backgroundColor: "rgba(255, 255, 255, 0.05)",
@@ -73,6 +82,40 @@ export function createRefinexTheme() {
     },
     ".cm-scroller": {
       backgroundColor: "var(--ui-background)",
+    },
+    // Minimap styles
+    ".cm-minimap": {
+      backgroundColor: "var(--ui-background)",
+      borderLeft: "1px solid var(--ui-border)",
+      width: "120px",
+      opacity: 1,
+      cursor: "pointer !important",
+    },
+    ".cm-minimap *": {
+      cursor: "pointer !important",
+    },
+    ".cm-minimap-gutter": {
+      backgroundColor: "var(--ui-background) !important",
+    },
+    ".cm-minimap-inner": {
+      backgroundColor: "var(--ui-background) !important",
+    },
+    ".cm-minimap-content": {
+      backgroundColor: "var(--ui-background)",
+      cursor: "pointer !important",
+    },
+    ".cm-minimap-overlay": {
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      border: "1px solid rgba(255, 255, 255, 0.3)",
+      borderRadius: "2px",
+      cursor: "pointer !important",
+    },
+    ".cm-minimap .cm-gutters": {
+      display: "none",
+      backgroundColor: "var(--ui-background) !important",
+    },
+    ".cm-minimap .cm-line": {
+      cursor: "pointer !important",
     },
   }, { dark: true });
 }

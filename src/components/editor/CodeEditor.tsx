@@ -4,6 +4,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Extension } from "@codemirror/state";
 import { search, highlightSelectionMatches, SearchQuery, setSearchQuery, findNext, findPrevious, getSearchQuery } from "@codemirror/search";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { showMinimap } from "@replit/codemirror-minimap";
 import { loadLanguage } from "@/lib/editor-languages";
 import { createRefinexTheme } from "@/lib/editor-theme";
 
@@ -73,6 +74,17 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         }),
         highlightSelectionMatches(),
         EditorView.lineWrapping,
+        showMinimap.compute(["doc"], (_state) => {
+          return {
+            create: () => ({
+              dom: document.createElement("div"),
+              // Minimap configuration
+              displayText: "blocks", // Show code as blocks for better performance
+              showOverlay: "always", // Always show viewport overlay
+              gutters: [],
+            }),
+          };
+        }),
       ];
 
       if (languageExtension) {
