@@ -78,7 +78,8 @@ pub fn run() {
             fs::metadata::get_file_metadata,
             fs::watcher::watch_directory,
             fs::watcher::unwatch_directory,
-            fs::watcher::get_watched_directory
+            fs::watcher::get_watched_directory,
+            fs::finder::list_all_files
         ])
         .setup(|app| {
             // Create and set menu

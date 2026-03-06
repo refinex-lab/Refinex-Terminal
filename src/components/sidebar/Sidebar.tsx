@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FolderOpen, MoreVertical, Terminal, Copy, X, FilePlus, ChevronsDownUp, FolderPlus } from "lucide-react";
+import { FolderOpen, MoreVertical, Terminal, Copy, X, FilePlus, ChevronsDownUp, FolderPlus, Search } from "lucide-react";
 import { BsFolderPlus, BsFolder } from "react-icons/bs";
 import { useSidebarStore, type Project } from "@/stores/sidebar-store";
 import { useConfigStore } from "@/stores/config-store";
@@ -11,9 +11,10 @@ import { FileTree } from "./FileTree";
 
 interface SidebarProps {
   className?: string;
+  onOpenFileFinder?: () => void;
 }
 
-export function Sidebar({ className = "" }: SidebarProps) {
+export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
   const { isVisible, width, projects, activeProjectId, setWidth, addProject, removeProject, setActiveProject } = useSidebarStore();
   const { config, updateConfig } = useConfigStore();
   const { addSession } = useTerminalStore();
@@ -183,14 +184,24 @@ export function Sidebar({ className = "" }: SidebarProps) {
               Projects
             </span>
           </div>
-          <button
-            onClick={handleAddProject}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-            style={{ color: "var(--ui-foreground)" }}
-            title="Add Project"
-          >
-            <BsFolderPlus className="size-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onOpenFileFinder}
+              className="p-1.5 rounded hover:bg-white/10 transition-colors"
+              style={{ color: "var(--ui-foreground)" }}
+              title="Search Files (Cmd/Ctrl+P)"
+            >
+              <Search className="size-4" />
+            </button>
+            <button
+              onClick={handleAddProject}
+              className="p-1.5 rounded hover:bg-white/10 transition-colors"
+              style={{ color: "var(--ui-foreground)" }}
+              title="Add Project"
+            >
+              <BsFolderPlus className="size-4" />
+            </button>
+          </div>
         </div>
 
         {/* Project List and File Tree */}

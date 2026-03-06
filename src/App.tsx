@@ -6,6 +6,8 @@ import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
 import { StatusBar } from "@/components/editor/StatusBar";
+import { QuickProjectSwitch } from "@/components/sidebar/QuickProjectSwitch";
+import { FuzzyFileFinder } from "@/components/sidebar/FuzzyFileFinder";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -23,6 +25,8 @@ function App() {
   const { tabs: fileTabs } = useFileEditorStore();
   const initializedRef = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [projectSwitchOpen, setProjectSwitchOpen] = useState(false);
+  const [fileFinderOpen, setFileFinderOpen] = useState(false);
   const [editorWidth, setEditorWidth] = useState(600);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const { config } = useConfigStore();
@@ -72,9 +76,25 @@ function App() {
 
   // Global keyboard shortcut for settings and sidebar
   useEffect(() => {
+    let lastShiftTime = 0;
+    const DOUBLE_SHIFT_THRESHOLD = 300; // ms
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      // Double Shift: Open file finder
+      if (e.key === "Shift") {
+        const now = Date.now();
+        if (now - lastShiftTime < DOUBLE_SHIFT_THRESHOLD) {
+          e.preventDefault();
+          setFileFinderOpen(true);
+          lastShiftTime = 0; // Reset to prevent triple shift
+        } else {
+          lastShiftTime = now;
+        }
+        return;
+      }
 
       // Cmd/Ctrl + ,: Open settings
       if (modifier && e.key === ",") {
@@ -86,6 +106,18 @@ function App() {
       if (modifier && e.key === "b") {
         e.preventDefault();
         useSidebarStore.getState().toggleVisibility();
+      }
+
+      // Cmd/Ctrl + Shift + O: Quick project switch
+      if (modifier && e.shiftKey && e.key === "O") {
+        e.preventDefault();
+        setProjectSwitchOpen(true);
+      }
+
+      // Cmd/Ctrl + P: Fuzzy file finder
+      if (modifier && e.key === "p") {
+        e.preventDefault();
+        setFileFinderOpen(true);
       }
 
       // Escape: Close settings
@@ -138,7 +170,7 @@ function App() {
       <TabBar />
       <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
         {/* Sidebar */}
-        {sidebarVisible && <Sidebar />}
+        {sidebarVisible && <Sidebar onOpenFileFinder={() => setFileFinderOpen(true)} />}
 
         {/* Terminal Area */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
@@ -188,6 +220,12 @@ function App() {
 
       {/* Settings Panel */}
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {/* Quick Project Switch */}
+      <QuickProjectSwitch isOpen={projectSwitchOpen} onClose={() => setProjectSwitchOpen(false)} />
+
+      {/* Fuzzy File Finder */}
+      <FuzzyFileFinder isOpen={fileFinderOpen} onClose={() => setFileFinderOpen(false)} />
     </div>
   );
 }

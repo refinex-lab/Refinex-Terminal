@@ -673,7 +673,7 @@ function deriveAgentStatus(
   >
   > Verify: open a project, create a new file from the terminal, see it appear in the file tree within 1 second. Delete a file, see it disappear.
 
-- [ ] **4.5 — Implement quick project switch and fuzzy file finder**
+- [x] **4.5 — Implement quick project switch and fuzzy file finder**
 
   > **Prompt**: Create two overlay components:
   >
