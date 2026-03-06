@@ -21,7 +21,15 @@ interface FilePreviewProps {
  */
 function isImageFile(fileName: string): boolean {
   const ext = fileName.split(".").pop()?.toLowerCase();
-  return ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico"].includes(ext || "");
+  return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico"].includes(ext || "");
+}
+
+/**
+ * Check if file is an SVG
+ */
+function isSVGFile(fileName: string): boolean {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  return ext === "svg";
 }
 
 /**
@@ -76,6 +84,7 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   const isScrollSyncingRef = useRef(false);
 
   const isImage = isImageFile(fileName);
+  const isSVG = isSVGFile(fileName);
   const isMarkdown = isMarkdownFile(fileName);
 
   // Load file content
@@ -155,14 +164,15 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
       setFileSize(metadata.size);
       setModified(metadata.modified);
 
-      // For images, just set the path
+      // For binary images, read as base64
       if (isImage) {
-        setContent(filePath);
+        const base64Data = await invoke<string>("read_file_as_base64", { path: filePath });
+        setContent(base64Data);
         setLoading(false);
         return;
       }
 
-      // For text files, read content
+      // For SVG and text files, read as text
       const fileContent = await invoke<string>("read_file", { path: filePath });
       setContent(fileContent);
       setEditedContent(fileContent);
@@ -500,10 +510,18 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
         ) : isImage ? (
           <div className="flex items-center justify-center h-full p-4">
             <img
-              src={`file://${content}`}
+              src={`data:image/${fileName.split('.').pop()};base64,${content}`}
               alt={fileName}
               className="max-w-full max-h-full object-contain"
               style={{ borderRadius: "4px" }}
+            />
+          </div>
+        ) : isSVG ? (
+          <div className="flex items-center justify-center h-full p-4">
+            <div
+              dangerouslySetInnerHTML={{ __html: content }}
+              className="max-w-full max-h-full"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
             />
           </div>
         ) : isMarkdown ? (

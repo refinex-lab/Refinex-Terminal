@@ -3350,6 +3350,7 @@ dependencies = [
 name = "refinex-terminal"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "cocoa",
  "dirs 5.0.1",
  "font-kit",

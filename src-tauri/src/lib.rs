@@ -65,6 +65,7 @@ pub fn run() {
             pty::detect_pty_cli,
             fs::reader::read_directory,
             fs::reader::read_file,
+            fs::reader::read_file_as_base64,
             fs::writer::fs_rename,
             fs::writer::fs_delete,
             fs::writer::fs_create_file,

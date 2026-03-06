@@ -622,7 +622,7 @@ function deriveAgentStatus(
 
 ### Tasks
 
-- [ ] **4.1 — Implement sidebar layout and project navigator**
+- [x] **4.1 — Implement sidebar layout and project navigator**
 
   > **Prompt**: Create the sidebar layout in `src/components/sidebar/Sidebar.tsx`:
   >
@@ -636,7 +636,7 @@ function deriveAgentStatus(
   >
   > Integrate the sidebar into `App.tsx` alongside the terminal area. Verify: add a project, see it in the list, click to activate, remove it.
 
-- [ ] **4.2 — Build file tree component**
+- [x] **4.2 — Build file tree component**
 
   > **Prompt**: Create `src/components/sidebar/FileTree.tsx` — a recursive tree view of the active project's file system:
   >
@@ -649,7 +649,7 @@ function deriveAgentStatus(
   >
   > Verify: add a real project (e.g., the refinex-terminal repo itself), expand directories, see correct file listing, verify lazy loading.
 
-- [ ] **4.3 — Implement file preview and editor**
+- [x] **4.3 — Implement file preview and editor**
 
   > **Prompt**: Create `src/components/sidebar/FilePreview.tsx` — when a file is clicked in the file tree:
   >

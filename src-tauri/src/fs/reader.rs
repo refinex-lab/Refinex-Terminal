@@ -135,6 +135,25 @@ pub async fn read_file(path: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to read file: {}", e))
 }
 
+/// Read file as base64 (for images and binary files)
+#[tauri::command]
+pub async fn read_file_as_base64(path: String) -> Result<String, String> {
+    let file_path = Path::new(&path);
+
+    if !file_path.exists() {
+        return Err(format!("File does not exist: {}", path));
+    }
+
+    if !file_path.is_file() {
+        return Err(format!("Path is not a file: {}", path));
+    }
+
+    let bytes = fs::read(file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    Ok(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
