@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useMemo } from "react";
 
 /**
  * AI CLI types that can be detected
@@ -463,8 +464,14 @@ export const useAIBlockStore = create<AIBlockStore>((set, get) => ({
     let tracker = trackers.get(sessionId);
     if (!tracker) {
       tracker = new BlockTracker(sessionId);
-      trackers.set(sessionId, tracker);
-      set({ trackers: new Map(trackers) });
+      // Use queueMicrotask to defer state update until after render
+      queueMicrotask(() => {
+        const currentTrackers = get().trackers;
+        if (!currentTrackers.has(sessionId)) {
+          currentTrackers.set(sessionId, tracker!);
+          set({ trackers: new Map(currentTrackers) });
+        }
+      });
     }
     return tracker;
   },
@@ -495,5 +502,7 @@ export function useAIBlocks(sessionId: string): AIBlock[] {
  * React hook to get the block tracker for a session
  */
 export function useBlockTracker(sessionId: string): BlockTracker {
-  return useAIBlockStore((state) => state.getTracker(sessionId));
+  const getTracker = useAIBlockStore((state) => state.getTracker);
+  // Use useMemo to cache the tracker and avoid infinite loops
+  return useMemo(() => getTracker(sessionId), [sessionId, getTracker]);
 }

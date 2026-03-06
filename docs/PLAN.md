@@ -661,7 +661,7 @@ function deriveAgentStatus(
   >
   > Verify: click a `.ts` file, see syntax-highlighted content, click Edit, make a change, save, re-open and verify the change persisted.
 
-- [ ] **4.4 — Implement file system watcher**
+- [x] **4.4 — Implement file system watcher**
 
   > **Prompt**: In `src-tauri/src/fs/watcher.rs`, implement a file system watcher using the `notify` crate:
   >

@@ -16,6 +16,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { getFileIcon } from "@/lib/file-icons";
+import { watchDirectory, unwatchDirectory, onFsChanged, type FsChangeEvent } from "@/lib/fs-watcher";
 
 /**
  * File entry from Rust backend
@@ -88,11 +89,79 @@ export function FileTree({ projectPath, className = "", triggerCreate, onCreateC
     }
   }, [triggerCollapseAll]);
 
-  // Load root directory on mount
+  // Load root directory on mount and setup file watcher
   useEffect(() => {
     loadDirectory(projectPath, 0).then((nodes) => {
       setRootNodes(nodes);
     });
+
+    // Start watching the project directory
+    watchDirectory(projectPath).catch((error) => {
+      console.error("Failed to start file watcher:", error);
+    });
+
+    // Listen for file system changes
+    const unlistenPromise = onFsChanged((event: FsChangeEvent) => {
+      const { path, kind } = event;
+
+      if (kind === "create") {
+        // Reload parent directory to show new file/folder
+        const parentPath = path.substring(0, path.lastIndexOf("/"));
+
+        // If it's the root directory, reload root nodes
+        if (parentPath === projectPath || parentPath === "") {
+          loadDirectory(projectPath, 0).then((nodes) => {
+            setRootNodes(nodes);
+          });
+        } else {
+          // Reload specific directory
+          const reloadDir = async (nodes: TreeNode[]): Promise<TreeNode[]> => {
+            const updated: TreeNode[] = [];
+            for (const node of nodes) {
+              if (node.path === parentPath && node.is_directory && node.isExpanded) {
+                const newChildren = await loadDirectory(node.path, node.depth + 1);
+                updated.push({ ...node, children: newChildren });
+              } else if (node.children) {
+                const updatedChildren = await reloadDir(node.children);
+                updated.push({ ...node, children: updatedChildren });
+              } else {
+                updated.push(node);
+              }
+            }
+            return updated;
+          };
+
+          setRootNodes((prevNodes) => {
+            reloadDir(prevNodes).then(setRootNodes);
+            return prevNodes; // Keep current nodes while async update is in progress
+          });
+        }
+      } else if (kind === "remove") {
+        // Remove node from tree
+        setRootNodes((prevNodes) => {
+          const removeFromNodes = (nodes: TreeNode[]): TreeNode[] => {
+            return nodes
+              .filter((n) => n.path !== path)
+              .map((n) => {
+                if (n.children) {
+                  return { ...n, children: removeFromNodes(n.children) };
+                }
+                return n;
+              });
+          };
+
+          return removeFromNodes(prevNodes);
+        });
+      }
+    });
+
+    // Cleanup on unmount or project change
+    return () => {
+      unwatchDirectory().catch((error) => {
+        console.error("Failed to stop file watcher:", error);
+      });
+      unlistenPromise.then((unlisten) => unlisten());
+    };
   }, [projectPath]);
 
   // Load directory contents

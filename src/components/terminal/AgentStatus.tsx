@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useAIBlocks, useBlockTracker, type AIBlock, type CLIType } from "@/lib/ai-block-detector";
+import { useEffect, useState, useMemo } from "react";
+import { useAIBlocks, useAIBlockStore, type AIBlock, type CLIType } from "@/lib/ai-block-detector";
 import { CLIIcon } from "@/components/ui/cli-icon";
 
 export type AgentState = "idle" | "thinking" | "writing" | "error" | "waiting";
@@ -188,9 +188,12 @@ function detectGenericState(block: AIBlock): AgentState {
  */
 export function AgentStatus({ sessionId, variant = "terminal" }: AgentStatusProps) {
   const blocks = useAIBlocks(sessionId);
-  const tracker = useBlockTracker(sessionId);
   const [state, setState] = useState<AgentState>("idle");
-  const activeCLI = tracker.getActiveCLI();
+
+  // Get tracker outside of render to avoid triggering state updates during render
+  const getTrackerSafely = useAIBlockStore((state) => state.getTracker);
+  const tracker = useMemo(() => getTrackerSafely(sessionId), [sessionId, getTrackerSafely]);
+  const activeCLI = useMemo(() => tracker.getActiveCLI(), [tracker]);
 
   // Update state based on blocks and streaming status
   useEffect(() => {
@@ -275,8 +278,11 @@ export function AgentStatus({ sessionId, variant = "terminal" }: AgentStatusProp
  */
 export function useAgentState(sessionId: string): AgentState {
   const blocks = useAIBlocks(sessionId);
-  const tracker = useBlockTracker(sessionId);
   const [state, setState] = useState<AgentState>("idle");
+
+  // Get tracker outside of render to avoid triggering state updates during render
+  const getTrackerSafely = useAIBlockStore((state) => state.getTracker);
+  const tracker = useMemo(() => getTrackerSafely(sessionId), [sessionId, getTrackerSafely]);
 
   useEffect(() => {
     const streamingBlock = tracker.getStreamingBlock();

@@ -9,6 +9,8 @@ use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, ConfigState};
 use config::{load_config, get_config_path};
 use cli::{detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile};
+use fs::watcher::FsWatcher;
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -45,6 +47,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(PtyManager::new())
         .manage(ConfigState::new(config))
+        .manage(Arc::new(Mutex::new(FsWatcher::new())))
         .invoke_handler(tauri::generate_handler![
             greet,
             pty_spawn,
@@ -72,7 +75,10 @@ pub fn run() {
             fs::writer::fs_create_folder,
             fs::writer::write_file,
             fs::reveal::reveal_in_finder,
-            fs::metadata::get_file_metadata
+            fs::metadata::get_file_metadata,
+            fs::watcher::watch_directory,
+            fs::watcher::unwatch_directory,
+            fs::watcher::get_watched_directory
         ])
         .setup(|app| {
             // Create and set menu
