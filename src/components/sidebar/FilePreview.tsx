@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Edit, Save, ExternalLink, FileText, Search, X, ChevronUp, ChevronDown } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useFileEditorStore } from "@/stores/file-editor-store";
+import { CodeEditor, CodeEditorRef } from "@/components/editor/CodeEditor";
 
 interface FilePreviewProps {
   filePath: string;
@@ -11,50 +10,6 @@ interface FilePreviewProps {
   tabId: string;
 }
 
-/**
- * Detect language from file extension for syntax highlighting
- */
-function detectLanguage(fileName: string): string {
-  const ext = fileName.split(".").pop()?.toLowerCase();
-
-  const languageMap: Record<string, string> = {
-    js: "javascript",
-    jsx: "jsx",
-    ts: "typescript",
-    tsx: "tsx",
-    py: "python",
-    java: "java",
-    rs: "rust",
-    go: "go",
-    cpp: "cpp",
-    c: "c",
-    cs: "csharp",
-    php: "php",
-    rb: "ruby",
-    swift: "swift",
-    kt: "kotlin",
-    html: "html",
-    css: "css",
-    scss: "scss",
-    sass: "sass",
-    less: "less",
-    json: "json",
-    yaml: "yaml",
-    yml: "yaml",
-    toml: "toml",
-    xml: "xml",
-    md: "markdown",
-    sh: "bash",
-    bash: "bash",
-    zsh: "bash",
-    sql: "sql",
-    graphql: "graphql",
-    vue: "vue",
-    svelte: "svelte",
-  };
-
-  return languageMap[ext || ""] || "text";
-}
 
 /**
  * Check if file is an image
@@ -80,33 +35,6 @@ function formatDate(timestamp: number): string {
   return new Date(timestamp * 1000).toLocaleString();
 }
 
-/**
- * Highlight search matches in content
- */
-function highlightMatches(content: string, matches: number[], currentIndex: number, searchQuery: string): string {
-  if (matches.length === 0 || !searchQuery) return content;
-
-  const parts: string[] = [];
-  let lastIndex = 0;
-
-  matches.forEach((matchIndex, i) => {
-    // Add text before match
-    parts.push(content.substring(lastIndex, matchIndex));
-
-    // Add highlighted match
-    const matchText = content.substring(matchIndex, matchIndex + searchQuery.length);
-    const isCurrent = i === currentIndex;
-    const bgColor = isCurrent ? "rgba(255, 165, 0, 0.6)" : "rgba(255, 255, 0, 0.4)";
-    parts.push(`<mark style="background-color: ${bgColor}; color: inherit; padding: 0;">${matchText}</mark>`);
-
-    lastIndex = matchIndex + searchQuery.length;
-  });
-
-  // Add remaining text
-  parts.push(content.substring(lastIndex));
-
-  return parts.join("");
-}
 
 export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
   const [content, setContent] = useState<string>("");
@@ -121,14 +49,10 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [matches, setMatches] = useState<number[]>([]);
   const { updateTabDirty } = useFileEditorStore();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<CodeEditorRef>(null);
 
   const isImage = isImageFile(fileName);
-  const language = detectLanguage(fileName);
 
   // Load file content
   useEffect(() => {
@@ -204,88 +128,32 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
     }
   };
 
-  // Search logic
+  // Search logic - wire to CodeMirror
   useEffect(() => {
-    if (!searchQuery || isImage) {
-      setMatches([]);
-      setCurrentMatchIndex(0);
+    if (!searchQuery || isImage || !editorRef.current) {
       return;
     }
 
-    const textToSearch = isEditing ? editedContent : content;
-    const foundMatches: number[] = [];
-
-    if (wholeWord) {
-      // Whole word matching using regex
-      const flags = caseSensitive ? "g" : "gi";
-      const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`\\b${escapedQuery}\\b`, flags);
-      let match;
-      while ((match = regex.exec(textToSearch)) !== null) {
-        foundMatches.push(match.index);
-      }
-    } else {
-      // Partial matching
-      const searchText = caseSensitive ? searchQuery : searchQuery.toLowerCase();
-      const contentText = caseSensitive ? textToSearch : textToSearch.toLowerCase();
-      let index = 0;
-      while (index < contentText.length) {
-        const matchIndex = contentText.indexOf(searchText, index);
-        if (matchIndex === -1) break;
-        foundMatches.push(matchIndex);
-        index = matchIndex + 1;
-      }
-    }
-
-    setMatches(foundMatches);
-    setCurrentMatchIndex(foundMatches.length > 0 ? 0 : -1);
-  }, [searchQuery, caseSensitive, wholeWord, content, editedContent, isEditing, isImage]);
+    editorRef.current.search(searchQuery, {
+      caseSensitive,
+      wholeWord,
+    });
+  }, [searchQuery, caseSensitive, wholeWord, isImage]);
 
   const handlePrevMatch = () => {
-    if (matches.length === 0) return;
-    const newIndex = (currentMatchIndex - 1 + matches.length) % matches.length;
-    setCurrentMatchIndex(newIndex);
-    scrollToMatch(newIndex);
+    editorRef.current?.findPrevious();
   };
 
   const handleNextMatch = () => {
-    if (matches.length === 0) return;
-    const newIndex = (currentMatchIndex + 1) % matches.length;
-    setCurrentMatchIndex(newIndex);
-    scrollToMatch(newIndex);
+    editorRef.current?.findNext();
   };
 
-  const scrollToMatch = (index: number) => {
-    if (index < 0 || index >= matches.length) return;
-    const matchPosition = matches[index];
+  // Get search state for display
+  const searchState = editorRef.current?.getSearchState() || { matches: 0, currentIndex: 0 };
 
-    if (isEditing && textareaRef.current) {
-      // Scroll textarea to match position
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(matchPosition, matchPosition + searchQuery.length);
-      textareaRef.current.scrollTop = Math.max(0, (matchPosition / editedContent.length) * textareaRef.current.scrollHeight - textareaRef.current.clientHeight / 2);
-    } else if (contentRef.current) {
-      // For syntax highlighter, scroll the container
-      const lineHeight = 1.6 * 13; // lineHeight * fontSize
-      const estimatedLine = content.substring(0, matchPosition).split('\n').length;
-      contentRef.current.scrollTop = Math.max(0, estimatedLine * lineHeight - contentRef.current.clientHeight / 2);
-    }
-  };
-
-  // Scroll to current match when it changes
-  useEffect(() => {
-    if (currentMatchIndex >= 0 && matches.length > 0) {
-      scrollToMatch(currentMatchIndex);
-    }
-  }, [currentMatchIndex, matches]);
-
-  // Handle Cmd/Ctrl + S to save and Cmd/Ctrl + F to search
+  // Handle Cmd/Ctrl + F to search and Escape to close search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s" && isEditing) {
-        e.preventDefault();
-        handleSave();
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === "f" && !isImage && !error) {
         e.preventDefault();
         setShowSearch((prev) => !prev);
@@ -298,7 +166,7 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isEditing, editedContent, showSearch, isImage, error]);
+  }, [showSearch, isImage, error]);
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: "var(--ui-background)" }}>
@@ -403,11 +271,11 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
             Ab
           </button>
           <span className="text-xs" style={{ color: "var(--ui-foreground)", opacity: 0.7 }}>
-            {matches.length > 0 ? `${currentMatchIndex + 1} of ${matches.length}` : "No results"}
+            {searchState.matches > 0 ? `${searchState.currentIndex} of ${searchState.matches}` : "No results"}
           </span>
           <button
             onClick={handlePrevMatch}
-            disabled={matches.length === 0}
+            disabled={searchState.matches === 0}
             className="p-1 rounded hover:bg-white/10 transition-colors disabled:opacity-30"
             style={{ color: "var(--ui-foreground)" }}
             title="Previous match"
@@ -416,7 +284,7 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
           </button>
           <button
             onClick={handleNextMatch}
-            disabled={matches.length === 0}
+            disabled={searchState.matches === 0}
             className="p-1 rounded hover:bg-white/10 transition-colors disabled:opacity-30"
             style={{ color: "var(--ui-foreground)" }}
             title="Next match"
@@ -435,7 +303,7 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
       )}
 
       {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <span className="text-sm" style={{ color: "var(--ui-foreground)", opacity: 0.7 }}>
@@ -476,55 +344,16 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
               style={{ borderRadius: "4px" }}
             />
           </div>
-        ) : isEditing ? (
-          <textarea
-            ref={textareaRef}
-            value={editedContent}
-            onChange={(e) => setEditedContent(e.target.value)}
-            className="w-full h-full p-4 resize-none focus:outline-none"
-            style={{
-              backgroundColor: "var(--ui-background)",
-              color: "var(--ui-foreground)",
-              fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-              fontSize: "13px",
-              lineHeight: "1.6",
-              tabSize: 2,
-            }}
-            spellCheck={false}
-          />
-        ) : matches.length > 0 && searchQuery ? (
-          <div
-            className="p-4"
-            style={{
-              fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-              fontSize: "13px",
-              lineHeight: "1.6",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              color: "var(--ui-foreground)",
-            }}
-            dangerouslySetInnerHTML={{ __html: highlightMatches(content, matches, currentMatchIndex, searchQuery) }}
-          />
         ) : (
-          <SyntaxHighlighter
-            language={language}
-            style={vscDarkPlus}
-            showLineNumbers
-            customStyle={{
-              margin: 0,
-              padding: "16px",
-              backgroundColor: "transparent",
-              fontSize: "13px",
-              lineHeight: "1.6",
-            }}
-            codeTagProps={{
-              style: {
-                fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-              },
-            }}
-          >
-            {content}
-          </SyntaxHighlighter>
+          <CodeEditor
+            ref={editorRef}
+            value={isEditing ? editedContent : content}
+            {...(isEditing && { onChange: (val: string) => setEditedContent(val) })}
+            language={fileName}
+            readOnly={!isEditing}
+            onSave={handleSave}
+            className="h-full"
+          />
         )}
       </div>
     </div>
