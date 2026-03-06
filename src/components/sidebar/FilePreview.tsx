@@ -213,18 +213,26 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   // Handle Cmd/Ctrl + F to search and Escape to close search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if the editor is focused by checking if the event target is within the editor
+      const target = e.target as HTMLElement;
+      const isEditorFocused = target.closest('.cm-editor') !== null;
+
+      if (!isEditorFocused) return;
+
       if ((e.metaKey || e.ctrlKey) && e.key === "f" && !isImage && !error) {
         e.preventDefault();
+        e.stopPropagation();
         onSearchToggle();
       }
       if (e.key === "Escape" && showSearch) {
         e.preventDefault();
+        e.stopPropagation();
         onSearchToggle();
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [showSearch, isImage, error, onSearchToggle]);
 
   return (
