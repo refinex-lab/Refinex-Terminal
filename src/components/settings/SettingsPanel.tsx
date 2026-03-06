@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { VscVscode } from "react-icons/vsc";
+import { SiIntellijidea } from "react-icons/si";
+import { MdOutlineEditNote } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -8,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { useConfigStore } from "@/stores/config-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { invoke } from "@tauri-apps/api/core";
 import { BUILTIN_THEMES, loadBuiltinTheme, type Theme } from "@/lib/theme-engine";
 import { listSystemFonts } from "@/lib/font-manager";
@@ -18,7 +22,7 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
-type SettingsSection = "appearance" | "terminal" | "ai" | "git" | "keybindings";
+type SettingsSection = "appearance" | "terminal" | "ai" | "git" | "keybindings" | "editor";
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
@@ -26,6 +30,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const { config, updateConfig } = useConfigStore();
+  const { autoSave, updateAutoSave } = useSettingsStore();
 
   // Load system fonts on mount
   useEffect(() => {
@@ -53,6 +58,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const sections: { id: SettingsSection; label: string }[] = [
     { id: "appearance", label: "Appearance" },
     { id: "terminal", label: "Terminal" },
+    { id: "editor", label: "File Editor" },
     { id: "ai", label: "AI" },
     { id: "git", label: "Git" },
     { id: "keybindings", label: "Keybindings" },
@@ -493,6 +499,162 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       handleConfigChange({ git: { ...config.git, showDiff: checked } })
                     }
                   />
+                </div>
+              </div>
+            )}
+
+            {/* File Editor Section */}
+            {activeSection === "editor" && (
+              <div className="space-y-6">
+                {/* Enable Auto-save */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="autoSaveEnabled">Enable Auto-Save</Label>
+                    <p className="text-xs text-muted-foreground">Automatically save files without manual intervention</p>
+                  </div>
+                  <Switch
+                    id="autoSaveEnabled"
+                    checked={autoSave.enabled}
+                    onCheckedChange={(checked) =>                updateAutoSave({ enabled: checked })
+                    }
+                  />
+                </div>
+
+                {/* Save on Tab Switch */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="onTabSwitch">Save on Tab Switch</Label>
+                    <p className="text-xs text-muted-foreground">Automatically save when switching to another tab</p>
+                  </div>
+                  <Switch
+                    id="onTabSwitch"
+                    checked={autoSave.onTabSwitch}
+                    onCheckedChange={(checked) =>
+                      updateAutoSave({ onTabSwitch: checked })
+                    }
+                    disabled={!autoSave.enabled}
+                  />
+                </div>
+
+                {/* Save on Window Change */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="onWindowChange">Save on Window Change</Label>
+                    <p className="text-xs text-muted-foreground">Automatically save when the window loses focus</p>
+                  </div>
+                  <Switch
+                    id="onWindowChange"
+                    checked={autoSave.onWindowChange}
+                    onCheckedChange={(checked) =>
+                      updateAutoSave({ onWindowChange: checked })
+                    }
+                    disabled={!autoSave.enabled}
+                  />
+                </div>
+
+                {/* Auto-save Delay */}
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label htmlFor="afterDelay">Auto-Save Delay</Label>
+                    <span className="text-sm text-muted-foreground">{autoSave.afterDelay}ms</span>
+                  </div>
+                  <Slider
+                    id="afterDelay"
+                    min={0}
+                    max={10000}
+                    step={500}
+                    value={[autoSave.afterDelay]}
+                    onValueChange={([value]) =>
+                      updateAutoSave({ afterDelay: value ?? 2000 })
+                    }
+                    disabled={!autoSave.enabled}
+                  />
+                  <p className="text-xs text-muted-foreground">Time to wait after typing stops before auto-saving (0 = disabled)</p>
+                </div>
+
+                {/* Prompt on Close */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="promptOnClose">Prompt on Close</Label>
+                    <p className="text-xs text-muted-foreground">Show confirmation dialog when closing tabs with unsaved changes</p>
+                  </div>
+                  <Switch
+                    id="promptOnClose"
+                    checked={autoSave.promptOnClose}
+                    onCheckedChange={(checked) =>
+                      updateAutoSave({ promptOnClose: checked })
+                    }
+                  />
+                </div>
+
+                {/* Recommended Presets */}
+                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <Label className="mb-3 block">Recommended Presets</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      onClick={() =>
+                        updateAutoSave({
+                          enabled: true,
+                          onTabSwitch: true,
+                          onWindowChange: true,
+                          afterDelay: 1000,
+                          promptOnClose: false,
+                        })
+                      }
+                      className="flex flex-col items-center gap-3 p-4 rounded-lg border transition-all hover:border-blue-500 hover:bg-blue-500/5"
+                      style={{ borderColor: "var(--ui-border)" }}
+                    >
+                      <VscVscode className="text-3xl text-blue-500" />
+                      <div className="text-center">
+                        <div className="font-medium text-sm">VS Code</div>
+                        <div className="text-xs mt-1" style={{ color: "var(--ui-muted-foreground)" }}>
+                          1s delay
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() =>
+                        updateAutoSave({
+                          enabled: true,
+                          onTabSwitch: true,
+                          onWindowChange: true,
+                          afterDelay: 0,
+                          promptOnClose: false,
+                        })
+                      }
+                      className="flex flex-col items-center gap-3 p-4 rounded-lg border transition-all hover:border-purple-500 hover:bg-purple-500/5"
+                      style={{ borderColor: "var(--ui-border)" }}
+                    >
+                      <SiIntellijidea className="text-3xl text-purple-500" />
+                      <div className="text-center">
+                        <div className="font-medium text-sm">IntelliJ IDEA</div>
+                        <div className="text-xs mt-1" style={{ color: "var(--ui-muted-foreground)" }}>
+                          Instant
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() =>
+                        updateAutoSave({
+                          enabled: false,
+                          onTabSwitch: false,
+                          onWindowChange: false,
+                          afterDelay: 0,
+                          promptOnClose: true,
+                        })
+                      }
+                      className="flex flex-col items-center gap-3 p-4 rounded-lg border transition-all hover:border-gray-500 hover:bg-gray-500/5"
+                      style={{ borderColor: "var(--ui-border)" }}
+                    >
+                      <MdOutlineEditNote className="text-3xl text-gray-500" />
+                      <div className="text-center">
+                        <div className="font-medium text-sm">Manual</div>
+                        <div className="text-xs mt-1" style={{ color: "var(--ui-muted-foreground)" }}>
+                          Cmd+S only
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

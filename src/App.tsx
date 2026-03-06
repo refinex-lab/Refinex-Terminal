@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { Toaster } from "sonner";
 import { TabBar } from "@/components/tabs/TabBar";
 import { TerminalView } from "@/components/terminal/TerminalView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
+import { StatusBar } from "@/components/editor/StatusBar";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -175,6 +177,14 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Status Bar */}
+      {fileTabs.length > 0 && <StatusBar />}
+
+      {/* Toast Notifications */}
+      <Toaster position="bottom-right" theme="dark" />
+
+      {/* Settings Panel */}
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );

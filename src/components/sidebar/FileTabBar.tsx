@@ -1,16 +1,19 @@
-import { useState, useEffect, useRef } from "react";
-import { X, ChevronDown, MoreVertical } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, ChevronDown, MoreVertical, Save } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { useFileEditorStore, type FileTab } from "@/stores/file-editor-store";
 import { getFileIcon } from "@/lib/file-icons";
 
 interface FileTabBarProps {
   className?: string;
+  onSaveAll?: () => void;
 }
 
-export function FileTabBar({ className = "" }: FileTabBarProps) {
+export function FileTabBar({ className = "", onSaveAll }: FileTabBarProps) {
   const { tabs, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeTabsToRight } = useFileEditorStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: FileTab } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [confirmClose, setConfirmClose] = useState<{ tabId: string; tabName: string } | null>(null);
   const tabBarRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -47,8 +50,24 @@ export function FileTabBar({ className = "" }: FileTabBarProps) {
     setContextMenu({ x: e.clientX, y: e.clientY, tab });
   };
 
-  const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
+  const handleCloseTab = async (e: React.MouseEvent, tabId: string) => {
     e.stopPropagation();
+
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    // If tab has unsaved changes, auto-save before closing
+    if (tab.isDirty && tab.content) {
+      try {
+        await invoke("write_file", { path: tab.path, content: tab.content });
+      } catch (err) {
+        console.error("Failed to auto-save before closing:", err);
+        // Show confirmation dialog if auto-save fails
+        setConfirmClose({ tabId, tabName: tab.name });
+        return;
+      }
+    }
+
     removeTab(tabId);
   };
 
@@ -62,7 +81,7 @@ export function FileTabBar({ className = "" }: FileTabBarProps) {
         style={{ borderColor: "var(--ui-border)", backgroundColor: "var(--ui-background)" }}
       >
         {/* Scrollable tab list */}
-        <div className="flex-1 flex items-center overflow-x-auto scrollbar-thin" style={{ scrollbarWidth: "thin" }}>
+        <div className="flex items-center overflow-x-auto scrollbar-thin" style={{ scrollbarWidth: "thin", flex: "1 1 0", minWidth: 0 }}>
           {tabs.map((tab) => {
             const iconConfig = getFileIcon(tab.name, false);
             const Icon = iconConfig.icon;
@@ -89,7 +108,6 @@ export function FileTabBar({ className = "" }: FileTabBarProps) {
                   title={tab.path}
                 >
                   {tab.name}
-                  {tab.isDirty && <span style={{ color: "var(--ui-foreground)", opacity: 0.7 }}> •</span>}
                 </span>
                 <button
                   onClick={(e) => handleCloseTab(e, tab.id)}
@@ -103,73 +121,70 @@ export function FileTabBar({ className = "" }: FileTabBarProps) {
           })}
         </div>
 
-        {/* Dropdown button */}
-        {tabs.length > 0 && (
-          <div className="relative flex-shrink-0" ref={dropdownRef}>
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="p-2 border-l hover:bg-white/5 transition-colors"
-              style={{ borderColor: "var(--ui-border)", color: "var(--ui-foreground)" }}
-              title="Show all tabs"
+        {/* Dropdown button - always visible */}
+        <div className="relative flex-shrink-0" ref={dropdownRef} style={{ flex: "0 0 auto" }}>
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="p-2 border-l hover:bg-white/5 transition-colors"
+            style={{ borderColor: "var(--ui-border)", color: "var(--ui-foreground)" }}
+            title="Show all tabs"
+          >
+            <ChevronDown className="size-4" />
+          </button>
+
+          {/* Dropdown menu */}
+          {showDropdown && (
+            <div
+              className="absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg z-50"
+              style={{
+                backgroundColor: "var(--ui-background)",
+                border: "1px solid var(--ui-border)",
+                minWidth: "200px",
+                maxHeight: "300px",
+                overflowY: "auto",
+              }}
             >
-              <ChevronDown className="size-4" />
-            </button>
+              {tabs.map((tab) => {
+                const iconConfig = getFileIcon(tab.name, false);
+                const Icon = iconConfig.icon;
 
-            {/* Dropdown menu */}
-            {showDropdown && (
-              <div
-                className="absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg z-50"
-                style={{
-                  backgroundColor: "var(--ui-background)",
-                  border: "1px solid var(--ui-border)",
-                  minWidth: "200px",
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                }}
-              >
-                {tabs.map((tab) => {
-                  const iconConfig = getFileIcon(tab.name, false);
-                  const Icon = iconConfig.icon;
-
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id);
-                        setShowDropdown(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors"
-                      style={{
-                        color: "var(--ui-foreground)",
-                        backgroundColor: tab.isActive ? "var(--ui-button-background)" : "transparent",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!tab.isActive) {
-                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!tab.isActive) {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }
-                      }}
-                      title={tab.path}
-                    >
-                      <Icon
-                        className="size-4 flex-shrink-0"
-                        style={{ color: iconConfig.color, opacity: 0.9 }}
-                      />
-                      <span className="truncate flex-1 text-left" title={tab.path}>
-                        {tab.name}
-                        {tab.isDirty && " •"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors"
+                    style={{
+                      color: "var(--ui-foreground)",
+                      backgroundColor: tab.isActive ? "var(--ui-button-background)" : "transparent",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!tab.isActive) {
+                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!tab.isActive) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                    title={tab.path}
+                  >
+                    <Icon
+                      className="size-4 flex-shrink-0"
+                      style={{ color: iconConfig.color, opacity: 0.9 }}
+                    />
+                    <span className="truncate flex-1 text-left" title={tab.path}>
+                      {tab.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Context Menu */}
@@ -218,6 +233,22 @@ export function FileTabBar({ className = "" }: FileTabBarProps) {
             Close to the Right
           </button>
           <div className="h-px my-1" style={{ backgroundColor: "var(--ui-border)" }} />
+          {onSaveAll && tabs.some(t => t.isDirty) && (
+            <>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                style={{ color: "var(--ui-foreground)" }}
+                onClick={() => {
+                  onSaveAll();
+                  setContextMenu(null);
+                }}
+              >
+                <Save className="size-4" />
+                Save All
+              </button>
+              <div className="h-px my-1" style={{ backgroundColor: "var(--ui-border)" }} />
+            </>
+          )}
           <button
             className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
             style={{ color: "var(--ui-foreground)" }}
@@ -229,6 +260,72 @@ export function FileTabBar({ className = "" }: FileTabBarProps) {
             <X className="size-4" />
             Close All
           </button>
+        </div>
+      )}
+
+      {/* Confirm Close Dialog */}
+      {confirmClose && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={() => setConfirmClose(null)}
+        >
+          <div
+            className="rounded-lg p-6 shadow-xl"
+            style={{
+              backgroundColor: "var(--ui-background)",
+              border: "1px solid var(--ui-border)",
+              maxWidth: "400px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--ui-foreground)" }}>
+              Unsaved Changes
+            </h3>
+            <p className="text-sm mb-4" style={{ color: "var(--ui-muted-foreground)" }}>
+              File "{confirmClose.tabName}" has unsaved changes. Do you want to save before closing?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConfirmClose(null)}
+                className="px-3 py-1.5 text-sm rounded hover:bg-white/10 transition-colors"
+                style={{ color: "var(--ui-foreground)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  removeTab(confirmClose.tabId);
+                  setConfirmClose(null);
+                }}
+                className="px-3 py-1.5 text-sm rounded hover:bg-white/10 transition-colors"
+                style={{ color: "var(--ui-foreground)" }}
+              >
+                Don't Save
+              </button>
+              <button
+                onClick={async () => {
+                  const tab = tabs.find(t => t.id === confirmClose.tabId);
+                  if (tab?.content) {
+                    try {
+                      await invoke("write_file", { path: tab.path, content: tab.content });
+                      removeTab(confirmClose.tabId);
+                    } catch (err) {
+                      alert(`Failed to save: ${err}`);
+                    }
+                  }
+                  setConfirmClose(null);
+                }}
+                className="px-3 py-1.5 text-sm rounded transition-colors"
+                style={{
+                  backgroundColor: "var(--ui-button-background)",
+                  color: "var(--ui-foreground)",
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

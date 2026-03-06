@@ -9,6 +9,7 @@ export interface FileTab {
   name: string;
   isActive: boolean;
   isDirty: boolean; // Has unsaved changes
+  content?: string; // Current content for auto-save
 }
 
 /**
@@ -21,6 +22,8 @@ interface FileEditorStore {
   removeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTabDirty: (id: string, isDirty: boolean) => void;
+  updateTabContent: (id: string, content: string) => void;
+  getTabContent: (id: string) => string | undefined;
   closeAllTabs: () => void;
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
@@ -29,7 +32,7 @@ interface FileEditorStore {
 /**
  * File editor store - manages file tabs and active file
  */
-export const useFileEditorStore = create<FileEditorStore>((set) => ({
+export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
   tabs: [],
   activeTabId: null,
 
@@ -108,6 +111,18 @@ export const useFileEditorStore = create<FileEditorStore>((set) => ({
         t.id === id ? { ...t, isDirty } : t
       ),
     })),
+
+  updateTabContent: (id, content) =>
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id === id ? { ...t, content } : t
+      ),
+    })),
+
+  getTabContent: (id) => {
+    const tab = get().tabs.find((t) => t.id === id);
+    return tab?.content;
+  },
 
   closeAllTabs: () =>
     set(() => ({

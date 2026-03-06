@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { Edit, Save, ExternalLink, FileText, Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ExternalLink, FileText, Search, X, ChevronUp, ChevronDown } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import { useFileEditorStore } from "@/stores/file-editor-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { CodeEditor, CodeEditorRef } from "@/components/editor/CodeEditor";
 
 interface FilePreviewProps {
@@ -38,7 +40,6 @@ function formatDate(timestamp: number): string {
 
 export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
   const [content, setContent] = useState<string>("");
-  const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +50,10 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
-  const { updateTabDirty } = useFileEditorStore();
+  const { updateTabDirty, updateTabContent } = useFileEditorStore();
+  const { autoSave } = useSettingsStore();
   const editorRef = useRef<CodeEditorRef>(null);
+  const autoSaveTimeoutRef = useRef<number | null>(null);
 
   const isImage = isImageFile(fileName);
 
@@ -61,11 +64,10 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
 
   // Update dirty state when content changes
   useEffect(() => {
-    if (isEditing) {
-      const isDirty = editedContent !== content;
-      updateTabDirty(tabId, isDirty);
-    }
-  }, [editedContent, content, isEditing, tabId, updateTabDirty]);
+    const isDirty = editedContent !== content;
+    updateTabDirty(tabId, isDirty);
+    updateTabContent(tabId, editedContent);
+  }, [editedContent, content, tabId, updateTabDirty, updateTabContent]);
 
   const loadFile = async () => {
     setLoading(true);
@@ -88,6 +90,7 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
       const fileContent = await invoke<string>("read_file", { path: filePath });
       setContent(fileContent);
       setEditedContent(fileContent);
+      updateTabContent(tabId, fileContent);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -95,30 +98,67 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
     }
   };
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedContent(content);
-  };
+  const handleSave = useCallback(async (isAutoSave = false) => {
+    if (isSaving || editedContent === content) return;
 
-  const handleSave = async () => {
     setIsSaving(true);
+
     try {
       await invoke("write_file", { path: filePath, content: editedContent });
       setContent(editedContent);
-      setIsEditing(false);
       updateTabDirty(tabId, false);
+
+      // Show success toast for manual saves
+      if (!isAutoSave) {
+        toast.success("File saved", {
+          description: fileName,
+          duration: 2000,
+        });
+      }
     } catch (err) {
-      alert(`Failed to save file: ${err}`);
+      const errorMessage = `Failed to save file: ${err}`;
+      console.error(errorMessage);
+
+      // Show error toast
+      toast.error("Save failed", {
+        description: errorMessage,
+        duration: 4000,
+      });
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [isSaving, editedContent, content, filePath, tabId, fileName, updateTabDirty]);
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedContent(content);
-    updateTabDirty(tabId, false);
-  };
+  const handleContentChange = useCallback((newContent: string) => {
+    setEditedContent(newContent);
+
+    // Clear existing auto-save timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Set up new auto-save timeout if enabled
+    if (autoSave.enabled && autoSave.afterDelay > 0) {
+      autoSaveTimeoutRef.current = window.setTimeout(() => {
+        handleSave(true);
+      }, autoSave.afterDelay);
+    }
+  }, [autoSave.enabled, autoSave.afterDelay, handleSave]);
+
+  // Auto-save on tab switch (when this component unmounts or tab becomes inactive)
+  useEffect(() => {
+    return () => {
+      // Clear auto-save timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+
+      // Save if there are unsaved changes when switching tabs (if enabled)
+      if (autoSave.enabled && autoSave.onTabSwitch && editedContent !== content && !isImage) {
+        handleSave(true);
+      }
+    };
+  }, [editedContent, content, isImage, autoSave.enabled, autoSave.onTabSwitch, handleSave]);
 
   const handleOpenExternal = async () => {
     try {
@@ -175,40 +215,6 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
         className="flex items-center justify-end gap-2 px-4 py-2 border-b"
         style={{ borderColor: "var(--ui-border)" }}
       >
-        {!isImage && !error && !isEditing && (
-          <button
-            onClick={handleEdit}
-            className="flex items-center gap-1.5 px-2 py-1 text-xs rounded hover:bg-white/10 transition-colors"
-            style={{ color: "var(--ui-foreground)" }}
-          >
-            <Edit className="size-3.5" />
-            Edit
-          </button>
-        )}
-        {isEditing && (
-          <>
-            <button
-              onClick={handleCancel}
-              className="px-2 py-1 text-xs rounded hover:bg-white/10 transition-colors"
-              style={{ color: "var(--ui-foreground)" }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors"
-              style={{
-                backgroundColor: "var(--ui-button-background)",
-                color: "var(--ui-foreground)",
-                opacity: isSaving ? 0.5 : 1,
-              }}
-            >
-              <Save className="size-3.5" />
-              {isSaving ? "Saving..." : "Save"}
-            </button>
-          </>
-        )}
         {!isImage && !error && (
           <button
             onClick={() => setShowSearch(!showSearch)}
@@ -347,11 +353,11 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
         ) : (
           <CodeEditor
             ref={editorRef}
-            value={isEditing ? editedContent : content}
-            {...(isEditing && { onChange: (val: string) => setEditedContent(val) })}
+            value={editedContent}
+            {...{ onChange: handleContentChange }}
             language={fileName}
-            readOnly={!isEditing}
-            onSave={handleSave}
+            readOnly={false}
+            onSave={() => handleSave(false)}
             className="h-full"
           />
         )}
