@@ -47,12 +47,17 @@ export function createRefinexTheme() {
       borderLeftColor: "var(--ui-foreground)",
     },
     ".cm-searchMatch": {
-      backgroundColor: "rgba(255, 200, 0, 0.3)",
-      outline: "1px solid rgba(255, 200, 0, 0.5)",
+      backgroundColor: "#ffc107 !important",
+      color: "#000 !important",
+      borderRadius: "2px",
+      padding: "0 1px",
     },
     ".cm-searchMatch-selected": {
-      backgroundColor: "rgba(255, 150, 0, 0.5)",
-      outline: "1px solid rgba(255, 150, 0, 0.8)",
+      backgroundColor: "#ff9800 !important",
+      color: "#000 !important",
+      borderRadius: "2px",
+      padding: "0 1px",
+      outline: "2px solid #ff5722",
     },
     ".cm-tooltip": {
       backgroundColor: "var(--ui-popover)",

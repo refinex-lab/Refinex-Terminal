@@ -146,18 +146,21 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         let matches = 0;
         let currentIndex = 0;
         const cursor = query.getCursor(view.state.doc);
-        const currentPos = view.state.selection.main.head;
+        const currentPos = view.state.selection.main.from;
 
+        let matchIndex = 0;
         let result = cursor.next();
         while (!result.done) {
           matches++;
-          if (result.value.from <= currentPos && result.value.to >= currentPos) {
-            currentIndex = matches;
+          matchIndex++;
+          // Check if current selection is within this match
+          if (result.value.from === currentPos) {
+            currentIndex = matchIndex;
           }
           result = cursor.next();
         }
 
-        return { matches, currentIndex };
+        return { matches, currentIndex: currentIndex || 1 };
       },
 
       focus: () => {

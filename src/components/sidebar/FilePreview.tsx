@@ -51,6 +51,7 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   const [searchQuery, setSearchQuery] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
+  const [searchState, setSearchState] = useState<{ matches: number; currentIndex: number }>({ matches: 0, currentIndex: 0 });
   const { updateTabDirty, updateTabContent } = useFileEditorStore();
   const { autoSave } = useSettingsStore();
   const editorRef = useRef<CodeEditorRef>(null);
@@ -172,6 +173,7 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   // Search logic - wire to CodeMirror
   useEffect(() => {
     if (!searchQuery || isImage || !editorRef.current) {
+      setSearchState({ matches: 0, currentIndex: 0 });
       return;
     }
 
@@ -179,18 +181,34 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
       caseSensitive,
       wholeWord,
     });
+
+    // Update search state after a short delay to allow CodeMirror to process
+    setTimeout(() => {
+      if (editorRef.current) {
+        setSearchState(editorRef.current.getSearchState());
+      }
+    }, 50);
   }, [searchQuery, caseSensitive, wholeWord, isImage]);
 
   const handlePrevMatch = () => {
     editorRef.current?.findPrevious();
+    // Update search state after navigation
+    setTimeout(() => {
+      if (editorRef.current) {
+        setSearchState(editorRef.current.getSearchState());
+      }
+    }, 50);
   };
 
   const handleNextMatch = () => {
     editorRef.current?.findNext();
+    // Update search state after navigation
+    setTimeout(() => {
+      if (editorRef.current) {
+        setSearchState(editorRef.current.getSearchState());
+      }
+    }, 50);
   };
-
-  // Get search state for display
-  const searchState = editorRef.current?.getSearchState() || { matches: 0, currentIndex: 0 };
 
   // Handle Cmd/Ctrl + F to search and Escape to close search
   useEffect(() => {
