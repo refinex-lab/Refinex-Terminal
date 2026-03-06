@@ -11,7 +11,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
-<img src="docs/assets/banner.png" alt="Refinex Terminal Banner" width="800" />
+<img src="docs/assets/banner.jpg" alt="Refinex Terminal Banner" width="800" />
 
 [中文](./README.zh-CN.md) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Configuration](#-configuration) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 

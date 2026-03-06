@@ -11,7 +11,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
-<img src="docs/assets/banner.png" alt="Refinex Terminal Banner" width="800" />
+<img src="docs/assets/banner.jpg" alt="Refinex Terminal Banner" width="800" />
 
 [English](README.md) · [功能特性](#-功能特性) · [架构设计](#-架构设计) · [快速开始](#-快速开始) · [配置说明](#-配置说明) · [开发路线图](#-开发路线图) · [参与贡献](#-参与贡献)
 
