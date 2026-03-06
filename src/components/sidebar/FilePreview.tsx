@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ExternalLink, FileText, Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { FileText, X, ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { useFileEditorStore } from "@/stores/file-editor-store";
@@ -10,6 +10,8 @@ interface FilePreviewProps {
   filePath: string;
   fileName: string;
   tabId: string;
+  showSearch: boolean;
+  onSearchToggle: () => void;
 }
 
 
@@ -38,7 +40,7 @@ function formatDate(timestamp: number): string {
 }
 
 
-export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
+export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchToggle }: FilePreviewProps) {
   const [content, setContent] = useState<string>("");
   const [editedContent, setEditedContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,6 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [fileSize, setFileSize] = useState<number>(0);
   const [modified, setModified] = useState<number>(0);
-  const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
@@ -196,45 +197,20 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "f" && !isImage && !error) {
         e.preventDefault();
-        setShowSearch((prev) => !prev);
+        onSearchToggle();
       }
       if (e.key === "Escape" && showSearch) {
         e.preventDefault();
-        setShowSearch(false);
+        onSearchToggle();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showSearch, isImage, error]);
+  }, [showSearch, isImage, error, onSearchToggle]);
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: "var(--ui-background)" }}>
-      {/* Toolbar */}
-      <div
-        className="flex items-center justify-end gap-2 px-4 py-2 border-b"
-        style={{ borderColor: "var(--ui-border)" }}
-      >
-        {!isImage && !error && (
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="p-1 rounded hover:bg-white/10 transition-colors"
-            style={{ color: "var(--ui-foreground)" }}
-            title="Search (Cmd/Ctrl+F)"
-          >
-            <Search className="size-4" />
-          </button>
-        )}
-        <button
-          onClick={handleOpenExternal}
-          className="p-1 rounded hover:bg-white/10 transition-colors"
-          style={{ color: "var(--ui-foreground)" }}
-          title="Open with system editor"
-        >
-          <ExternalLink className="size-4" />
-        </button>
-      </div>
-
       {/* Search Panel */}
       {showSearch && !isImage && !error && (
         <div
@@ -298,7 +274,7 @@ export function FilePreview({ filePath, fileName, tabId }: FilePreviewProps) {
             <ChevronDown className="size-4" />
           </button>
           <button
-            onClick={() => setShowSearch(false)}
+            onClick={() => onSearchToggle()}
             className="p-1 rounded hover:bg-white/10 transition-colors"
             style={{ color: "var(--ui-foreground)" }}
             title="Close search"

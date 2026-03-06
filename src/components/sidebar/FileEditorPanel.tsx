@@ -15,6 +15,7 @@ export function FileEditorPanel({ className = "" }: FileEditorPanelProps) {
   const { autoSave } = useSettingsStore();
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const [isSavingAll, setIsSavingAll] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   const dirtyTabs = tabs.filter(tab => tab.isDirty && tab.content);
 
@@ -112,7 +113,7 @@ export function FileEditorPanel({ className = "" }: FileEditorPanelProps) {
 
   return (
     <div className={`flex flex-col h-full ${className}`} style={{ backgroundColor: "var(--ui-background)" }}>
-      <FileTabBar onSaveAll={handleSaveAll} />
+      <FileTabBar onSaveAll={handleSaveAll} showSearch={showSearch} onSearchToggle={() => setShowSearch(!showSearch)} />
       {activeTab && (
         <div className="flex-1 overflow-hidden">
           <FilePreview
@@ -120,6 +121,8 @@ export function FileEditorPanel({ className = "" }: FileEditorPanelProps) {
             filePath={activeTab.path}
             fileName={activeTab.name}
             tabId={activeTab.id}
+            showSearch={showSearch}
+            onSearchToggle={() => setShowSearch(!showSearch)}
           />
         </div>
       )}

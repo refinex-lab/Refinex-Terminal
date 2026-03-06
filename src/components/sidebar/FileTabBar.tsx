@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, ChevronDown, MoreVertical, Save } from "lucide-react";
+import { X, ChevronDown, MoreVertical, Save, Search, ExternalLink } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { useFileEditorStore, type FileTab } from "@/stores/file-editor-store";
 import { getFileIcon } from "@/lib/file-icons";
@@ -7,9 +7,11 @@ import { getFileIcon } from "@/lib/file-icons";
 interface FileTabBarProps {
   className?: string;
   onSaveAll?: () => void;
+  showSearch: boolean;
+  onSearchToggle: () => void;
 }
 
-export function FileTabBar({ className = "", onSaveAll }: FileTabBarProps) {
+export function FileTabBar({ className = "", onSaveAll, onSearchToggle }: FileTabBarProps) {
   const { tabs, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeTabsToRight } = useFileEditorStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: FileTab } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -121,16 +123,18 @@ export function FileTabBar({ className = "", onSaveAll }: FileTabBarProps) {
           })}
         </div>
 
-        {/* Dropdown button - always visible */}
-        <div className="relative flex-shrink-0" ref={dropdownRef} style={{ flex: "0 0 auto" }}>
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="p-2 border-l hover:bg-white/5 transition-colors"
-            style={{ borderColor: "var(--ui-border)", color: "var(--ui-foreground)" }}
-            title="Show all tabs"
-          >
-            <ChevronDown className="size-4" />
-          </button>
+        {/* Action buttons - always visible */}
+        <div className="flex items-center flex-shrink-0" style={{ flex: "0 0 auto" }}>
+          {/* Dropdown button */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="p-2 border-l hover:bg-white/5 transition-colors"
+              style={{ borderColor: "var(--ui-border)", color: "var(--ui-foreground)" }}
+              title="Show all tabs"
+            >
+              <ChevronDown className="size-4" />
+            </button>
 
           {/* Dropdown menu */}
           {showDropdown && (
@@ -184,6 +188,17 @@ export function FileTabBar({ className = "", onSaveAll }: FileTabBarProps) {
               })}
             </div>
           )}
+          </div>
+
+          {/* Search button */}
+          <button
+            onClick={onSearchToggle}
+            className="p-2 border-l hover:bg-white/5 transition-colors"
+            style={{ borderColor: "var(--ui-border)", color: "var(--ui-foreground)" }}
+            title="Search (Cmd/Ctrl+F)"
+          >
+            <Search className="size-4" />
+          </button>
         </div>
       </div>
 
@@ -199,6 +214,22 @@ export function FileTabBar({ className = "", onSaveAll }: FileTabBarProps) {
             minWidth: "180px",
           }}
         >
+          <button
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+            style={{ color: "var(--ui-foreground)" }}
+            onClick={async () => {
+              try {
+                await invoke("reveal_in_finder", { path: contextMenu.tab.path });
+                setContextMenu(null);
+              } catch (err) {
+                console.error("Failed to reveal in finder:", err);
+              }
+            }}
+          >
+            <ExternalLink className="size-4" />
+            Reveal in Finder
+          </button>
+          <div className="h-px my-1" style={{ backgroundColor: "var(--ui-border)" }} />
           <button
             className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
             style={{ color: "var(--ui-foreground)" }}
@@ -222,7 +253,7 @@ export function FileTabBar({ className = "", onSaveAll }: FileTabBarProps) {
             Close Others
           </button>
           <button
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+            className="w-full flex items-center gap-x-3 py-2 text-sm hover:bg-white/5 transition-colors"
             style={{ color: "var(--ui-foreground)" }}
             onClick={() => {
               closeTabsToRight(contextMenu.tab.id);
