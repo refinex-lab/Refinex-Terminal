@@ -1,0 +1,37 @@
+/* CodeMirror selection styles - Blue highlight */
+
+.cm-editor .cm-selectionBackground {
+  background-color: #3b82f6 !important;
+  opacity: 0.5 !important;
+}
+
+.cm-editor.cm-focused .cm-selectionBackground {
+  background-color: #3b82f6 !important;
+  opacity: 0.6 !important;
+}
+
+.cm-editor ::selection {
+  background-color: #3b82f6 !important;
+  color: inherit !important;
+}
+
+.cm-editor .cm-content ::selection {
+  background-color: #3b82f6 !important;
+  color: inherit !important;
+}
+
+.cm-editor .cm-line ::selection {
+  background-color: #3b82f6 !important;
+  color: inherit !important;
+}
+
+.cm-selectionLayer .cm-selectionBackground {
+  background-color: #3b82f6 !important;
+  opacity: 0.5 !important;
+}
+
+/* Force override any conflicting styles */
+.cm-editor * ::selection {
+  background-color: #3b82f6 !important;
+  color: inherit !important;
+}

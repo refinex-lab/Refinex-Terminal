@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { EditorState, Extension } from "@codemirror/state";
 import { search, highlightSelectionMatches, SearchQuery, setSearchQuery, findNext, findPrevious, getSearchQuery } from "@codemirror/search";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -69,6 +69,7 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       const exts: Extension[] = [
         oneDark,
         createRefinexTheme(),
+        drawSelection(),
         search({
           top: true,
         }),

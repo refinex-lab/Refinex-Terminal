@@ -45,12 +45,25 @@ export function createRefinexTheme() {
     ".cm-activeLine": {
       backgroundColor: "rgba(255, 255, 255, 0.05)",
     },
-    ".cm-selectionBackground, ::selection": {
-      backgroundColor: "var(--ui-accent) !important",
-      color: "var(--ui-accent-foreground) !important",
+    ".cm-selectionBackground": {
+      backgroundColor: "#3b82f6 !important",
+      opacity: "0.5 !important",
     },
-    "&.cm-focused .cm-selectionBackground, &.cm-focused ::selection": {
-      backgroundColor: "var(--ui-accent) !important",
+    "&.cm-focused .cm-selectionBackground": {
+      backgroundColor: "#3b82f6 !important",
+      opacity: "0.6 !important",
+    },
+    "&.cm-focused .cm-selectionMatch": {
+      backgroundColor: "rgba(59, 130, 246, 0.2) !important",
+    },
+    ".cm-content ::selection": {
+      backgroundColor: "#3b82f6 !important",
+    },
+    ".cm-line ::selection": {
+      backgroundColor: "#3b82f6 !important",
+    },
+    "& ::selection": {
+      backgroundColor: "#3b82f6 !important",
     },
     ".cm-cursor": {
       borderLeftColor: "var(--ui-foreground)",

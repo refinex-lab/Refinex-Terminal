@@ -14,6 +14,7 @@ import { loadBuiltinTheme, applyTheme } from "@/lib/theme-engine";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
+import "./styles/editor-selection-debug.css";
 
 function App() {
   const { sessions, addSession } = useTerminalStore();
