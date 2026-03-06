@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { FolderOpen, FolderPlus, MoreVertical, Terminal, Copy, X, FilePlus, Folder, ChevronsDownUp } from "lucide-react";
+import { FolderOpen, MoreVertical, Terminal, Copy, X, FilePlus, ChevronsDownUp, FolderPlus } from "lucide-react";
+import { BsFolderPlus, BsFolder } from "react-icons/bs";
 import { useSidebarStore, type Project } from "@/stores/sidebar-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useTerminalStore } from "@/stores/terminal-store";
@@ -188,7 +189,7 @@ export function Sidebar({ className = "" }: SidebarProps) {
             style={{ color: "var(--ui-foreground)" }}
             title="Add Project"
           >
-            <FolderPlus className="size-4" />
+            <BsFolderPlus className="size-4" />
           </button>
         </div>
 
@@ -196,7 +197,7 @@ export function Sidebar({ className = "" }: SidebarProps) {
         <div className="flex-1 overflow-hidden flex flex-col">
           {projects.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full px-4 text-center">
-              <Folder
+              <BsFolder
                 className="size-12 mb-3"
                 style={{ color: "var(--ui-foreground)", opacity: 0.3 }}
               />
