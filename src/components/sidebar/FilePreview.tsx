@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { FileText, X, ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
+import { FileText, X, ChevronUp, ChevronDown, ExternalLink, FileEdit, Columns, Eye } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { useFileEditorStore } from "@/stores/file-editor-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { CodeEditor, CodeEditorRef } from "@/components/editor/CodeEditor";
+import { MarkdownPreview, MarkdownPreviewRef } from "@/components/editor/MarkdownPreview";
 
 interface FilePreviewProps {
   filePath: string;
@@ -24,6 +25,14 @@ function isImageFile(fileName: string): boolean {
 }
 
 /**
+ * Check if file is a Markdown file
+ */
+function isMarkdownFile(fileName: string): boolean {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  return ext === "md" || ext === "markdown";
+}
+
+/**
  * Format file size
  */
 function formatFileSize(bytes: number): string {
@@ -40,6 +49,8 @@ function formatDate(timestamp: number): string {
 }
 
 
+type PreviewMode = 'editor' | 'split' | 'preview';
+
 export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchToggle }: FilePreviewProps) {
   const [content, setContent] = useState<string>("");
   const [editedContent, setEditedContent] = useState<string>("");
@@ -52,23 +63,86 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
   const [searchState, setSearchState] = useState<{ matches: number; currentIndex: number }>({ matches: 0, currentIndex: 0 });
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('editor');
+  const [splitRatio, setSplitRatio] = useState(50);
+  const [isResizing, setIsResizing] = useState(false);
   const { updateTabDirty, updateTabContent } = useFileEditorStore();
   const { autoSave } = useSettingsStore();
   const editorRef = useRef<CodeEditorRef>(null);
+  const previewRef = useRef<MarkdownPreviewRef>(null);
   const autoSaveTimeoutRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollSyncTimeoutRef = useRef<number | null>(null);
+  const isScrollSyncingRef = useRef(false);
 
   const isImage = isImageFile(fileName);
+  const isMarkdown = isMarkdownFile(fileName);
 
   // Load file content
   useEffect(() => {
     loadFile();
   }, [filePath]);
 
-  // Update dirty state when content changes
+  // Auto-detect markdown files and set default mode to split
   useEffect(() => {
-    const isDirty = editedContent !== content;
-    updateTabDirty(tabId, isDirty);
-    updateTabContent(tabId, editedContent);
+    if (isMarkdown) {
+      setPreviewMode('split');
+    } else {
+      setPreviewMode('editor');
+    }
+  }, [isMarkdown]);
+
+  // Handle editor scroll -> preview scroll sync
+  const handleEditorScroll = useCallback((scrollPercentage: number) => {
+    if (isScrollSyncingRef.current || !previewRef.current) return;
+
+    isScrollSyncingRef.current = true;
+
+    // Use requestAnimationFrame for smooth scrolling
+    requestAnimationFrame(() => {
+      if (previewRef.current) {
+        previewRef.current.scrollToPercentage(scrollPercentage);
+      }
+    });
+
+    if (scrollSyncTimeoutRef.current) {
+      clearTimeout(scrollSyncTimeoutRef.current);
+    }
+    scrollSyncTimeoutRef.current = window.setTimeout(() => {
+      isScrollSyncingRef.current = false;
+    }, 150);
+  }, []);
+
+  // Handle preview scroll -> editor scroll sync
+  const handlePreviewScroll = useCallback((scrollPercentage: number) => {
+    if (isScrollSyncingRef.current || !editorRef.current?.scrollToPercentage) return;
+
+    isScrollSyncingRef.current = true;
+
+    // Use requestAnimationFrame for smooth scrolling
+    requestAnimationFrame(() => {
+      if (editorRef.current?.scrollToPercentage) {
+        editorRef.current.scrollToPercentage(scrollPercentage);
+      }
+    });
+
+    if (scrollSyncTimeoutRef.current) {
+      clearTimeout(scrollSyncTimeoutRef.current);
+    }
+    scrollSyncTimeoutRef.current = window.setTimeout(() => {
+      isScrollSyncingRef.current = false;
+    }, 150);
+  }, []);
+
+  // Update dirty state when content changes (debounced to avoid excessive updates)
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const isDirty = editedContent !== content;
+      updateTabDirty(tabId, isDirty);
+      updateTabContent(tabId, editedContent);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [editedContent, content, tabId, updateTabDirty, updateTabContent]);
 
   const loadFile = async () => {
@@ -132,6 +206,7 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   }, [isSaving, editedContent, content, filePath, tabId, fileName, updateTabDirty]);
 
   const handleContentChange = useCallback((newContent: string) => {
+    // Use startTransition to mark this as a low-priority update
     setEditedContent(newContent);
 
     // Clear existing auto-save timeout
@@ -139,11 +214,11 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
       clearTimeout(autoSaveTimeoutRef.current);
     }
 
-    // Set up new auto-save timeout if enabled
+    // Set up new auto-save timeout if enabled (increased delay to reduce I/O)
     if (autoSave.enabled && autoSave.afterDelay > 0) {
       autoSaveTimeoutRef.current = window.setTimeout(() => {
         handleSave(true);
-      }, autoSave.afterDelay);
+      }, Math.max(autoSave.afterDelay, 2000)); // Minimum 2 seconds to avoid frequent saves
     }
   }, [autoSave.enabled, autoSave.afterDelay, handleSave]);
 
@@ -210,6 +285,30 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
     }, 50);
   };
 
+  // Handle split view resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newRatio = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      setSplitRatio(Math.max(30, Math.min(70, newRatio)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   // Handle Cmd/Ctrl + F to search and Escape to close search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -219,15 +318,31 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
 
       if (!isEditorFocused) return;
 
-      if ((e.metaKey || e.ctrlKey) && e.key === "f" && !isImage && !error) {
+      const modifier = e.metaKey || e.ctrlKey;
+
+      // Stop propagation for all editor shortcuts to prevent terminal from handling them
+      // This includes: Cmd/Ctrl + V (paste), Cmd/Ctrl + C (copy), Cmd/Ctrl + X (cut),
+      // Cmd/Ctrl + A (select all), Cmd/Ctrl + Z (undo), Cmd/Ctrl + Y (redo), etc.
+      if (modifier && ['v', 'c', 'x', 'a', 'z', 'y', 's'].includes(e.key.toLowerCase())) {
+        e.stopPropagation();
+        // Let CodeMirror handle these shortcuts natively
+        return;
+      }
+
+      // Cmd/Ctrl + F: Open search
+      if (modifier && e.key === "f" && !isImage && !error) {
         e.preventDefault();
         e.stopPropagation();
         onSearchToggle();
+        return;
       }
+
+      // Escape: Close search
       if (e.key === "Escape" && showSearch) {
         e.preventDefault();
         e.stopPropagation();
         onSearchToggle();
+        return;
       }
     };
 
@@ -310,8 +425,47 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
         </div>
       )}
 
+      {/* Toolbar for Markdown files */}
+      {isMarkdown && !loading && !error && (
+        <div
+          className="flex items-center justify-end gap-1 px-4 py-2 border-b"
+          style={{ borderColor: "var(--ui-border)", backgroundColor: "var(--ui-background)" }}
+        >
+          <button
+            onClick={() => setPreviewMode('editor')}
+            className={`p-1 rounded hover:bg-white/10 transition-colors ${
+              previewMode === 'editor' ? 'bg-white/10' : ''
+            }`}
+            style={{ color: "var(--ui-foreground)" }}
+            title="Editor Only"
+          >
+            <FileEdit className="size-4" />
+          </button>
+          <button
+            onClick={() => setPreviewMode('split')}
+            className={`p-1 rounded hover:bg-white/10 transition-colors ${
+              previewMode === 'split' ? 'bg-white/10' : ''
+            }`}
+            style={{ color: "var(--ui-foreground)" }}
+            title="Split View"
+          >
+            <Columns className="size-4" />
+          </button>
+          <button
+            onClick={() => setPreviewMode('preview')}
+            className={`p-1 rounded hover:bg-white/10 transition-colors ${
+              previewMode === 'preview' ? 'bg-white/10' : ''
+            }`}
+            style={{ color: "var(--ui-foreground)" }}
+            title="Preview Only"
+          >
+            <Eye className="size-4" />
+          </button>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div ref={containerRef} className="flex-1 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <span className="text-sm" style={{ color: "var(--ui-foreground)", opacity: 0.7 }}>
@@ -352,6 +506,56 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
               style={{ borderRadius: "4px" }}
             />
           </div>
+        ) : isMarkdown ? (
+          <>
+            {previewMode === 'editor' && (
+              <CodeEditor
+                ref={editorRef}
+                value={editedContent}
+                {...{ onChange: handleContentChange }}
+                language={fileName}
+                readOnly={false}
+                onSave={() => handleSave(false)}
+                className="h-full"
+              />
+            )}
+            {previewMode === 'split' && (
+              <div className="flex h-full">
+                <div style={{ width: `${splitRatio}%`, height: '100%', overflow: 'hidden' }}>
+                  <CodeEditor
+                    ref={editorRef}
+                    value={editedContent}
+                    {...{ onChange: handleContentChange }}
+                    language={fileName}
+                    readOnly={false}
+                    onSave={() => handleSave(false)}
+                    onScroll={handleEditorScroll}
+                    className="h-full"
+                  />
+                </div>
+                <div
+                  className="w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
+                  style={{ backgroundColor: isResizing ? 'rgba(59, 130, 246, 0.5)' : 'var(--ui-border)' }}
+                  onMouseDown={() => setIsResizing(true)}
+                />
+                <div style={{ width: `${100 - splitRatio}%`, height: '100%', overflow: 'hidden' }}>
+                  <MarkdownPreview
+                    ref={previewRef}
+                    content={editedContent}
+                    onScroll={handlePreviewScroll}
+                    className="h-full"
+                  />
+                </div>
+              </div>
+            )}
+            {previewMode === 'preview' && (
+              <MarkdownPreview
+                ref={previewRef}
+                content={editedContent}
+                className="h-full"
+              />
+            )}
+          </>
         ) : (
           <CodeEditor
             ref={editorRef}

@@ -1,0 +1,250 @@
+/* Import KaTeX CSS for math rendering */
+@import "katex/dist/katex.min.css";
+
+/* Markdown preview container */
+.markdown-preview {
+  padding: 1rem 2rem;
+  overflow-y: auto;
+  height: 100%;
+  background-color: var(--ui-background);
+  color: var(--ui-foreground);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+  line-height: 1.6;
+}
+
+/* Support for HTML align attribute */
+.markdown-preview [align="center"] {
+  text-align: center;
+}
+
+.markdown-preview [align="left"] {
+  text-align: left;
+}
+
+.markdown-preview [align="right"] {
+  text-align: right;
+}
+
+/* Headings */
+.markdown-preview h1 {
+  font-size: 2em;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  border-bottom: 1px solid var(--ui-border);
+  padding-bottom: 0.3em;
+}
+
+.markdown-preview h1:first-child {
+  margin-top: 0;
+}
+
+.markdown-preview h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  border-bottom: 1px solid var(--ui-border);
+  padding-bottom: 0.3em;
+}
+
+.markdown-preview h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview h4 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview h5,
+.markdown-preview h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+/* Paragraphs and text */
+.markdown-preview p {
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview strong {
+  font-weight: 600;
+}
+
+/* Links */
+.markdown-preview a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.markdown-preview a:hover {
+  text-decoration: underline;
+}
+
+/* Lists */
+.markdown-preview ul,
+.markdown-preview ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
+  list-style-position: outside;
+}
+
+.markdown-preview ul {
+  list-style-type: disc;
+}
+
+.markdown-preview ol {
+  list-style-type: decimal;
+}
+
+.markdown-preview ul ul {
+  list-style-type: circle;
+}
+
+.markdown-preview ul ul ul {
+  list-style-type: square;
+}
+
+.markdown-preview li {
+  margin-bottom: 0.25em;
+  display: list-item;
+}
+
+/* Task lists */
+.markdown-preview li:has(input[type="checkbox"]) {
+  list-style-type: none;
+}
+
+.markdown-preview input[type="checkbox"] {
+  margin-right: 0.5em;
+}
+
+/* Code blocks */
+.markdown-preview pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
+  margin-bottom: 0.25em;
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.9em;
+}
+
+/* Override Prism theme margin */
+.markdown-preview pre[class*="language-"] {
+  margin: 0 0 0.25em 0;
+  padding: 0.75em;
+}
+
+.markdown-preview code {
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.9em;
+}
+
+.markdown-preview :not(pre) > code {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  margin: 0 0.1em;
+  display: inline-block;
+}
+
+/* Tables */
+.markdown-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid var(--ui-border);
+  padding: 0.5em 1em;
+  text-align: left;
+}
+
+.markdown-preview th {
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+/* Blockquotes */
+.markdown-preview blockquote {
+  border-left: 4px solid var(--ui-border);
+  padding-left: 1em;
+  margin-left: 0;
+  margin-bottom: 1em;
+  color: var(--ui-muted-foreground);
+  background-color: rgba(255, 255, 255, 0.02);
+  padding: 0.5em 1em;
+}
+
+/* Horizontal rules */
+.markdown-preview hr {
+  border: none;
+  border-top: 1px solid var(--ui-border);
+  margin: 2em 0;
+}
+
+/* Images */
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 1em 0;
+}
+
+/* Mermaid diagrams */
+.markdown-preview .mermaid-container {
+  margin: 1em 0;
+  text-align: center;
+}
+
+.markdown-preview .mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-preview .mermaid-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  padding: 1em;
+  color: #ef4444;
+  font-family: monospace;
+  margin: 1em 0;
+}
+
+.markdown-preview .mermaid-loading {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  padding: 1em;
+  color: #3b82f6;
+  text-align: center;
+  margin: 1em 0;
+}
+
+/* Math formulas (KaTeX) */
+.markdown-preview .katex {
+  font-size: 1.1em;
+}
+
+.markdown-preview .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}

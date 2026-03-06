@@ -112,7 +112,7 @@ export function FileEditorPanel({ className = "" }: FileEditorPanelProps) {
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`} style={{ backgroundColor: "var(--ui-background)" }}>
+    <div className={`flex flex-col h-full ${className}`} style={{ backgroundColor: "var(--ui-background)" }} data-file-editor>
       <FileTabBar onSaveAll={handleSaveAll} showSearch={showSearch} onSearchToggle={() => setShowSearch(!showSearch)} />
       {activeTab && (
         <div className="flex-1 overflow-hidden">

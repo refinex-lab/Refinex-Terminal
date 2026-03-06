@@ -107,18 +107,30 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
     })),
 
   updateTabDirty: (id, isDirty) =>
-    set((state) => ({
-      tabs: state.tabs.map((t) =>
-        t.id === id ? { ...t, isDirty } : t
-      ),
-    })),
+    set((state) => {
+      const tab = state.tabs.find(t => t.id === id);
+      // Only update if the value actually changed
+      if (tab && tab.isDirty === isDirty) return state;
+
+      return {
+        tabs: state.tabs.map((t) =>
+          t.id === id ? { ...t, isDirty } : t
+        ),
+      };
+    }),
 
   updateTabContent: (id, content) =>
-    set((state) => ({
-      tabs: state.tabs.map((t) =>
-        t.id === id ? { ...t, content } : t
-      ),
-    })),
+    set((state) => {
+      const tab = state.tabs.find(t => t.id === id);
+      // Only update if the content actually changed
+      if (tab && tab.content === content) return state;
+
+      return {
+        tabs: state.tabs.map((t) =>
+          t.id === id ? { ...t, content } : t
+        ),
+      };
+    }),
 
   getTabContent: (id) => {
     const tab = get().tabs.find((t) => t.id === id);

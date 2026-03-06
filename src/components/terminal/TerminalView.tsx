@@ -381,6 +381,13 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
 
     // Handle Cmd/Ctrl+F to open search, copy/paste shortcuts, and font zoom
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if the event target is within the terminal container
+      const target = e.target as HTMLElement;
+      const isInTerminal = containerRef.current?.contains(target) || false;
+
+      // Only handle terminal shortcuts if the event is within the terminal
+      if (!isInTerminal) return;
+
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 

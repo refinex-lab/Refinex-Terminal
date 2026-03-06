@@ -26,6 +26,7 @@ export interface CodeEditorProps {
   readOnly?: boolean;
   onSave?: () => void;
   className?: string;
+  onScroll?: (scrollPercentage: number) => void;
 }
 
 export interface CodeEditorRef {
@@ -34,12 +35,16 @@ export interface CodeEditorRef {
   findPrevious: () => void;
   getSearchState: () => SearchState;
   focus: () => void;
+  onScroll?: (callback: (scrollPercentage: number) => void) => void;
+  scrollToPercentage?: (percentage: number) => void;
 }
 
 export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
-  ({ value, onChange, language, readOnly = false, onSave, className }, ref) => {
+  ({ value, onChange, language, readOnly = false, onSave, className, onScroll }, ref) => {
     const editorRef = useRef<ReactCodeMirrorRef>(null);
     const [languageExtension, setLanguageExtension] = useState<Extension | null>(null);
+    const scrollCallbackRef = useRef<((scrollPercentage: number) => void) | null>(null);
+    const scrollTimeoutRef = useRef<number | null>(null);
 
     // Load language extension
     useEffect(() => {
@@ -86,6 +91,33 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             }),
           };
         }),
+        EditorView.domEventHandlers({
+          scroll: (event) => {
+            // Debounce scroll events for better performance
+            if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+            }
+
+            scrollTimeoutRef.current = window.setTimeout(() => {
+              const scrollTop = (event.target as HTMLElement).scrollTop;
+              const scrollHeight = (event.target as HTMLElement).scrollHeight;
+              const clientHeight = (event.target as HTMLElement).clientHeight;
+              const maxScroll = scrollHeight - clientHeight;
+
+              if (maxScroll > 0) {
+                const percentage = (scrollTop / maxScroll) * 100;
+                if (onScroll) {
+                  onScroll(percentage);
+                }
+                if (scrollCallbackRef.current) {
+                  scrollCallbackRef.current(percentage);
+                }
+              }
+            }, 50);
+
+            return false;
+          }
+        }),
       ];
 
       if (languageExtension) {
@@ -112,7 +144,7 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       }
 
       return exts;
-    }, [languageExtension, readOnly, onSave]);
+    }, [languageExtension, readOnly, onSave, onScroll]);
 
     // Expose API via ref
     useImperativeHandle(ref, () => ({
@@ -178,6 +210,19 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
       focus: () => {
         editorRef.current?.view?.focus();
+      },
+
+      onScroll: (callback: (scrollPercentage: number) => void) => {
+        scrollCallbackRef.current = callback;
+      },
+
+      scrollToPercentage: (percentage: number) => {
+        const view = editorRef.current?.view;
+        if (!view) return;
+
+        const scrollDOM = view.scrollDOM;
+        const maxScroll = scrollDOM.scrollHeight - scrollDOM.clientHeight;
+        scrollDOM.scrollTop = (maxScroll * percentage) / 100;
       },
     }));
 
