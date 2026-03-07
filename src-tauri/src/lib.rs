@@ -7,7 +7,7 @@ mod fs;
 mod git;
 
 use pty::PtyManager;
-use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, ConfigState};
+use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, set_window_opacity, set_window_vibrancy, toggle_fullscreen, set_always_on_top, get_window_state, restore_window_state, ConfigState};
 use config::{load_config, get_config_path};
 use cli::{detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile};
 use fs::watcher::FsWatcher;
@@ -62,6 +62,12 @@ pub fn run() {
             read_theme_file,
             list_fonts,
             set_title_bar_theme,
+            set_window_opacity,
+            set_window_vibrancy,
+            toggle_fullscreen,
+            set_always_on_top,
+            get_window_state,
+            restore_window_state,
             detect_ai_clis,
             test_cli,
             get_shell_profile_path,

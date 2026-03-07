@@ -70,6 +70,10 @@ export const globalKeybindings: KeybindingMap = {
   "Cmd+Q": "app.quit",
   "Cmd+R": "app.reload",
   "Cmd+Shift+R": "app.hard_reload",
+
+  // Window Management
+  "Cmd+Enter": "window.toggle_fullscreen",
+  "F11": "window.toggle_fullscreen",
 };
 
 /**

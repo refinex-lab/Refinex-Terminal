@@ -58,32 +58,56 @@ const TabBarComponent = () => {
     removeSession(sessionId);
   }, [sessions, removeSession]);
 
-  // Register action handlers
-  useActionHandler("terminal.new_tab", handleNewTab);
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = sessionIds.indexOf(active.id as string);
+      const newIndex = sessionIds.indexOf(over.id as string);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        reorderSessions(oldIndex, newIndex);
+      }
+    }
+
+    setActiveId(null);
+  };
+
+  // Register keyboard shortcuts
+  useActionHandler("terminal.new_tab", handleNewTab);
   useActionHandler("terminal.close_tab", useCallback(() => {
     if (activeSessionId) {
       handleCloseTab(activeSessionId);
     }
   }, [activeSessionId, handleCloseTab]));
 
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as string);
+  // Switch to specific tab (Cmd+1 through Cmd+9)
+  for (let i = 1; i <= 9; i++) {
+    useActionHandler(`terminal.switch_tab_${i}`, useCallback(() => {
+      const tabSessions = sessions.filter(s => !s.isPane);
+      const targetSession = tabSessions[i - 1];
+      if (targetSession) {
+        setActiveSession(targetSession.id);
+      }
+    }, [sessions, setActiveSession]));
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (over && active.id !== over.id) {
-      const oldIndex = sessionIds.indexOf(active.id as string);
-      const newIndex = sessionIds.indexOf(over.id as string);
-      reorderSessions(oldIndex, newIndex);
-    }
-  }
+  const activeSession = sessions.find((s) => s.id === activeId);
 
   return (
-    <div className="tab-bar-container flex items-center h-10 border-b px-3 gap-1.5" style={{ backgroundColor: "var(--ui-tab-background)", borderColor: "var(--ui-border)" }}>
+    <div
+      className="flex items-center gap-1 px-2 py-1.5 border-b select-none"
+      style={{
+        backgroundColor: "var(--ui-background)",
+        borderColor: "var(--ui-border)",
+        // Add padding for macOS traffic lights when using overlay title bar
+        paddingLeft: "80px", // Space for traffic lights on macOS
+      }}
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -91,56 +115,39 @@ const TabBarComponent = () => {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sessionIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex items-center gap-1.5 flex-1">
-            {sessions.filter(s => !s.isPane).map((session) => (
+          {sessions
+            .filter((s) => !s.isPane)
+            .map((session) => (
               <SortableTab
                 key={session.id}
-                id={session.id}
-                title={session.title}
-                isActive={session.isActive}
-                onActivate={() => setActiveSession(session.id)}
+                session={session}
+                isActive={session.id === activeSessionId}
+                onSelect={() => setActiveSession(session.id)}
                 onClose={() => handleCloseTab(session.id)}
-                totalTabs={sessions.filter(s => !s.isPane).length}
               />
             ))}
-          </div>
         </SortableContext>
 
         <DragOverlay>
-          {activeId ? (
+          {activeSession && (
             <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full shadow-lg cursor-grabbing min-w-[100px] max-w-[180px]"
+              className="px-3 py-1.5 rounded text-sm font-medium cursor-grabbing opacity-80"
               style={{
-                backgroundColor: "var(--ui-tab-background-active)",
-                color: "var(--ui-tab-foreground-active)",
+                backgroundColor: "var(--ui-accent)",
+                color: "var(--ui-accent-foreground)",
               }}
             >
-              <span className="text-xs font-medium truncate flex-1">
-                {sessions.find((s) => s.id === activeId)?.title}
-              </span>
+              {activeSession.title}
             </div>
-          ) : null}
+          )}
         </DragOverlay>
       </DndContext>
 
       <button
         onClick={handleNewTab}
-        className="flex items-center justify-center size-7 rounded-full transition-all duration-200 flex-shrink-0"
-        style={{
-          backgroundColor: "var(--ui-button-background)",
-          color: "var(--ui-foreground)",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.05)";
-          e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.1)";
-        }}
-        aria-label="New tab"
-        title="New tab (Cmd/Ctrl+T)"
+        className="p-1.5 rounded hover:bg-white/10 transition-colors ml-1"
+        style={{ color: "var(--ui-foreground)" }}
+        title="New Terminal (Cmd+T)"
       >
         <Plus className="size-4" />
       </button>
@@ -148,5 +155,4 @@ const TabBarComponent = () => {
   );
 };
 
-// Memoize TabBar to prevent unnecessary re-renders
 export const TabBar = memo(TabBarComponent);

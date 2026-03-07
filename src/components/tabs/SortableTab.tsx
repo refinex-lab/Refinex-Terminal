@@ -3,21 +3,19 @@ import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { AgentStatus } from "@/components/terminal/AgentStatus";
+import type { TerminalSession } from "@/stores/terminal-store";
 
 interface SortableTabProps {
-  id: string;
-  title: string;
+  session: TerminalSession;
   isActive: boolean;
-  onActivate: () => void;
+  onSelect: () => void;
   onClose: () => void;
-  totalTabs?: number; // Optional, not currently used but may be needed for future features
 }
 
 export function SortableTab({
-  id,
-  title,
+  session,
   isActive,
-  onActivate,
+  onSelect,
   onClose,
 }: SortableTabProps) {
   const {
@@ -27,7 +25,7 @@ export function SortableTab({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id: session.id });
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -53,17 +51,17 @@ export function SortableTab({
         transition-all duration-200
         ${isDragging ? "cursor-grabbing" : ""}
       `}
-      onClick={onActivate}
+      onClick={onSelect}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <span className="text-xs font-medium truncate pointer-events-none">
-        {title}
+        {session.title}
       </span>
 
       {/* Agent status indicator */}
       <div className="pointer-events-none">
-        <AgentStatus sessionId={id} variant="tab" />
+        <AgentStatus sessionId={session.id} variant="tab" />
       </div>
 
       <button

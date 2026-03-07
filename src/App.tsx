@@ -14,6 +14,7 @@ import { getKeybindingManager } from "@/lib/keybinding-manager";
 import { useActionHandler } from "@/lib/keybinding-manager";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { setWindowOpacity, setWindowVibrancy, getWindowState, restoreWindowState, toggleFullscreen, setAlwaysOnTop } from "@/lib/tauri-window";
 import "./App.css";
 import "./styles/editor-selection-debug.css";
 import "./styles/markdown-preview.css";
@@ -62,6 +63,19 @@ function App() {
 
   useActionHandler("command_palette.open_files", useCallback(() => {
     setFileFinderOpen(true);
+  }, []));
+
+  // Register window actions
+  useActionHandler("window.toggle_fullscreen", useCallback(() => {
+    toggleFullscreen().catch(console.error);
+  }, []));
+
+  useActionHandler("window.toggle_always_on_top", useCallback(() => {
+    // Toggle state
+    const currentState = localStorage.getItem("always-on-top") === "true";
+    const newState = !currentState;
+    localStorage.setItem("always-on-top", String(newState));
+    setAlwaysOnTop(newState).catch(console.error);
   }, []));
 
   // Register file actions
@@ -155,6 +169,49 @@ function App() {
       })
       .catch(console.error);
   }, [config.appearance.theme]);
+
+  // Apply opacity and vibrancy settings
+  useEffect(() => {
+    setWindowOpacity(config.appearance.opacity).catch(console.error);
+  }, [config.appearance.opacity]);
+
+  useEffect(() => {
+    setWindowVibrancy(config.appearance.vibrancy).catch(console.error);
+  }, [config.appearance.vibrancy]);
+
+  // Save and restore window state
+  useEffect(() => {
+    // Restore window state on mount
+    const savedState = localStorage.getItem("window-state");
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        restoreWindowState(state).catch(console.error);
+      } catch (error) {
+        console.error("Failed to restore window state:", error);
+      }
+    }
+
+    // Save window state periodically and on unmount
+    const saveWindowState = () => {
+      getWindowState()
+        .then((state) => {
+          localStorage.setItem("window-state", JSON.stringify(state));
+        })
+        .catch(console.error);
+    };
+
+    const interval = setInterval(saveWindowState, 5000); // Save every 5 seconds
+
+    // Save on beforeunload
+    window.addEventListener("beforeunload", saveWindowState);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("beforeunload", saveWindowState);
+      saveWindowState(); // Final save on unmount
+    };
+  }, []);
 
   // Helper function to determine if a color is dark
   const isColorDark = (color: string): boolean => {
