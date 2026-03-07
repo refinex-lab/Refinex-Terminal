@@ -17,6 +17,7 @@ interface SidebarStore {
   width: number;
   projects: Project[];
   activeProjectId: string | null;
+  activeProject: Project | null;
 
   // Actions
   toggleVisibility: () => void;
@@ -35,6 +36,7 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
   width: 260,
   projects: [],
   activeProjectId: null,
+  activeProject: null,
 
   toggleVisibility: () =>
     set((state) => ({ isVisible: !state.isVisible })),
@@ -46,7 +48,13 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
     const { projects } = get();
 
     // Check if project already exists
-    if (projects.some((p) => p.path === path)) {
+    const existingProject = projects.find((p) => p.path === path);
+    if (existingProject) {
+      // If project exists, just set it as active
+      set({
+        activeProjectId: existingProject.id,
+        activeProject: existingProject
+      });
       return;
     }
 
@@ -59,21 +67,35 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
       path,
     };
 
-    set({ projects: [...projects, newProject] });
+    // Add project and set it as active
+    set({
+      projects: [...projects, newProject],
+      activeProjectId: newProject.id,
+      activeProject: newProject
+    });
   },
 
   removeProject: (id: string) => {
     const { projects, activeProjectId } = get();
     const newProjects = projects.filter((p) => p.id !== id);
+    const newActiveId = activeProjectId === id ? null : activeProjectId;
+    const newActiveProject = newActiveId ? newProjects.find(p => p.id === newActiveId) || null : null;
 
     set({
       projects: newProjects,
-      activeProjectId: activeProjectId === id ? null : activeProjectId,
+      activeProjectId: newActiveId,
+      activeProject: newActiveProject
     });
   },
 
-  setActiveProject: (id: string | null) =>
-    set({ activeProjectId: id }),
+  setActiveProject: (id: string | null) => {
+    const { projects } = get();
+    const project = id ? projects.find(p => p.id === id) || null : null;
+    set({
+      activeProjectId: id,
+      activeProject: project
+    });
+  },
 
   loadProjects: (paths: string[]) => {
     const projects = paths.map((path, index) => {
@@ -85,6 +107,12 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
       };
     });
 
-    set({ projects });
+    // Set first project as active if there are projects
+    const firstProject = projects.length > 0 ? projects[0] : null;
+    set({
+      projects,
+      activeProjectId: firstProject?.id || null,
+      activeProject: firstProject
+    });
   },
 }));

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FolderOpen, MoreVertical, Terminal, Copy, X, FilePlus, ChevronsDownUp, FolderPlus, Search } from "lucide-react";
+import { FolderOpen, MoreVertical, Terminal, Copy, X, FilePlus, ChevronsDownUp, FolderPlus, Search, GitBranch } from "lucide-react";
 import { BsFolderPlus, BsFolder } from "react-icons/bs";
 import { useSidebarStore, type Project } from "@/stores/sidebar-store";
 import { useConfigStore } from "@/stores/config-store";
@@ -8,6 +8,7 @@ import { useFileEditorStore } from "@/stores/file-editor-store";
 import { Logo } from "@/components/ui/Logo";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileTree } from "./FileTree";
+import { GitPanel } from "@/components/git/GitPanel";
 
 interface SidebarProps {
   className?: string;
@@ -23,6 +24,7 @@ export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: Project } | null>(null);
   const [triggerCreate, setTriggerCreate] = useState<{ type: "file" | "folder" } | null>(null);
   const [triggerCollapseAll, setTriggerCollapseAll] = useState(false);
+  const [showGitPanel, setShowGitPanel] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleFileClick = (filePath: string, fileName: string) => {
@@ -186,6 +188,17 @@ export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
           </div>
           <div className="flex items-center gap-1">
             <button
+              onClick={() => setShowGitPanel(!showGitPanel)}
+              className="p-1.5 rounded hover:bg-white/10 transition-colors"
+              style={{
+                color: "var(--ui-foreground)",
+                backgroundColor: showGitPanel ? "var(--ui-button-background)" : "transparent"
+              }}
+              title="Git Panel"
+            >
+              <GitBranch className="size-4" />
+            </button>
+            <button
               onClick={onOpenFileFinder}
               className="p-1.5 rounded hover:bg-white/10 transition-colors"
               style={{ color: "var(--ui-foreground)" }}
@@ -206,7 +219,9 @@ export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
 
         {/* Project List and File Tree */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          {projects.length === 0 ? (
+          {showGitPanel ? (
+            <GitPanel />
+          ) : projects.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full px-4 text-center">
               <BsFolder
                 className="size-12 mb-3"
