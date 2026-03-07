@@ -186,8 +186,14 @@ export function GitGraphView({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex"
-      style={{ backgroundColor: "var(--ui-background)" }}
+      className="fixed z-50 flex"
+      style={{
+        backgroundColor: "var(--ui-background)",
+        top: "40px", // Below the title bar
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
     >
       {/* Branch Tree Panel */}
       <div
