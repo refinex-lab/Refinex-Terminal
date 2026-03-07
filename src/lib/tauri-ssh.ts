@@ -95,3 +95,27 @@ export async function sshCloseChannel(
 ): Promise<void> {
   await invoke("ssh_close_channel", { connId, channelId });
 }
+
+/**
+ * List SSH keys in a directory
+ */
+export interface SSHKeyInfo {
+  path: string;
+  filename: string;
+  keyType: string;
+  hasPassphrase: boolean;
+  publicKeyPath?: string;
+}
+
+export async function listSSHKeys(dir?: string): Promise<SSHKeyInfo[]> {
+  return await invoke<SSHKeyInfo[]>("list_ssh_keys_cmd", { dir });
+}
+
+/**
+ * Test SSH connection without keeping it open
+ */
+export async function testSSHConnection(
+  hostConfig: SSHHostConfig
+): Promise<string> {
+  return await invoke<string>("test_ssh_connection", { hostConfig });
+}
