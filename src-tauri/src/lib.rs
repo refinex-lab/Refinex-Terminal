@@ -4,6 +4,7 @@ mod config;
 mod menu;
 mod cli;
 mod fs;
+mod git;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, ConfigState};
@@ -79,7 +80,20 @@ pub fn run() {
             fs::watcher::watch_directory,
             fs::watcher::unwatch_directory,
             fs::watcher::get_watched_directory,
-            fs::finder::list_all_files
+            fs::finder::list_all_files,
+            git::git_status,
+            git::git_diff,
+            git::git_log,
+            git::git_stage,
+            git::git_unstage,
+            git::git_commit,
+            git::git_push,
+            git::git_pull,
+            git::git_fetch,
+            git::git_branches,
+            git::git_checkout,
+            git::git_stash,
+            git::git_stash_pop
         ])
         .setup(|app| {
             // Create and set menu
