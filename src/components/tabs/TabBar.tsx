@@ -100,14 +100,14 @@ const TabBarComponent = () => {
 
   return (
     <div
-      className="flex items-center gap-1 px-2 py-1.5 border-b select-none"
+      className="flex items-center gap-1 px-2 border-b select-none"
       role="tablist"
       aria-label="Terminal tabs"
       style={{
         backgroundColor: "var(--ui-background)",
         borderColor: "var(--ui-border)",
-        // Add padding for macOS traffic lights when using overlay title bar
-        paddingLeft: "80px", // Space for traffic lights on macOS
+        paddingTop: "8px",
+        paddingBottom: "8px",
       }}
     >
       <DndContext
@@ -116,19 +116,22 @@ const TabBarComponent = () => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={sessionIds} strategy={horizontalListSortingStrategy}>
-          {sessions
-            .filter((s) => !s.isPane)
-            .map((session) => (
-              <SortableTab
-                key={session.id}
-                session={session}
-                isActive={session.id === activeSessionId}
-                onSelect={() => setActiveSession(session.id)}
-                onClose={() => handleCloseTab(session.id)}
-              />
-            ))}
-        </SortableContext>
+        {/* Tabs container with flex-1 to take available space */}
+        <div style={{ flex: 1, display: "flex", gap: "4px" }}>
+          <SortableContext items={sessionIds} strategy={horizontalListSortingStrategy}>
+            {sessions
+              .filter((s) => !s.isPane)
+              .map((session) => (
+                <SortableTab
+                  key={session.id}
+                  session={session}
+                  isActive={session.id === activeSessionId}
+                  onSelect={() => setActiveSession(session.id)}
+                  onClose={() => handleCloseTab(session.id)}
+                />
+              ))}
+          </SortableContext>
+        </div>
 
         <DragOverlay>
           {activeSession && (
@@ -147,8 +150,8 @@ const TabBarComponent = () => {
 
       <button
         onClick={handleNewTab}
-        className="p-1.5 rounded hover:bg-white/10 motion-safe:transition-colors ml-1"
-        style={{ color: "var(--ui-foreground)" }}
+        className="p-1.5 rounded hover:bg-white/10 motion-safe:transition-colors"
+        style={{ color: "var(--ui-foreground)", flexShrink: 0 }}
         title="New Terminal (Cmd+T)"
         aria-label="New terminal tab"
       >

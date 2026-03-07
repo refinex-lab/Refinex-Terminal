@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
 import { Toaster, toast } from "sonner";
 import { TabBar } from "@/components/tabs/TabBar";
 import { SplitContainer } from "@/components/terminal/SplitContainer";
@@ -14,24 +21,50 @@ import { getKeybindingManager } from "@/lib/keybinding-manager";
 import { useActionHandler } from "@/lib/keybinding-manager";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { setWindowOpacity, setWindowVibrancy, getWindowState, restoreWindowState, toggleFullscreen, setAlwaysOnTop } from "@/lib/tauri-window";
+import {
+  setWindowOpacity,
+  setWindowVibrancy,
+  getWindowState,
+  restoreWindowState,
+  toggleFullscreen,
+  setAlwaysOnTop,
+} from "@/lib/tauri-window";
 import "./App.css";
 import "./styles/editor-selection-debug.css";
 import "./styles/markdown-preview.css";
 import "./styles/reduced-motion.css";
 
 // Lazy load heavy components for faster startup
-const SettingsPanel = lazy(() => import("@/components/settings/SettingsPanel").then(m => ({ default: m.SettingsPanel })));
-const QuickProjectSwitch = lazy(() => import("@/components/sidebar/QuickProjectSwitch").then(m => ({ default: m.QuickProjectSwitch })));
-const FuzzyFileFinder = lazy(() => import("@/components/sidebar/FuzzyFileFinder").then(m => ({ default: m.FuzzyFileFinder })));
-const CommandPalette = lazy(() => import("@/components/command-palette/CommandPalette").then(m => ({ default: m.CommandPalette })));
+const SettingsPanel = lazy(() =>
+  import("@/components/settings/SettingsPanel").then((m) => ({
+    default: m.SettingsPanel,
+  })),
+);
+const QuickProjectSwitch = lazy(() =>
+  import("@/components/sidebar/QuickProjectSwitch").then((m) => ({
+    default: m.QuickProjectSwitch,
+  })),
+);
+const FuzzyFileFinder = lazy(() =>
+  import("@/components/sidebar/FuzzyFileFinder").then((m) => ({
+    default: m.FuzzyFileFinder,
+  })),
+);
+const CommandPalette = lazy(() =>
+  import("@/components/command-palette/CommandPalette").then((m) => ({
+    default: m.CommandPalette,
+  })),
+);
 
 function App() {
   const { sessions, addSession } = useTerminalStore();
-  const { isVisible: sidebarVisible, toggleVisibility: toggleSidebar } = useSidebarStore();
+  const { isVisible: sidebarVisible, toggleVisibility: toggleSidebar } =
+    useSidebarStore();
   const { tabs: fileTabs } = useFileEditorStore();
   const initializedRef = useRef(false);
-  const keybindingManagerRef = useRef<ReturnType<typeof getKeybindingManager> | null>(null);
+  const keybindingManagerRef = useRef<ReturnType<
+    typeof getKeybindingManager
+  > | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [projectSwitchOpen, setProjectSwitchOpen] = useState(false);
   const [fileFinderOpen, setFileFinderOpen] = useState(false);
@@ -50,52 +83,73 @@ function App() {
   }, []);
 
   // Register global action handlers
-  useActionHandler("settings.open", useCallback(() => {
-    setSettingsOpen(true);
-  }, []));
+  useActionHandler(
+    "settings.open",
+    useCallback(() => {
+      setSettingsOpen(true);
+    }, []),
+  );
 
-  useActionHandler("sidebar.toggle", useCallback(() => {
-    toggleSidebar();
-  }, [toggleSidebar]));
+  useActionHandler(
+    "sidebar.toggle",
+    useCallback(() => {
+      toggleSidebar();
+    }, [toggleSidebar]),
+  );
 
-  useActionHandler("command_palette.open", useCallback(() => {
-    setCommandPaletteOpen(true);
-  }, []));
+  useActionHandler(
+    "command_palette.open",
+    useCallback(() => {
+      setCommandPaletteOpen(true);
+    }, []),
+  );
 
-  useActionHandler("command_palette.open_files", useCallback(() => {
-    setFileFinderOpen(true);
-  }, []));
+  useActionHandler(
+    "command_palette.open_files",
+    useCallback(() => {
+      setFileFinderOpen(true);
+    }, []),
+  );
 
   // Register window actions
-  useActionHandler("window.toggle_fullscreen", useCallback(() => {
-    toggleFullscreen().catch(console.error);
-  }, []));
+  useActionHandler(
+    "window.toggle_fullscreen",
+    useCallback(() => {
+      toggleFullscreen().catch(console.error);
+    }, []),
+  );
 
-  useActionHandler("window.toggle_always_on_top", useCallback(() => {
-    // Toggle state
-    const currentState = localStorage.getItem("always-on-top") === "true";
-    const newState = !currentState;
-    localStorage.setItem("always-on-top", String(newState));
-    setAlwaysOnTop(newState).catch(console.error);
-  }, []));
+  useActionHandler(
+    "window.toggle_always_on_top",
+    useCallback(() => {
+      // Toggle state
+      const currentState = localStorage.getItem("always-on-top") === "true";
+      const newState = !currentState;
+      localStorage.setItem("always-on-top", String(newState));
+      setAlwaysOnTop(newState).catch(console.error);
+    }, []),
+  );
 
   // Register file actions
-  useActionHandler("file.open_folder", useCallback(async () => {
-    try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      });
+  useActionHandler(
+    "file.open_folder",
+    useCallback(async () => {
+      try {
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const selected = await open({
+          directory: true,
+          multiple: false,
+        });
 
-      if (selected) {
-        const { addProject } = useSidebarStore.getState();
-        addProject(selected as string);
+        if (selected) {
+          const { addProject } = useSidebarStore.getState();
+          addProject(selected as string);
+        }
+      } catch (error) {
+        console.error("Failed to open folder:", error);
       }
-    } catch (error) {
-      console.error("Failed to open folder:", error);
-    }
-  }, []));
+    }, []),
+  );
 
   // Initialize with one terminal session
   useEffect(() => {
@@ -118,7 +172,8 @@ function App() {
         const transformedConfig = {
           appearance: {
             theme: loadedConfig.appearance?.theme || "refinex-dark",
-            fontFamily: loadedConfig.appearance?.font_family || "JetBrains Mono",
+            fontFamily:
+              loadedConfig.appearance?.font_family || "JetBrains Mono",
             fontSize: loadedConfig.appearance?.font_size || 14,
             lineHeight: loadedConfig.appearance?.line_height || 1.5,
             ligatures: loadedConfig.appearance?.font_ligatures ?? true,
@@ -170,8 +225,9 @@ function App() {
         const bgColor = theme.ui.background;
         const isDark = isColorDark(bgColor);
 
-        invoke("set_title_bar_theme", { theme: isDark ? "dark" : "light" })
-          .catch(console.error);
+        invoke("set_title_bar_theme", {
+          theme: isDark ? "dark" : "light",
+        }).catch(console.error);
       })
       .catch(console.error);
   }, [config.appearance.theme]);
@@ -309,17 +365,62 @@ function App() {
   }, [isResizingEditor]);
 
   return (
-    <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--ui-background)" }}>
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "var(--ui-background)",
+      }}
+    >
+      {/* Draggable title bar area for macOS */}
+      <div
+        onMouseDown={async (e) => {
+          // Only trigger drag on left mouse button
+          if (e.button === 0) {
+            const { getCurrentWindow } = await import("@tauri-apps/api/window");
+            await getCurrentWindow().startDragging();
+          }
+        }}
+        style={{
+          height: "28px",
+          backgroundColor: "var(--ui-background)",
+          borderBottom: "1px solid var(--ui-border)",
+          flexShrink: 0,
+          cursor: "default",
+          userSelect: "none",
+        }}
+      />
       <TabBar />
-      <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
         {/* Sidebar */}
-        {sidebarVisible && <Sidebar onOpenFileFinder={() => setFileFinderOpen(true)} />}
+        {sidebarVisible && (
+          <Sidebar onOpenFileFinder={() => setFileFinderOpen(true)} />
+        )}
 
         {/* Terminal Area */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "var(--ui-background)" }}>
-          {sessions.map((session) => (
-            session.isActive && <SplitContainer key={session.id} tabId={session.id} />
-          ))}
+        <div
+          style={{
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
+            backgroundColor: "var(--ui-background)",
+          }}
+        >
+          {sessions.map(
+            (session) =>
+              session.isActive && (
+                <SplitContainer key={session.id} tabId={session.id} />
+              ),
+          )}
         </div>
 
         {/* File Editor Panel */}
@@ -345,7 +446,9 @@ function App() {
                 bottom: 0,
                 width: "4px",
                 cursor: "col-resize",
-                backgroundColor: isResizingEditor ? "rgba(59, 130, 246, 0.5)" : "transparent",
+                backgroundColor: isResizingEditor
+                  ? "rgba(59, 130, 246, 0.5)"
+                  : "transparent",
                 zIndex: 10,
               }}
               className="hover:bg-blue-500/50 transition-colors"
@@ -364,16 +467,36 @@ function App() {
       {/* Lazy-loaded overlays */}
       <Suspense fallback={null}>
         {/* Settings Panel */}
-        {settingsOpen && <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />}
+        {settingsOpen && (
+          <SettingsPanel
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
 
         {/* Quick Project Switch */}
-        {projectSwitchOpen && <QuickProjectSwitch isOpen={projectSwitchOpen} onClose={() => setProjectSwitchOpen(false)} />}
+        {projectSwitchOpen && (
+          <QuickProjectSwitch
+            isOpen={projectSwitchOpen}
+            onClose={() => setProjectSwitchOpen(false)}
+          />
+        )}
 
         {/* Fuzzy File Finder */}
-        {fileFinderOpen && <FuzzyFileFinder isOpen={fileFinderOpen} onClose={() => setFileFinderOpen(false)} />}
+        {fileFinderOpen && (
+          <FuzzyFileFinder
+            isOpen={fileFinderOpen}
+            onClose={() => setFileFinderOpen(false)}
+          />
+        )}
 
         {/* Command Palette */}
-        {commandPaletteOpen && <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />}
+        {commandPaletteOpen && (
+          <CommandPalette
+            open={commandPaletteOpen}
+            onOpenChange={setCommandPaletteOpen}
+          />
+        )}
       </Suspense>
     </div>
   );
