@@ -141,35 +141,17 @@ impl PtyManager {
             let mut ring_buffer = vec![0u8; RING_BUFFER_SIZE];
             let mut write_pos = 0;
             let mut last_send_time = Instant::now();
-            let mut total_bytes_read = 0u64;
-            let mut total_messages_sent = 0u64;
-            let start_time = Instant::now();
-            let mut is_first_output = true; // Track first output for immediate prompt display
+            let pty_start_time = Instant::now();
+            let mut last_newline_time: Option<Instant> = None;
 
             loop {
                 // Read into ring buffer
                 match reader.read(&mut ring_buffer[write_pos..]) {
                     Ok(0) => {
                         // EOF - PTY closed
-                        info!("PTY {} session ended (EOF)", session_id);
-
                         // Send any remaining buffered data
                         if write_pos > 0 {
-                            let data = ring_buffer[..write_pos].to_vec();
-                            let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
-                            total_messages_sent += 1;
-                        }
-
-                        // Log performance metrics
-                        let elapsed = start_time.elapsed().as_secs_f64();
-                        if elapsed > 0.0 {
-                            let bytes_per_sec = total_bytes_read as f64 / elapsed;
-                            let messages_per_sec = total_messages_sent as f64 / elapsed;
-                            info!(
-                                "PTY {} stats: {} bytes, {} messages, {:.2} KB/s, {:.2} msg/s",
-                                session_id, total_bytes_read, total_messages_sent,
-                                bytes_per_sec / 1024.0, messages_per_sec
-                            );
+                            let _ = app_handle.emit(&format!("pty-output-{}", session_id), ring_buffer[..write_pos].to_vec());
                         }
 
                         // Emit exit event to notify frontend
@@ -178,25 +160,36 @@ impl PtyManager {
                     }
                     Ok(n) => {
                         write_pos += n;
-                        total_bytes_read += n as u64;
+
+                        let elapsed_since_start = pty_start_time.elapsed();
+
+                        // Check if buffer contains newline (command output)
+                        let has_newline = ring_buffer[..write_pos].contains(&b'\n');
+                        if has_newline {
+                            last_newline_time = Some(Instant::now());
+                        }
 
                         let time_since_last_send = last_send_time.elapsed();
                         let should_send_by_size = write_pos >= BATCH_SIZE_THRESHOLD;
                         let should_send_by_time = time_since_last_send >= Duration::from_millis(BATCH_TIME_THRESHOLD_MS);
 
-                        // Send first output quickly (50ms) to show initial prompt immediately
-                        let should_send_first_output = is_first_output
-                            && write_pos > 0
-                            && time_since_last_send >= Duration::from_millis(50);
+                        // Send immediately if:
+                        // 1. Within first 5 seconds (initial prompt)
+                        // 2. Buffer contains newline (command output)
+                        // 3. Within 100ms after seeing a newline (to catch the prompt that follows)
+                        // 4. Buffer is full (size threshold)
+                        // 5. Time threshold reached
+                        let within_prompt_window = last_newline_time
+                            .map(|t| t.elapsed() < Duration::from_millis(100))
+                            .unwrap_or(false);
+                        let should_send_immediately = elapsed_since_start < Duration::from_secs(5)
+                            || has_newline
+                            || within_prompt_window;
 
-                        // Send if buffer is full enough OR enough time has passed OR first output ready
-                        if should_send_by_size || should_send_by_time || should_send_first_output {
-                            let data = ring_buffer[..write_pos].to_vec();
-                            let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
-                            total_messages_sent += 1;
+                        if write_pos > 0 && (should_send_immediately || should_send_by_size || should_send_by_time) {
+                            let _ = app_handle.emit(&format!("pty-output-{}", session_id), ring_buffer[..write_pos].to_vec());
                             write_pos = 0;
                             last_send_time = Instant::now();
-                            is_first_output = false; // Mark first output as sent
                         }
                     }
                     Err(e) => {

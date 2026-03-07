@@ -115,7 +115,6 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
     container.className = `terminal-container ${className}`;
     container.style.width = '100%';
     container.style.height = '100%';
-    // Don't set backgroundColor here - let xterm.js handle it via theme
 
     // Attach to mount point
     if (mountPointRef.current) {
@@ -148,6 +147,9 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
       theme: initialTheme,
       scrollback: config.terminal.scrollbackLines || 10000,
       allowProposedApi: true,
+      windowOptions: {
+        setWinLines: true,
+      },
     });
 
     // Initialize addons

@@ -43,7 +43,11 @@ fn detect_macos_shell() -> ShellConfig {
         if !shell.is_empty() && PathBuf::from(&shell).exists() {
             return ShellConfig {
                 program: shell,
-                args: vec![],
+                args: vec![
+                    "-l".to_string(), // Login shell to load profile
+                    "-c".to_string(), // Execute command
+                    "unset zle_bracketed_paste; exec $SHELL".to_string(), // Disable bracketed paste and re-exec shell
+                ],
                 env: build_shell_env(),
             };
         }
@@ -53,7 +57,11 @@ fn detect_macos_shell() -> ShellConfig {
     if PathBuf::from("/bin/zsh").exists() {
         return ShellConfig {
             program: "/bin/zsh".to_string(),
-            args: vec![],
+            args: vec![
+                "-l".to_string(),
+                "-c".to_string(),
+                "unset zle_bracketed_paste; exec /bin/zsh".to_string(),
+            ],
             env: build_shell_env(),
         };
     }
@@ -61,7 +69,7 @@ fn detect_macos_shell() -> ShellConfig {
     // Final fallback to /bin/bash
     ShellConfig {
         program: "/bin/bash".to_string(),
-        args: vec![],
+        args: vec!["-l".to_string()],
         env: build_shell_env(),
     }
 }
@@ -153,6 +161,9 @@ fn build_shell_env() -> Vec<(String, String)> {
     } else {
         env_vars.push(("COLORTERM".to_string(), "truecolor".to_string()));
     }
+
+    // Disable zsh bracketed paste mode to fix first-enter issue
+    env_vars.push(("DISABLE_BRACKETED_PASTE".to_string(), "1".to_string()));
 
     env_vars
 }
