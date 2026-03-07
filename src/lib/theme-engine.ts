@@ -46,6 +46,9 @@ export interface Theme {
     inputBackground: string;
     inputForeground: string;
     inputBorder: string;
+    accent: string;
+    accentForeground: string;
+    mutedForeground: string;
   };
 }
 
@@ -125,6 +128,9 @@ export function applyTheme(theme: Theme): void {
   root.style.setProperty("--ui-input-background", theme.ui.inputBackground);
   root.style.setProperty("--ui-input-foreground", theme.ui.inputForeground);
   root.style.setProperty("--ui-input-border", theme.ui.inputBorder);
+  root.style.setProperty("--ui-accent", theme.ui.accent);
+  root.style.setProperty("--ui-accent-foreground", theme.ui.accentForeground);
+  root.style.setProperty("--ui-muted-foreground", theme.ui.mutedForeground);
 }
 
 /**
@@ -178,7 +184,9 @@ function parseThemeToml(tomlContent: string): Theme {
       if (key === "name" && !currentSection) {
         theme.name = value;
       } else if (currentSection) {
-        (theme[currentSection] as Record<string, string>)[key] = value;
+        // Convert snake_case to camelCase for TypeScript
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        (theme[currentSection] as Record<string, string>)[camelKey] = value;
       }
     }
   }

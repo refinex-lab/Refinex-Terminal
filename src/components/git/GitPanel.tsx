@@ -281,22 +281,44 @@ const GitPanelComponent = () => {
     >
       {/* Branch indicator */}
       <div
-        className="flex items-center gap-2 px-4 py-3 border-b cursor-pointer hover:bg-white/5 transition-colors"
+        className="flex items-center gap-2 px-4 py-3 border-b"
         style={{ borderColor: "var(--ui-border)" }}
-        onClick={() => setShowBranchManager(true)}
-        title="Click to manage branches"
       >
-        <GitBranch className="size-4" />
-        <span className="font-medium">{status.branch}</span>
-        {(status.ahead > 0 || status.behind > 0) && (
-          <span
-            className="text-xs px-2 py-0.5 rounded"
-            style={{ backgroundColor: "rgba(59, 130, 246, 0.2)", color: "#3b82f6" }}
-          >
-            {status.ahead > 0 && `↑${status.ahead}`}
-            {status.behind > 0 && ` ↓${status.behind}`}
-          </span>
-        )}
+        <div
+          className="flex items-center gap-2 flex-1 cursor-pointer hover:bg-white/5 transition-colors rounded px-2 py-1 -mx-2"
+          onClick={() => setShowBranchManager(true)}
+          title="Click to manage branches"
+        >
+          <GitBranch className="size-4" />
+          <span className="font-medium">{status.branch}</span>
+          {(status.ahead > 0 || status.behind > 0) && (
+            <span
+              className="text-xs px-2 py-0.5 rounded"
+              style={{ backgroundColor: "rgba(59, 130, 246, 0.2)", color: "#3b82f6" }}
+            >
+              {status.ahead > 0 && `↑${status.ahead}`}
+              {status.behind > 0 && ` ↓${status.behind}`}
+            </span>
+          )}
+        </div>
+
+        {/* Git Graph Icon Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const { mode, toggleBottomPanel } = useLayoutStore.getState();
+            if (mode === "ide") {
+              toggleBottomPanel("git-graph");
+            } else {
+              setShowGitGraph(true);
+            }
+          }}
+          className="p-1.5 rounded hover:bg-white/10 transition-colors"
+          style={{ color: "var(--ui-foreground)" }}
+          title="Git Graph"
+        >
+          <GitCommit className="size-4" />
+        </button>
       </div>
 
       {/* File sections */}
@@ -548,25 +570,6 @@ const GitPanelComponent = () => {
             <Archive className="size-4" />
           </button>
         </div>
-
-        {/* Git Graph Button */}
-        <button
-          onClick={() => {
-            // In IDE mode, open in bottom panel
-            const { mode, toggleBottomPanel } = useLayoutStore.getState();
-            if (mode === "ide") {
-              toggleBottomPanel("git-graph");
-            } else {
-              // In Terminal mode, open as overlay
-              setShowGitGraph(true);
-            }
-          }}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors mt-2"
-          title="Git Graph"
-        >
-          <GitCommit className="size-4" />
-          <span>Git Graph</span>
-        </button>
       </div>
 
       {/* Branch Manager */}

@@ -60,6 +60,16 @@ export function GitGraphViewPanel({
     loadBranches();
   }, [repoPath]);
 
+  useEffect(() => {
+    // Auto-load commits for the current branch when branches are loaded
+    if (branches.length > 0 && !selectedBranch) {
+      const currentBranch = branches.find(b => b.is_head || (b as any).is_current);
+      if (currentBranch) {
+        loadCommits(currentBranch.name);
+      }
+    }
+  }, [branches, selectedBranch]);
+
   const loadBranches = async () => {
     try {
       const result = await gitBranches(repoPath);
@@ -223,41 +233,44 @@ export function GitGraphViewPanel({
               >
                 Local
               </div>
-              {localBranches.map((branch) => (
-                <div
-                  key={branch.name}
-                  className="group flex items-center justify-between px-4 py-2 hover:bg-white/5 cursor-pointer transition-colors"
-                  style={{
-                    backgroundColor:
-                      selectedBranch === branch.name
-                        ? "rgba(255, 255, 255, 0.08)"
-                        : undefined,
-                    borderLeft: branch.is_head ? "3px solid var(--ui-accent)" : "3px solid transparent",
-                  }}
-                  onClick={() => handleBranchClick(branch)}
-                  onContextMenu={(e) => handleBranchContextMenu(e, branch)}
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {branch.is_head ? (
-                      <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--ui-accent)" }}>●</span>
-                    ) : (
-                      <GitBranch className="size-3.5 flex-shrink-0 opacity-70" />
-                    )}
-                    <span className="text-sm truncate" style={{ fontWeight: branch.is_head ? 600 : 400 }}>
-                      {branch.name}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBranchContextMenu(e, branch);
+              {localBranches.map((branch) => {
+                const isCurrentBranch = branch.is_head || (branch as any).is_current;
+                return (
+                  <div
+                    key={branch.name}
+                    className="group flex items-center justify-between px-4 py-2 hover:bg-white/5 cursor-pointer transition-colors"
+                    style={{
+                      backgroundColor:
+                        selectedBranch === branch.name
+                          ? "rgba(255, 255, 255, 0.08)"
+                          : undefined,
+                      borderLeft: isCurrentBranch ? "3px solid var(--ui-accent)" : "3px solid transparent",
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 transition-opacity"
+                    onClick={() => handleBranchClick(branch)}
+                    onContextMenu={(e) => handleBranchContextMenu(e, branch)}
                   >
-                    <MoreVertical className="size-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {isCurrentBranch ? (
+                        <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--ui-accent)" }}>●</span>
+                      ) : (
+                        <GitBranch className="size-3.5 flex-shrink-0 opacity-70" />
+                      )}
+                      <span className="text-sm truncate" style={{ fontWeight: isCurrentBranch ? 600 : 400 }}>
+                        {branch.name}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBranchContextMenu(e, branch);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 transition-opacity"
+                    >
+                      <MoreVertical className="size-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -454,7 +467,7 @@ export function GitGraphViewPanel({
           <button
             onClick={() => handleCheckoutBranch(contextMenu.branch.name)}
             className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-colors"
-            disabled={contextMenu.branch.is_head}
+            disabled={contextMenu.branch.is_head || (contextMenu.branch as any).is_current}
           >
             Checkout
           </button>
