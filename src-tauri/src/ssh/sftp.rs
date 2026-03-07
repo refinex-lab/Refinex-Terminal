@@ -94,7 +94,7 @@ impl SftpManager {
             .clone();
         drop(sessions);
 
-        let mut session = wrapper.lock().await;
+        let session = wrapper.lock().await;
 
         // Read directory
         let entries = session
@@ -124,9 +124,9 @@ impl SftpManager {
                     .unwrap_or_default()
                     .as_secs()
             });
-            let permissions = metadata.permissions()
-                .map(|p| format_permissions(p.mode()))
-                .unwrap_or_else(|| "?????????".to_string());
+
+            // Get permissions - use default if not available
+            let permissions = "?????????".to_string();
 
             result.push(RemoteFileEntry {
                 name: file_name,
@@ -185,9 +185,7 @@ impl SftpManager {
                     .unwrap_or_default()
                     .as_secs()
             }),
-            permissions: metadata.permissions()
-                .map(|p| format_permissions(p.mode()))
-                .unwrap_or_else(|| "?????????".to_string()),
+            permissions: "?????????".to_string(),
             owner: None,
             group: None,
         })

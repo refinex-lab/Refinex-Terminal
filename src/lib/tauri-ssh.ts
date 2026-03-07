@@ -119,3 +119,168 @@ export async function testSSHConnection(
 ): Promise<string> {
   return await invoke<string>("test_ssh_connection", { hostConfig });
 }
+
+// ============ SFTP Operations ============
+
+export interface RemoteFileEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+  size: number;
+  modified?: number; // Unix timestamp
+  permissions: string; // rwxr-xr-x format
+  owner?: string;
+  group?: string;
+}
+
+export interface TransferProgress {
+  transferId: string;
+  direction: "upload" | "download";
+  fileName: string;
+  bytesTransferred: number;
+  totalBytes: number;
+  speed: number; // bytes per second
+}
+
+/**
+ * Open SFTP session on existing SSH connection
+ */
+export async function sftpOpen(connId: string): Promise<string> {
+  return await invoke<string>("sftp_open", { connId });
+}
+
+/**
+ * List directory contents
+ */
+export async function sftpReaddir(
+  sessionId: string,
+  path: string
+): Promise<RemoteFileEntry[]> {
+  return await invoke<RemoteFileEntry[]>("sftp_readdir", { sessionId, path });
+}
+
+/**
+ * Get file/directory information
+ */
+export async function sftpStat(
+  sessionId: string,
+  path: string
+): Promise<RemoteFileEntry> {
+  return await invoke<RemoteFileEntry>("sftp_stat", { sessionId, path });
+}
+
+/**
+ * Read file content (for preview)
+ */
+export async function sftpReadFile(
+  sessionId: string,
+  path: string,
+  maxBytes: number
+): Promise<string> {
+  return await invoke<string>("sftp_read_file", {
+    sessionId,
+    path,
+    maxBytes,
+  });
+}
+
+/**
+ * Create directory
+ */
+export async function sftpMkdir(
+  sessionId: string,
+  path: string
+): Promise<void> {
+  await invoke("sftp_mkdir", { sessionId, path });
+}
+
+/**
+ * Rename file or directory
+ */
+export async function sftpRename(
+  sessionId: string,
+  oldPath: string,
+  newPath: string
+): Promise<void> {
+  await invoke("sftp_rename", { sessionId, oldPath, newPath });
+}
+
+/**
+ * Remove file or empty directory
+ */
+export async function sftpRemove(
+  sessionId: string,
+  path: string
+): Promise<void> {
+  await invoke("sftp_remove", { sessionId, path });
+}
+
+/**
+ * Remove directory recursively
+ */
+export async function sftpRemoveRecursive(
+  sessionId: string,
+  path: string
+): Promise<void> {
+  await invoke("sftp_remove_recursive", { sessionId, path });
+}
+
+/**
+ * Close SFTP session
+ */
+export async function sftpClose(sessionId: string): Promise<void> {
+  await invoke("sftp_close", { sessionId });
+}
+
+/**
+ * Upload file from local to remote
+ */
+export async function sftpUpload(
+  sessionId: string,
+  localPath: string,
+  remotePath: string
+): Promise<string> {
+  return await invoke<string>("sftp_upload", {
+    sessionId,
+    localPath,
+    remotePath,
+  });
+}
+
+/**
+ * Download file from remote to local
+ */
+export async function sftpDownload(
+  sessionId: string,
+  remotePath: string,
+  localPath: string
+): Promise<string> {
+  return await invoke<string>("sftp_download", {
+    sessionId,
+    remotePath,
+    localPath,
+  });
+}
+
+/**
+ * Upload directory recursively
+ */
+export async function sftpUploadDirectory(
+  sessionId: string,
+  localDir: string,
+  remoteDir: string
+): Promise<string[]> {
+  return await invoke<string[]>("sftp_upload_directory", {
+    sessionId,
+    localDir,
+    remoteDir,
+  });
+}
+
+/**
+ * Cancel transfer
+ */
+export async function sftpCancelTransfer(transferId: string): Promise<void> {
+  await invoke("sftp_cancel_transfer", { transferId });
+}
+
