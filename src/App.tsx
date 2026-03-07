@@ -9,7 +9,7 @@ import {
 import { Toaster, toast } from "sonner";
 import { FaTerminal, FaCode } from "react-icons/fa";
 import { PiTerminalFill } from "react-icons/pi";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FolderOpen } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -647,18 +647,226 @@ function App() {
             >
               {fileTabs.length > 0 ? (
                 <FileEditorPanel />
-              ) : (
+              ) : sidebarVisible && useSidebarStore.getState().activeProject ? (
+                // Project opened but no file selected - show shortcuts
                 <div
                   style={{
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
                     height: "100%",
-                    color: "var(--ui-muted-foreground)",
-                    fontSize: "14px",
+                    gap: "32px",
+                    padding: "40px",
                   }}
                 >
-                  No file open. Select a file from the sidebar to edit.
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "var(--ui-foreground)",
+                        fontSize: "20px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {useSidebarStore.getState().activeProject?.name}
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--ui-muted-foreground)",
+                        fontSize: "14px",
+                        opacity: 0.7,
+                      }}
+                    >
+                      Select a file from the sidebar to start editing
+                    </div>
+        </div>
+
+                  {/* Keyboard Shortcuts */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "16px",
+                      width: "100%",
+                      maxWidth: "500px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "var(--ui-foreground)",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Keyboard Shortcuts
+                    </div>
+
+                    {[
+                      { keys: ["⇧", "⇧"], description: "Quick file search" },
+                      { keys: ["⌘", "P"], description: "Command palette" },
+                      { keys: ["⌘", "B"], description: "Toggle sidebar" },
+                      { keys: ["⌘", "⇧", "P"], description: "Global commands" },
+                      { keys: ["⌘", ","], description: "Settings" },
+                      { keys: ["⌘", "T"], description: "New terminal" },
+                    ].map((shortcut, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "12px 16px",
+                          backgroundColor: "rgba(255, 255, 255, 0.03)",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(255, 255, 255, 0.05)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "var(--ui-muted-foreground)",
+                            fontSize: "13px",
+                          }}
+                        >
+                          {shortcut.description}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "4px",
+                          }}
+                        >
+                          {shortcut.keys.map((key, keyIndex) => (
+                            <span
+                              key={keyIndex}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minWidth: "24px",
+                                height: "24px",
+                                padding: "0 8px",
+                                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                                borderRadius: "4px",
+                                color: "var(--ui-foreground)",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
+                              }}
+                            >
+                              {key}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // No project opened - show open folder prompt
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    gap: "24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "12px",
+                    }}
+                  >
+                    <FolderOpen
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        color: "var(--ui-muted-foreground)",
+                        opacity: 0.5,
+                      }}
+                    />
+                    <div
+                      style={{
+                        color: "var(--ui-muted-foreground)",
+                        fontSize: "16px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      No project opened
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--ui-muted-foreground)",
+                        fontSize: "14px",
+                        opacity: 0.7,
+                        textAlign: "center",
+                        maxWidth: "400px",
+                      }}
+                    >
+                      Open a folder to start editing files, or switch to Terminal mode to use the terminal.
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { open } = await import("@tauri-apps/plugin-dialog");
+                        const selected = await open({
+                          directory: true,
+                          multiple: false,
+                        });
+
+                        if (selected) {
+                          const { addProject } = useSidebarStore.getState();
+                          addProject(selected as string);
+                        }
+                      } catch (error) {
+                        console.error("Failed to open folder:", error);
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.filter = "brightness(1.1)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.filter = "brightness(1)";
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = "scale(0.95)";
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = "scale(1)";
+                    }}
+                    style={{
+                      backgroundColor: "var(--ui-accent)",
+                      color: "var(--ui-accent-foreground)",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 16px",
+                      borderRadius: "6px",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <FolderOpen className="size-4" />
+                    Open Folder
+                  </button>
                 </div>
               )}
             </div>
