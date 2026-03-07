@@ -445,7 +445,7 @@ export function GitGraphView({
         </div>
       )}
 
-      {/* Context Menu - Reuse BranchManager logic */}
+      {/* Context Menu */}
       {contextMenu && (
         <div
           data-git-graph-context-menu
@@ -457,14 +457,62 @@ export function GitGraphView({
             border: "1px solid var(--ui-border)",
             minWidth: "200px",
           }}
+          onMouseEnter={() => {
+            if (contextMenuTimeoutRef.current) {
+              clearTimeout(contextMenuTimeoutRef.current);
+            }
+          }}
+          onMouseLeave={() => {
+            contextMenuTimeoutRef.current = window.setTimeout(() => {
+              setContextMenu(null);
+            }, 1000);
+          }}
         >
-          {/* Context menu items - same as BranchManager */}
-          <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors">
-            Checkout
-          </button>
-          <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors">
-            Create branch from
-          </button>
+          {contextMenu.branch.is_current ? (
+            <>
+              {/* Current branch menu */}
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                onClick={() => {
+                  toast.info("Create branch from current branch");
+                  setContextMenu(null);
+                }}
+              >
+                Create branch from '{contextMenu.branch.name}'
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Non-current branch menu */}
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                onClick={async () => {
+                  try {
+                    await invoke("git_checkout", {
+                      repoPath,
+                      branchName: contextMenu.branch.name,
+                    });
+                    toast.success(`Checked out to ${contextMenu.branch.name}`);
+                    loadBranches();
+                  } catch (error) {
+                    toast.error(`Failed to checkout: ${error}`);
+                  }
+                  setContextMenu(null);
+                }}
+              >
+                Checkout
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                onClick={() => {
+                  toast.info(`Create branch from ${contextMenu.branch.name}`);
+                  setContextMenu(null);
+                }}
+              >
+                Create branch from '{contextMenu.branch.name}'
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
