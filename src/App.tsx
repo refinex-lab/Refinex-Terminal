@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { TabBar } from "@/components/tabs/TabBar";
 import { SplitContainer } from "@/components/terminal/SplitContainer";
 import { Sidebar } from "@/components/sidebar/Sidebar";
@@ -152,6 +152,11 @@ function App() {
       })
       .catch((error) => {
         console.error("Failed to load config:", error);
+        // Show toast notification for config errors
+        toast.error("Config file has errors", {
+          description: "Using default configuration",
+          duration: 5000,
+        });
       });
   }, []);
 

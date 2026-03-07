@@ -5,6 +5,7 @@ mod menu;
 mod cli;
 mod fs;
 mod git;
+mod logging;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, set_window_opacity, set_window_vibrancy, toggle_fullscreen, set_always_on_top, get_window_state, restore_window_state, ConfigState};
@@ -13,6 +14,7 @@ use cli::{detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile
 use fs::watcher::FsWatcher;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
+use tracing::{info, error};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -36,9 +38,25 @@ fn disable_webview_drag_drop(webview: &tauri::WebviewWindow) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize logging system
+    if let Err(e) = logging::init_logging() {
+        eprintln!("Failed to initialize logging: {}", e);
+    } else {
+        info!("Refinex Terminal starting...");
+    }
+
     // Load configuration on startup
     let config_path = get_config_path().expect("Failed to get config path");
-    let config = load_config(config_path).unwrap_or_default();
+    let config = match load_config(config_path.clone()) {
+        Ok(cfg) => {
+            info!("Configuration loaded successfully from {:?}", config_path);
+            cfg
+        }
+        Err(e) => {
+            error!("Failed to load config: {}. Using defaults.", e);
+            config::AppConfig::default()
+        }
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
+use tracing::{info, error, debug};
 
 use super::shell::detect_shell;
 
@@ -52,6 +53,8 @@ impl PtyManager {
             id
         };
 
+        info!("Spawning PTY session {} in directory: {}", id, cwd);
+
         // Create PTY system
         let pty_system = native_pty_system();
 
@@ -63,10 +66,14 @@ impl PtyManager {
                 pixel_width: 0,
                 pixel_height: 0,
             })
-            .map_err(|e| format!("Failed to open PTY: {}", e))?;
+            .map_err(|e| {
+                error!("Failed to open PTY {}: {}", id, e);
+                format!("Failed to open PTY: {}", e)
+            })?;
 
         // Detect shell and get configuration
         let shell_config = detect_shell(None); // TODO: Read from config
+        debug!("Using shell: {} for PTY {}", shell_config.program, id);
 
         // Create command builder
         let mut cmd = CommandBuilder::new(&shell_config.program);
@@ -86,10 +93,14 @@ impl PtyManager {
         let child = pair
             .slave
             .spawn_command(cmd)
-            .map_err(|e| format!("Failed to spawn shell: {}", e))?;
+            .map_err(|e| {
+                error!("Failed to spawn shell for PTY {}: {}", id, e);
+                format!("Failed to spawn shell: {}", e)
+            })?;
 
         // Get child PID for process detection
         let child_pid = child.process_id();
+        info!("PTY {} spawned with PID: {:?}", id, child_pid);
 
         // Get reader and writer
         let mut reader = pair
@@ -139,6 +150,8 @@ impl PtyManager {
                 match reader.read(&mut ring_buffer[write_pos..]) {
                     Ok(0) => {
                         // EOF - PTY closed
+                        info!("PTY {} session ended (EOF)", session_id);
+
                         // Send any remaining buffered data
                         if write_pos > 0 {
                             let data = ring_buffer[..write_pos].to_vec();
@@ -151,15 +164,16 @@ impl PtyManager {
                         if elapsed > 0.0 {
                             let bytes_per_sec = total_bytes_read as f64 / elapsed;
                             let messages_per_sec = total_messages_sent as f64 / elapsed;
-                            eprintln!(
-                                "[PTY-{}] Session ended. Stats: {} bytes, {} messages, {:.2} KB/s, {:.2} msg/s",
+                            info!(
+                                "PTY {} stats: {} bytes, {} messages, {:.2} KB/s, {:.2} msg/s",
                                 session_id, total_bytes_read, total_messages_sent,
                                 bytes_per_sec / 1024.0, messages_per_sec
                             );
                         }
 
+                        // Emit exit event to notify frontend
                         let _ = app_handle.emit(&format!("pty-exit-{}", session_id), ());
-                    break;
+                        break;
                     }
                     Ok(n) => {
                         write_pos += n;
@@ -169,7 +183,7 @@ impl PtyManager {
                         let should_send_by_size = write_pos >= BATCH_SIZE_THRESHOLD;
                         let should_send_by_time = time_since_last_send >= Duration::from_millis(BATCH_TIME_THRESHOLD_MS);
 
-                        // Send if buffer is full enough OR enough time has passed
+                        // Send  buffer is full enough OR enough time has passed
                         if should_send_by_size || should_send_by_time {
                             let data = ring_buffer[..write_pos].to_vec();
                             let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
@@ -179,7 +193,8 @@ impl PtyManager {
                         }
                     }
                     Err(e) => {
-                        eprintln!("[PTY-{}] Read error: {}", session_id, e);
+                        error!("PTY {} read error: {}", session_id, e);
+                        let _ = app_handle.emit(&format!("pty-exit-{}", session_id), ());
                         break;
                     }
                 }
