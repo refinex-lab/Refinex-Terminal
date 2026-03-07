@@ -1,7 +1,8 @@
 import { Plus } from "lucide-react";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { ptyKill } from "@/lib/tauri-pty";
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
+import { useActionHandler } from "@/lib/keybinding-manager";
 import {
   DndContext,
   closestCenter,
@@ -33,58 +34,19 @@ export function TabBar() {
     useSensor(KeyboardSensor)
   );
 
-  const sessionIds = sessions.map((s) => s.id);
+  const sessionIds = sessions.filter(s => !s.isPane).map((s) => s.id);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-      const modifier = isMac ? e.metaKey : e.ctrlKey;
-
-      if (!modifier) return;
-
-      // Cmd/Ctrl + T - New tab
-      if (e.key === "t") {
-        e.preventDefault();
-        handleNewTab();
-        return;
-      }
-
-      // Cmd/Ctrl + W - Close current tab
-      if (e.key === "w") {
-        e.preventDefault();
-        if (activeSessionId) {
-          handleCloseTab(activeSessionId);
-        }
-        return;
-      }
-
-      // Cmd/Ctrl + 1-9 - Switch to tab
-      const num = parseInt(e.key);
-      if (num >= 1 && num <= 9) {
-        e.preventDefault();
-        const session = sessions[num - 1];
-        if (session) {
-          setActiveSession(session.id);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [sessions, activeSessionId, setActiveSession]);
-
-  const handleNewTab = () => {
+  const handleNewTab = useCallback(() => {
     const newSession = {
       id: `terminal-${Date.now()}`,
-      title: `⌘ ${sessions.length + 1}`, // Will be renumbered by store
+      title: `⌘ ${sessions.filter(s => !s.isPane).length + 1}`, // Will be renumbered by store
       cwd: "~",
       ptyId: null,
     };
     addSession(newSession);
-  };
+  }, [sessions, addSession]);
 
-  const handleCloseTab = async (sessionId: string) => {
+  const handleCloseTab = useCallback(async (sessionId: string) => {
     const session = sessions.find((s) => s.id === sessionId);
     if (session?.ptyId !== null && session?.ptyId !== undefined) {
       try {
@@ -94,7 +56,16 @@ export function TabBar() {
       }
     }
     removeSession(sessionId);
-  };
+  }, [sessions, removeSession]);
+
+  // Register action handlers
+  useActionHandler("terminal.new_tab", handleNewTab);
+
+  useActionHandler("terminal.close_tab", useCallback(() => {
+    if (activeSessionId) {
+      handleCloseTab(activeSessionId);
+    }
+  }, [activeSessionId, handleCloseTab]));
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
@@ -121,7 +92,7 @@ export function TabBar() {
       >
         <SortableContext items={sessionIds} strategy={horizontalListSortingStrategy}>
           <div className="flex items-center gap-1.5 flex-1">
-            {sessions.map((session) => (
+            {sessions.filter(s => !s.isPane).map((session) => (
               <SortableTab
                 key={session.id}
                 id={session.id}
@@ -129,7 +100,7 @@ export function TabBar() {
                 isActive={session.isActive}
                 onActivate={() => setActiveSession(session.id)}
                 onClose={() => handleCloseTab(session.id)}
-                totalTabs={sessions.length}
+                totalTabs={sessions.filter(s => !s.isPane).length}
               />
             ))}
           </div>

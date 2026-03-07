@@ -10,6 +10,7 @@ export interface TerminalSession {
   cwd: string;
   ptyId: number | null;
   isActive: boolean;
+  isPane?: boolean; // Mark if this is a split pane (not a tab)
 }
 
 /**
@@ -34,15 +35,27 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 
   addSession: (session) =>
     set((state) => {
+      // If this is a pane (not a tab), don't change active states
+      if (session.isPane) {
+        return {
+          sessions: [...state.sessions, { ...session, isActive: false }],
+        };
+      }
+
+      // For tabs, mark all others as inactive and renumber
       const newSessions = [
         ...state.sessions.map((s) => ({ ...s, isActive: false })),
         { ...session, isActive: true },
       ];
-      // Renumber all sessions to be sequential
-      const renumberedSessions = newSessions.map((s, index) => ({
-        ...s,
-        title: `⌘ ${index + 1}`,
-      }));
+      // Renumber only tab sessions (not panes)
+      const renumberedSessions = newSessions.map((s, index) => {
+        if (s.isPane) return s;
+        const tabIndex = newSessions.filter((ns, i) => i <= index && !ns.isPane).length;
+        return {
+          ...s,
+          title: `⌘ ${tabIndex}`,
+        };
+      });
       return {
         sessions: renumberedSessions,
         activeSessionId: session.id,

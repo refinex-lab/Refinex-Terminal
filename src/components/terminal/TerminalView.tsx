@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import React from "react";
 import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
@@ -15,92 +16,70 @@ import { AIBlockOverlay } from "./AIBlockOverlay";
 import { AgentStatus } from "./AgentStatus";
 import { useBlockTracker, type CLIType } from "@/lib/ai-block-detector";
 import { createFontZoomHandler, applyFont } from "@/lib/font-manager";
-import { loadBuiltinTheme, applyTheme, themeToXtermTheme } from "@/lib/theme-engine";
+import { loadBuiltinTheme, themeToXtermTheme } from "@/lib/theme-engine";
+import { terminalManager } from "@/lib/terminal-manager";
 import "@xterm/xterm/css/xterm.css";
+
+// Global registry to track initialized terminals
+// This prevents re-initialization when React remounts the component
+const initializedTerminals = new Map<string, boolean>();
 
 interface TerminalViewProps {
   sessionId: string;
   className?: string;
+  forceVisible?: boolean; // Force visibility regardless of isActive state
 }
 
-export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const searchAddonRef = useRef<SearchAddon | null>(null);
+const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false }: TerminalViewProps) => {
+  const mountPointRef = useRef<HTMLDivElement>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [fontSize, setFontSize] = useState(14);
-  const { sessions } = useTerminalStore();
   const { config } = useConfigStore();
   const blockTracker = useBlockTracker(sessionId);
-
-  // Output batching for streaming performance
-  const outputBufferRef = useRef<Uint8Array[]>([]);
-  const flushScheduledRef = useRef(false);
-  const lastFlushTimeRef = useRef(0);
-  const writeQueueSizeRef = useRef(0);
+  const sessions = useTerminalStore((state) => state.sessions);
 
   const session = sessions.find((s) => s.id === sessionId);
 
-  // Apply config changes to terminal in real-time
+  // Initialize terminal instance (only once globally)
   useEffect(() => {
-    const terminal = terminalRef.current;
-    if (!terminal) return;
+    if (!session) return;
 
-    // Apply font settings
-    applyFont({
-      family: config.appearance.fontFamily,
-      size: config.appearance.fontSize,
-      lineHeight: config.appearance.lineHeight,
-      ligatures: config.appearance.ligatures,
-    }, terminal);
-
-    // Apply cursor style
-    terminal.options.cursorStyle = config.appearance.cursorStyle;
-
-    // Apply theme
-    loadBuiltinTheme(config.appearance.theme)
-      .then((theme) => {
-        applyTheme(theme);
-        terminal.options.theme = themeToXtermTheme(theme);
-      })
-      .catch(console.error);
-
-    // Refit terminal after changes
-    if (fitAddonRef.current) {
-      fitAddonRef.current.fit();
-      if (session?.ptyId !== null && session?.ptyId !== undefined) {
-        ptyResize(session.ptyId, terminal.cols, terminal.rows).catch(console.error);
-      }
-    }
-  }, [
-    config.appearance.fontFamily,
-    config.appearance.fontSize,
-    config.appearance.lineHeight,
-    config.appearance.ligatures,
-    config.appearance.cursorStyle,
-    config.appearance.theme,
-    session?.ptyId,
-  ]);
-
-  // Refit terminal when tab becomes active
-  useEffect(() => {
-    if (!session?.isActive || !terminalRef.current || !fitAddonRef.current) return;
-
-    // Use requestAnimationFrame to ensure DOM has updated
-    requestAnimationFrame(() => {
-      if (fitAddonRef.current && terminalRef.current) {
-        fitAddonRef.current.fit();
+    // Check if terminal instance already exists
+    if (terminalManager.hasInstance(sessionId)) {
+      // Terminal already initialized, just attach to mount point
+      const instance = terminalManager.getInstance(sessionId);
+      if (instance && mountPointRef.current) {
+        // Move the terminal container to the new mount point
+        mountPointRef.current.appendChild(instance.container);
+        // Refit terminal
+        instance.fitAddon.fit();
         if (session.ptyId !== null && session.ptyId !== undefined) {
-          const terminal = terminalRef.current;
-          ptyResize(session.ptyId, terminal.cols, terminal.rows).catch(console.error);
+          ptyResize(session.ptyId, instance.terminal.cols, instance.terminal.rows).catch(console.error);
         }
       }
-    });
-  }, [session?.isActive, session?.ptyId]);
+      return;
+    }
 
-  useEffect(() => {
-    if (!containerRef.current || !session) return;
+    // Mark as initialized
+    initializedTerminals.set(sessionId, true);
+
+    // Create terminal container (will be managed globally)
+    const container = document.createElement('div');
+    container.className = `terminal-container ${className}`;
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.backgroundColor = 'var(--terminal-background)';
+
+    // Attach to mount point
+    if (mountPointRef.current) {
+      mountPointRef.current.appendChild(container);
+    }
+
+    // Output batching refs
+    const outputBufferRef = { current: [] as Uint8Array[] };
+    const flushScheduledRef = { current: false };
+    const lastFlushTimeRef = { current: 0 };
+    const writeQueueSizeRef = { current: 0 };
 
     // Load theme synchronously before terminal initialization
     let initialTheme: ITheme = {
@@ -134,16 +113,11 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
     terminal.loadAddon(webLinksAddon);
     terminal.loadAddon(unicode11Addon);
 
-    // Store refs
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
-    searchAddonRef.current = searchAddon;
-
     // Activate unicode11
     terminal.unicode.activeVersion = "11";
 
     // Open terminal in container
-    terminal.open(containerRef.current);
+    terminal.open(container);
 
     // Apply theme immediately after opening
     loadBuiltinTheme(config.appearance.theme)
@@ -163,7 +137,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
     // Fit terminal to container
     fitAddon.fit();
 
-    // Configure copy on select (TODO: make configurable via settings)
+    // Configure copy on select
     terminal.onSelectionChange(() => {
       if (terminal.hasSelection()) {
         const selection = terminal.getSelection();
@@ -293,7 +267,6 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
         store.sessions = updatedSessions;
 
         // Detect CLI type from PTY process and set it in block tracker
-        // Poll periodically to detect CLI tools launched after shell starts
         const detectCLI = async () => {
           try {
             const cliType = await detectPtyCli(id);
@@ -365,27 +338,23 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
 
     // Handle container resize
     const resizeObserver = new ResizeObserver(() => {
-      if (fitAddonRef.current && terminalRef.current) {
-        fitAddon.fit();
-        if (session.ptyId !== null) {
-          ptyResize(session.ptyId, terminal.cols, terminal.rows).catch((error) => {
-            console.error("Failed to resize PTY:", error);
-          });
-        }
+      fitAddon.fit();
+      if (session.ptyId !== null) {
+        ptyResize(session.ptyId, terminal.cols, terminal.rows).catch((error) => {
+          console.error("Failed to resize PTY:", error);
+        });
       }
     });
 
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+    if (container) {
+      resizeObserver.observe(container);
     }
 
-    // Handle Cmd/Ctrl+F to open search, copy/paste shortcuts, and font zoom
+    // Handle keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if the event target is within the terminal container
       const target = e.target as HTMLElement;
-      const isInTerminal = containerRef.current?.contains(target) || false;
+      const isInTerminal = container.contains(target) || false;
 
-      // Only handle terminal shortcuts if the event is within the terminal
       if (!isInTerminal) return;
 
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -407,35 +376,11 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
             console.error("Failed to copy:", error);
           });
         }
-        // If no selection, let Ctrl+C pass through to send SIGINT
-        return;
-      }
-
-      // Cmd/Ctrl + Shift + C: Always copy selection
-      if (modifier && e.shiftKey && e.key === "C") {
-        e.preventDefault();
-        if (terminal.hasSelection()) {
-          const selection = terminal.getSelection();
-          navigator.clipboard.writeText(selection).catch((error) => {
-            console.error("Failed to copy:", error);
-          });
-        }
         return;
       }
 
       // Cmd/Ctrl + V: Paste from clipboard
       if (modifier && e.key === "v" && !e.shiftKey) {
-        e.preventDefault();
-        navigator.clipboard.readText().then((text) => {
-          terminal.paste(text);
-        }).catch((error) => {
-          console.error("Failed to paste:", error);
-        });
-        return;
-      }
-
-      // Cmd/Ctrl + Shift + V: Always paste
-      if (modifier && e.shiftKey && e.key === "V") {
         e.preventDefault();
         navigator.clipboard.readText().then((text) => {
           terminal.paste(text);
@@ -460,7 +405,7 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
       }
     };
 
-    // Handle font zoom (Cmd/Ctrl + Plus/Minus/0)
+    // Handle font zoom
     const fontZoomHandler = createFontZoomHandler(
       () => fontSize,
       (newSize) => {
@@ -471,14 +416,11 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
           lineHeight: config.appearance.lineHeight,
           ligatures: config.appearance.ligatures,
         }, terminal);
-        // Refit terminal after font size change
-        if (fitAddonRef.current) {
-          fitAddon.fit();
-          if (session.ptyId !== null) {
-            ptyResize(session.ptyId, terminal.cols, terminal.rows).catch((error) => {
-              console.error("Failed to resize PTY:", error);
-            });
-          }
+        fitAddon.fit();
+        if (session.ptyId !== null) {
+          ptyResize(session.ptyId, terminal.cols, terminal.rows).catch((error) => {
+            console.error("Failed to resize PTY:", error);
+          });
         }
       }
     );
@@ -486,38 +428,51 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keydown", fontZoomHandler);
 
-    // Cleanup
+    // Register terminal instance globally
+    terminalManager.registerInstance(sessionId, {
+      terminal,
+      fitAddon,
+      searchAddon,
+      container,
+      cleanupListeners,
+      disposable,
+      resizeObserver,
+    });
+
+    // Cleanup function (only removes from current mount point, doesn't destroy terminal)
     return () => {
-      disposable.dispose();
-      resizeObserver.disconnect();
+      // Remove container from current mount point
+      if (mountPointRef.current && container.parentNode === mountPointRef.current) {
+        mountPointRef.current.removeChild(container);
+      }
+      // Don't dispose terminal, disposable, or cleanup listeners - they're managed globally
+      // Don't disconnect resizeObserver - it's managed globally
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keydown", fontZoomHandler);
-      if (cleanupListeners) {
-        cleanupListeners();
-      }
-      terminal.dispose();
     };
-  }, [sessionId]);
+  }, [sessionId, session, className, config, blockTracker, fontSize]);
 
   if (!session) {
     return null;
   }
 
+  const instance = terminalManager.getInstance(sessionId);
+
   return (
-    <TerminalContextMenu terminal={terminalRef.current}>
+    <TerminalContextMenu terminal={instance?.terminal || null}>
       <div
         className="relative"
         style={{
           width: "100%",
           height: "100%",
-          visibility: session.isActive ? "visible" : "hidden",
-          position: session.isActive ? "relative" : "absolute",
+          visibility: forceVisible || session.isActive ? "visible" : "hidden",
+          position: forceVisible || session.isActive ? "relative" : "absolute",
           backgroundColor: "var(--terminal-background)",
         }}
       >
         <div
-          ref={containerRef}
-          className={`terminal-container ${className}`}
+          ref={mountPointRef}
+          className={`terminal-mount-point ${className}`}
           style={{
             width: "100%",
             height: "100%",
@@ -525,8 +480,8 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
           }}
         />
         {/* AI Block Overlay */}
-        {session.isActive && config.ai.blockMode && (
-          <AIBlockOverlay sessionId={sessionId} terminal={terminalRef.current} />
+        {session.isActive && config.ai.blockMode && instance && (
+          <AIBlockOverlay sessionId={sessionId} terminal={instance.terminal} />
         )}
         {/* Agent Status Indicator */}
         {session.isActive && config.ai.detectCLI && (
@@ -534,12 +489,12 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
             <AgentStatus sessionId={sessionId} variant="terminal" />
           </div>
         )}
-        {showSearch && session.isActive && (
+        {showSearch && session.isActive && instance && (
           <TerminalSearch
-            searchAddon={searchAddonRef.current}
+            searchAddon={instance.searchAddon}
             onClose={() => {
               setShowSearch(false);
-              searchAddonRef.current?.clearDecorations();
+              instance.searchAddon.clearDecorations();
             }}
           />
         )}
@@ -548,3 +503,8 @@ export function TerminalView({ sessionId, className = "" }: TerminalViewProps) {
   );
 }
 
+// Memoize the component to prevent unnecessary re-renders
+export const TerminalView = React.memo(TerminalViewComponent, (prevProps, nextProps) => {
+  // Only re-render if sessionId changes
+  return prevProps.sessionId === nextProps.sessionId;
+});

@@ -105,10 +105,8 @@ export const editorKeybindings: KeybindingMap = {
   "Cmd+Shift+K": "editor.delete_line",
   "Alt+ArrowUp": "editor.move_line_up",
   "Alt+ArrowDown": "editor.move_line_down",
-  "Cmd+Shift+D": "editor.duplicate_line",
 
   // Multi-cursor
-  "Cmd+D": "editor.add_cursor_to_next_match",
   "Cmd+Shift+L": "editor.add_cursors_to_all_matches",
   "Alt+Click": "editor.add_cursor",
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Toaster } from "sonner";
 import { TabBar } from "@/components/tabs/TabBar";
-import { TerminalView } from "@/components/terminal/TerminalView";
+import { SplitContainer } from "@/components/terminal/SplitContainer";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
@@ -62,15 +62,6 @@ function App() {
     setFileFinderOpen(true);
   }, []));
 
-  useActionHandler("terminal.new_tab", useCallback(() => {
-    addSession({
-      id: `terminal-${Date.now()}`,
-      title: `⌘ ${sessions.length + 1}`,
-      cwd: "~",
-      ptyId: null,
-    });
-  }, [addSession, sessions.length]));
-
   // Register file actions
   useActionHandler("file.open_folder", useCallback(async () => {
     try {
@@ -101,6 +92,51 @@ function App() {
       });
     }
   }, [sessions.length, addSession]);
+
+  // Load config from backend on mount
+  useEffect(() => {
+    invoke<any>("get_config")
+      .then((loadedConfig) => {
+        // Transform Rust config (snake_case) to TypeScript config (camelCase)
+        const transformedConfig = {
+          appearance: {
+            theme: loadedConfig.appearance?.theme || "refinex-dark",
+            fontFamily: loadedConfig.appearance?.font_family || "JetBrains Mono",
+            fontSize: loadedConfig.appearance?.font_size || 14,
+            lineHeight: loadedConfig.appearance?.line_height || 1.5,
+            ligatures: loadedConfig.appearance?.font_ligatures ?? true,
+            opacity: loadedConfig.appearance?.opacity || 1.0,
+            vibrancy: loadedConfig.appearance?.vibrancy ?? false,
+            cursorStyle: loadedConfig.appearance?.cursor_style || "block",
+          },
+          terminal: {
+            shell: loadedConfig.terminal?.shell || "",
+            scrollbackLines: loadedConfig.terminal?.scrollback_lines || 10000,
+            copyOnSelect: loadedConfig.terminal?.copy_on_select ?? true,
+            bellMode: loadedConfig.terminal?.bell_mode || "none",
+            env: {},
+          },
+          ai: {
+            detectCLI: loadedConfig.ai?.detect_cli ?? true,
+            blockMode: loadedConfig.ai?.block_mode ?? true,
+            streamingThrottle: loadedConfig.ai?.streaming_throttle_ms || 16,
+            maxBlockLines: loadedConfig.ai?.max_block_lines || 50000,
+          },
+          git: {
+            enabled: loadedConfig.git?.enabled ?? true,
+            autoFetchInterval: loadedConfig.git?.auto_fetch_interval || 300,
+            showDiff: loadedConfig.git?.show_diff ?? true,
+          },
+          keybindings: config.keybindings, // Keep existing keybindings
+          projects: config.projects, // Keep existing projects
+        };
+
+        useConfigStore.setState({ config: transformedConfig });
+      })
+      .catch((error) => {
+        console.error("Failed to load config:", error);
+      });
+  }, []);
 
   // Apply theme to UI and window
   useEffect(() => {
@@ -217,7 +253,7 @@ function App() {
         {/* Terminal Area */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           {sessions.map((session) => (
-            <TerminalView key={session.id} sessionId={session.id} />
+            session.isActive && <SplitContainer key={session.id} tabId={session.id} />
           ))}
         </div>
 
