@@ -21,18 +21,21 @@ interface LayoutStore {
 
 /**
  * Layout store - manages application layout mode and bottom panel state
+ * Persists mode preference to localStorage
  */
 export const useLayoutStore = create<LayoutStore>((set) => ({
-  mode: "terminal",
+  mode: (localStorage.getItem("layout-mode") as LayoutMode) || "terminal",
   bottomPanelVisible: false,
   bottomPanelHeight: 300,
 
-  setMode: (mode) =>
+  setMode: (mode) => {
+    localStorage.setItem("layout-mode", mode);
     set({
       mode,
       // When switching to terminal mode, hide bottom panel
       bottomPanelVisible: mode === "terminal" ? false : false,
-    }),
+    });
+  },
 
   toggleBottomPanel: () =>
     set((state) => ({
