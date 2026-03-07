@@ -101,6 +101,8 @@ const TabBarComponent = () => {
   return (
     <div
       className="flex items-center gap-1 px-2 py-1.5 border-b select-none"
+      role="tablist"
+      aria-label="Terminal tabs"
       style={{
         backgroundColor: "var(--ui-background)",
         borderColor: "var(--ui-border)",
@@ -145,11 +147,12 @@ const TabBarComponent = () => {
 
       <button
         onClick={handleNewTab}
-        className="p-1.5 rounded hover:bg-white/10 transition-colors ml-1"
+        className="p-1.5 rounded hover:bg-white/10 motion-safe:transition-colors ml-1"
         style={{ color: "var(--ui-foreground)" }}
         title="New Terminal (Cmd+T)"
+        aria-label="New terminal tab"
       >
-        <Plus className="size-4" />
+        <Plus className="size-4" aria-hidden="true" />
       </button>
     </div>
   );

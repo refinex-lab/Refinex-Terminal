@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { arrayMove } from "@dnd-kit/sortable";
 import { terminalManager } from "@/lib/terminal-manager";
 import { ptyKill } from "@/lib/tauri-pty";
+import { screenReaderAnnouncer } from "@/hooks/useScreenReaderAnnouncement";
 
 /**
  * Terminal session type
@@ -114,13 +115,20 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
     }),
 
   setActiveSession: (id) =>
-    set((state) => ({
-      sessions: state.sessions.map((s) => ({
-        ...s,
-        isActive: s.id === id,
-      })),
-      activeSessionId: id,
-    })),
+    set((state) => {
+      const session = state.sessions.find((s) => s.id === id);
+      if (session) {
+        // Announce tab switch to screen readers
+        screenReaderAnnouncer.announce(`Switched to ${session.title}`);
+      }
+      return {
+        sessions: state.sessions.map((s) => ({
+          ...s,
+          isActive: s.id === id,
+        })),
+        activeSessionId: id,
+      };
+    }),
 
   updateSessionTitle: (id, title) =>
     set((state) => ({

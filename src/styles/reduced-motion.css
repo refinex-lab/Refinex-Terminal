@@ -1,0 +1,109 @@
+/**
+ * Reduced Motion Support
+ * Respects user's prefers-reduced-motion preference
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all animations and transitions */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable specific animations */
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
+
+  /* Disable collapse/expand animations */
+  [data-state="open"],
+  [data-state="closed"] {
+    transition: none !important;
+  }
+
+  /* Disable status indicator animations */
+  .status-indicator {
+    animation: none !important;
+  }
+
+  /* Disable tab transitions */
+  .tab-transition {
+    transition: none !important;
+  }
+
+  /* Disable sidebar transitions */
+  .sidebar-transition {
+    transition: none !important;
+  }
+
+  /* Disable modal/dialog transitions */
+  [role="dialog"],
+  [role="alertdialog"] {
+    transition: none !important;
+  }
+
+  /* Disable tooltip transitions */
+  [role="tooltip"] {
+    transition: none !important;
+  }
+
+  /* Disable dropdown transitions */
+  [role="menu"],
+  [role="listbox"] {
+    transition: none !important;
+  }
+
+  /* Disable loading spinners - show static state */
+  .loading-spinner {
+    animation: none !important;
+  }
+
+  /* Disable progress bar animations */
+  .progress-bar {
+    transition: none !important;
+  }
+
+  /* Disable hover effects that use transitions */
+  button:hover,
+  a:hover,
+  [role="button"]:hover {
+    transition: none !important;
+  }
+}
+
+/* Reduced motion utility classes */
+.motion-safe\:animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.motion-safe\:animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.motion-safe\:transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.motion-safe\:transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:animate-spin,
+  .motion-safe\:animate-pulse,
+  .motion-safe\:transition-all,
+  .motion-safe\:transition-colors {
+    animation: none !important;
+    transition: none !important;
+  }
+}

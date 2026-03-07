@@ -18,6 +18,7 @@ import { setWindowOpacity, setWindowVibrancy, getWindowState, restoreWindowState
 import "./App.css";
 import "./styles/editor-selection-debug.css";
 import "./styles/markdown-preview.css";
+import "./styles/reduced-motion.css";
 
 // Lazy load heavy components for faster startup
 const SettingsPanel = lazy(() => import("@/components/settings/SettingsPanel").then(m => ({ default: m.SettingsPanel })));

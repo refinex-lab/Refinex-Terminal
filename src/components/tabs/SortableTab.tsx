@@ -46,9 +46,13 @@ export function SortableTab({
       style={style}
       {...attributes}
       {...listeners}
+      role="tab"
+      aria-selected={isActive}
+      aria-label={session.title}
+      tabIndex={isActive ? 0 : -1}
       className={`
         group relative flex items-center justify-center gap-2 px-3 py-1.5 rounded-full cursor-grab
-        transition-all duration-200
+        motion-safe:transition-all motion-safe:duration-200
         ${isDragging ? "cursor-grabbing" : ""}
       `}
       onClick={onSelect}
@@ -60,7 +64,7 @@ export function SortableTab({
       </span>
 
       {/* Agent status indicator */}
-      <div className="pointer-events-none">
+      <div className="pointer-events-none" aria-hidden="true">
         <AgentStatus sessionId={session.id} variant="tab" />
       </div>
 
@@ -71,7 +75,7 @@ export function SortableTab({
         }}
         onPointerDown={(e) => e.stopPropagation()}
         className={`
-          absolute right-2 flex items-center justify-center size-4 rounded-full transition-all duration-200 cursor-pointer
+          absolute right-2 flex items-center justify-center size-4 rounded-full motion-safe:transition-all motion-safe:duration-200 cursor-pointer
           ${isActive || isHovered ? "opacity-70 hover:opacity-100" : "opacity-0"}
         `}
         style={{
@@ -83,9 +87,10 @@ export function SortableTab({
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = "transparent";
         }}
-        aria-label="Close tab"
+        aria-label={`Close ${session.title}`}
+        tabIndex={-1}
       >
-        <X className="size-3 pointer-events-none" />
+        <X className="size-3 pointer-events-none" aria-hidden="true" />
       </button>
     </div>
   );
