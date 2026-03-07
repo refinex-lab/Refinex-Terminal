@@ -8,13 +8,17 @@ pub mod keystore;
 pub mod known_hosts;
 pub mod sftp;
 pub mod sftp_commands;
+pub mod transfer;
+pub mod transfer_commands;
 
 pub use connection::SshConnectionManager;
 pub use handler::SshHandler;
 pub use channel::SshChannelManager;
 pub use sftp::SftpManager;
+pub use transfer::TransferManager;
 pub use types::*;
 pub use commands::*;
 pub use keystore::*;
 pub use known_hosts::*;
 pub use sftp_commands::*;
+pub use transfer_commands::*;

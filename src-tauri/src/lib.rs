@@ -73,7 +73,7 @@ pub fn run() {
             // Initialize SSH connection manager
             let ssh_conn_manager = SshConnectionManager::new(app.handle().clone());
             let ssh_channel_manager = ssh::SshChannelManager::new(app.handle().clone());
-            app.manage(ssh::SshManagerState::new(ssh_conn_manager, ssh_channel_manager));
+            app.manage(ssh::SshManagerState::new(ssh_conn_manager, ssh_channel_manager, app.handle().clone()));
 
             // Create and set menu
             let menu = menu::create_menu(app.handle())?;
@@ -166,7 +166,11 @@ pub fn run() {
             ssh::sftp_rename,
             ssh::sftp_remove,
             ssh::sftp_remove_recursive,
-            ssh::sftp_close
+            ssh::sftp_close,
+            ssh::sftp_upload,
+            ssh::sftp_download,
+            ssh::sftp_upload_directory,
+            ssh::sftp_cancel_transfer
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

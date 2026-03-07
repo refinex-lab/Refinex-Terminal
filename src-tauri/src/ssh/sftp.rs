@@ -28,8 +28,9 @@ pub struct SftpSessionWrapper {
 }
 
 /// SFTP session manager
+#[derive(Clone)]
 pub struct SftpManager {
-    sessions: Arc<Mutex<HashMap<String, Arc<Mutex<SftpSessionWrapper>>>>>,
+    pub(crate) sessions: Arc<Mutex<HashMap<String, Arc<Mutex<SftpSessionWrapper>>>>>,
     connection_manager: Arc<SshConnectionManager>,
 }
 
@@ -117,17 +118,15 @@ impl SftpManager {
 
             let metadata = entry.metadata();
             let is_dir = metadata.is_dir();
-            let size = metadata.len().unwrap_or(0);
-            let modified = metadata.modified().map(|t| {
+            let size = metadata.len();
+            let modified = metadata.modified().ok().map(|t| {
                 t.duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_secs()
             });
-            let permissions = if let Some(perms) = metadata.permissions() {
-                format_permissions(perms.mode())
-            } else {
-                "?????????".to_string()
-            };
+            let permissions = metadata.permissions()
+                .map(|p| format_permissions(p.mode()))
+                .unwrap_or_else(|| "?????????".to_string());
 
             result.push(RemoteFileEntry {
                 name: file_name,
@@ -180,17 +179,15 @@ impl SftpManager {
             name: file_name,
             path: path.clone(),
             is_dir: metadata.is_dir(),
-            size: metadata.len().unwrap_or(0),
-            modified: metadata.modified().map(|t| {
+            size: metadata.len(),
+            modified: metadata.modified().ok().map(|t| {
                 t.duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_secs()
             }),
-            permissions: if let Some(perms) = metadata.permissions() {
-                format_permissions(perms.mode())
-            } else {
-                "?????????".to_string()
-            },
+            permissions: metadata.permissions()
+                .map(|p| format_permissions(p.mode()))
+                .unwrap_or_else(|| "?????????".to_string()),
             owner: None,
             group: None,
         })

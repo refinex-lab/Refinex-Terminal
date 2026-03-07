@@ -53,6 +53,7 @@ keyring = "3"
 
 # Async runtime (already included by Tauri, ensure features)
 tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
 
 # Async trait support
 async-trait = "0.1"
