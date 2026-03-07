@@ -71,8 +71,9 @@ pub fn run() {
         .manage(Arc::new(Mutex::new(FsWatcher::new())))
         .setup(|app| {
             // Initialize SSH connection manager
-            let ssh_manager = SshConnectionManager::new(app.handle().clone());
-            app.manage(ssh::SshManagerState::new(ssh_manager));
+            let ssh_conn_manager = SshConnectionManager::new(app.handle().clone());
+            let ssh_channel_manager = ssh::SshChannelManager::new(app.handle().clone());
+            app.manage(ssh::SshManagerState::new(ssh_conn_manager, ssh_channel_manager));
 
             // Create and set menu
             let menu = menu::create_menu(app.handle())?;
@@ -150,7 +151,11 @@ pub fn run() {
             git::git_commit_file_diff,
             ssh::ssh_connect,
             ssh::ssh_disconnect,
-            ssh::ssh_list_connections
+            ssh::ssh_list_connections,
+            ssh::ssh_open_shell,
+            ssh::ssh_write,
+            ssh::ssh_resize,
+            ssh::ssh_close_channel
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

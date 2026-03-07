@@ -4,18 +4,32 @@ use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 use super::handler::SshHandler;
 use super::types::{AuthMethod, SshChannelInfo, SshConnectionInfo, SshHostConfig};
+
+/// Channel command for controlling a channel
+#[derive(Debug)]
+pub enum ChannelCommand {
+    Write(Vec<u8>),
+    Resize { cols: u32, rows: u32 },
+    Close,
+}
+
+/// Channel handle with command sender
+pub struct ChannelHandle {
+    pub info: SshChannelInfo,
+    pub command_tx: mpsc::UnboundedSender<ChannelCommand>,
+}
 
 /// SSH connection wrapper
 pub struct SshConnection {
     pub id: String,
     pub host_config: SshHostConfig,
     pub handle: client::Handle<SshHandler>,
-    pub channels: Arc<Mutex<HashMap<String, SshChannelInfo>>>,
+    pub channels: Arc<Mutex<HashMap<String, ChannelHandle>>>,
     pub connected_at: String,
 }
 
