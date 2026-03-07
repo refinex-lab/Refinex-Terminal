@@ -20,6 +20,9 @@ export interface TerminalSession {
   sshChannelId?: string;
   sshHostLabel?: string; // Display label like "user@hostname"
   sshColor?: string; // Color indicator for SSH connection
+  // SFTP panel state
+  sftpPanelOpen?: boolean; // Whether SFTP panel is open for this session
+  sftpSessionId?: string; // SFTP session ID if opened
 }
 
 /**
@@ -33,6 +36,8 @@ interface TerminalStore {
   setActiveSession: (id: string) => void;
   updateSessionTitle: (id: string, title: string) => void;
   reorderSessions: (oldIndex: number, newIndex: number) => void;
+  toggleSftpPanel: (sessionId: string) => void;
+  setSftpSessionId: (sessionId: string, sftpSessionId: string | undefined) => void;
 }
 
 /**
@@ -159,4 +164,22 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
         sessions: renumberedSessions,
       };
     }),
+
+  toggleSftpPanel: (sessionId) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? { ...s, sftpPanelOpen: !s.sftpPanelOpen }
+          : s
+      ),
+    })),
+
+  setSftpSessionId: (sessionId, sftpSessionId) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? { ...s, sftpSessionId }
+          : s
+      ),
+    })),
 }));

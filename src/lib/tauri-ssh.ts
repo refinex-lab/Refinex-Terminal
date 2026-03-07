@@ -53,6 +53,21 @@ export async function sshListConnections(): Promise<SSHConnectionInfo[]> {
 }
 
 /**
+ * Execute a command on the remote server and return output
+ * This opens a temporary exec channel, runs the command, and returns the output
+ */
+export async function sshExecCommand(connId: string, command: string): Promise<string> {
+  return await invoke<string>("ssh_exec_command", { connId, command });
+}
+
+/**
+ * List all active SSH connections
+ */
+export async function sshListConnections(): Promise<SSHConnectionInfo[]> {
+  return await invoke<SSHConnectionInfo[]>("ssh_list_connections");
+}
+
+/**
  * Open a shell channel on an SSH connection
  */
 export async function sshOpenShell(

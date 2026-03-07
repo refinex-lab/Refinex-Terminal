@@ -19,6 +19,9 @@ import { createFontZoomHandler, applyFont } from "@/lib/font-manager";
 import { loadBuiltinTheme, themeToXtermTheme } from "@/lib/theme-engine";
 import { terminalManager } from "@/lib/terminal-manager";
 import { useTerminalTransport, type TerminalTransportConfig } from "@/hooks/useTerminalTransport";
+import { FolderOpen } from "lucide-react";
+import { SftpPanel } from "../sftp/SftpPanel";
+import { sftpOpen, sftpClose, sshExecCommand } from "@/lib/tauri-ssh";
 import "@xterm/xterm/css/xterm.css";
 
 // Global registry to track initialized terminals
@@ -36,9 +39,13 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
   const [showSearch, setShowSearch] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [sftpPanelWidth, setSftpPanelWidth] = useState(50); // percentage
+  const [isResizingSftp, setIsResizingSftp] = useState(false);
   const { config } = useConfigStore();
   const blockTracker = useBlockTracker(sessionId);
   const sessions = useTerminalStore((state) => state.sessions);
+  const toggleSftpPanel = useTerminalStore((state) => state.toggleSftpPanel);
+  const setSftpSessionId = useTerminalStore((state) => state.setSftpSessionId);
 
   const session = sessions.find((s) => s.id === sessionId);
 
@@ -360,6 +367,84 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Handle "Open in Terminal" from SFTP panel
+  const handleOpenInTerminal = async (path: string) => {
+    if (!session || !session.sshConnectionId || !session.sshChannelId || !transport) {
+      return;
+    }
+
+    try {
+      // Write cd command to terminal
+      const command = `cd ${path} && clear\n`;
+      await transport.write(command);
+    } catch (error) {
+      console.error("Failed to write to terminal:", error);
+    }
+  };
+
+  // Handle SFTP panel toggle
+  const handleToggleSftp = async () => {
+    if (!session || session.mode !== "ssh" || !session.sshConnectionId) return;
+
+    if (session.sftpPanelOpen) {
+      // Close SFTP panel
+      if (session.sftpSessionId) {
+        try {
+          await sftpClose(session.sftpSessionId);
+        } catch (error) {
+          console.error("Failed to close SFTP session:", error);
+        }
+        setSftpSessionId(sessionId, undefined);
+      }
+      toggleSftpPanel(sessionId);
+    } else {
+      // Open SFTP panel
+      try {
+        const sftpSid = await sftpOpen(session.sshConnectionId);
+        setSftpSessionId(sessionId, sftpSid);
+        toggleSftpPanel(sessionId);
+
+        // Get current working directory from terminal
+        try {
+          const pwd = await sshExecCommand(session.sshConnectionId, "pwd");
+          // Store pwd for SFTP panel to use
+          (window as any).__sftpInitialPath = pwd;
+        } catch (error) {
+          console.error("Failed to get current directory:", error);
+        }
+      } catch (error) {
+        console.error("Failed to open SFTP session:", error);
+        alert(`Failed to open SFTP: ${error}`);
+      }
+    }
+  };
+
+  // Handle SFTP panel resize
+  useEffect(() => {
+    if (!isResizingSftp) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const container = document.getElementById(`terminal-container-${sessionId}`);
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const newRatio = ((rect.right - e.clientX) / rect.width) * 100;
+      setSftpPanelWidth(Math.max(30, Math.min(70, newRatio)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSftp(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingSftp, sessionId]);
+
   if (!session) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -372,104 +457,158 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
   return (
     <div
-      className="relative w-full h-full"
+      id={`terminal-container-${sessionId}`}
+      className="relative w-full h-full flex"
       style={{
-        display: isVisible ? "block" : "none",
+        display: isVisible ? "flex" : "none",
       }}
     >
-      {/* Terminal mount point */}
-      <div ref={mountPointRef} className="w-full h-full" />
+      {/* Terminal area */}
+      <div
+        className="relative"
+        style={{
+          width: session.sftpPanelOpen ? `${100 - sftpPanelWidth}%` : "100%",
+          transition: isResizingSftp ? "none" : "width 0.2s ease",
+        }}
+      >
+        {/* Terminal mount point */}
+        <div ref={mountPointRef} className="w-full h-full" />
 
-      {/* Search overlay */}
-      {showSearch && (
-        <TerminalSearch
-          sessionId={sessionId}
-          onClose={() => setShowSearch(false)}
-        />
-      )}
+        {/* SFTP toggle button (only for SSH mode) */}
+        {session.mode === "ssh" && session.sshConnectionId && (
+          <button
+            onClick={handleToggleSftp}
+            className="absolute top-2 right-2 p-2 rounded hover:bg-white/10 transition-colors"
+            style={{
+              backgroundColor: session.sftpPanelOpen ? "rgba(59, 130, 246, 0.2)" : "transparent",
+              color: "var(--ui-foreground)",
+              border: "1px solid var(--ui-border)",
+            }}
+            title={session.sftpPanelOpen ? "Close SFTP Panel" : "Open SFTP Panel"}
+          >
+            <FolderOpen className="size-4" />
+          </button>
+        )}
 
-      {/* Context menu */}
-      <TerminalContextMenu sessionId={sessionId} />
+        {/* Search overlay */}
+        {showSearch && (
+          <TerminalSearch
+            sessionId={sessionId}
+            onClose={() => setShowSearch(false)}
+          />
+        )}
 
-      {/* AI Block overlay */}
-      {blockTracker.activeBlock && (
-        <AIBlockOverlay
-          sessionId={sessionId}
-          block={blockTracker.activeBlock}
-          onAccept={blockTracker.acceptBlock}
-          onReject={blockTracker.rejectBlock}
-        />
-      )}
+        {/* Context menu */}
+        <TerminalContextMenu sessionId={sessionId} />
 
-      {/* Agent status indicator */}
-      {blockTracker.agentActive && (
-        <AgentStatus
-          cliType={blockTracker.cliType as CLIType}
-          isStreaming={blockTracker.isStreaming}
-        />
-      )}
+        {/* AI Block overlay */}
+        {blockTracker.activeBlock && (
+          <AIBlockOverlay
+            sessionId={sessionId}
+            block={blockTracker.activeBlock}
+            onAccept={blockTracker.acceptBlock}
+            onReject={blockTracker.rejectBlock}
+          />
+        )}
 
-      {/* SSH connection status bar (only for SSH mode) */}
-      {session.mode === "ssh" && session.sshHostLabel && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "24px",
-            backgroundColor: "var(--ui-background)",
-            borderTop: "1px solid var(--ui-border)",
-            display: "flex",
-            alignItems: "center",
-            paddingLeft: "12px",
-            paddingRight: "12px",
-            fontSize: "12px",
-            color: "var(--ui-muted-foreground)",
-            gap: "8px",
-          }}
-        >
-          {session.sshColor && (
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                backgroundColor: session.sshColor,
-              }}
+        {/* Agent status indicator */}
+        {blockTracker.agentActive && (
+          <AgentStatus
+            cliType={blockTracker.cliType as CLIType}
+            isStreaming={blockTracker.isStreaming}
+          />
+        )}
+
+        {/* SSH connection status bar (only for SSH mode) */}
+        {session.mode === "ssh" && session.sshHostLabel && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "24px",
+              backgroundColor: "var(--ui-background)",
+              borderTop: "1px solid var(--ui-border)",
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: "12px",
+              paddingRight: "12px",
+              fontSize: "12px",
+              color: "var(--ui-muted-foreground)",
+              gap: "8px",
+            }}
+          >
+            {session.sshColor && (
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  backgroundColor: session.sshColor,
+                }}
+              />
+            )}
+            <span>SSH · {session.sshHostLabel}</span>
+            {!sessionEnded && <span>· Connected</span>}
+            {sessionEnded && <span style={{ color: "var(--terminal-red)" }}>· Disconnected</span>}
+          </div>
+        )}
+
+        {/* Session ended overlay */}
+        {sessionEnded && (
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "var(--ui-background)",
+              border: "1px solid var(--ui-border)",
+              borderRadius: "8px",
+              padding: "24px",
+              textAlign: "center",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>
+              {session.mode === "ssh" ? "SSH Connection Closed" : "Session Ended"}
+            </div>
+            <div style={{ fontSize: "14px", color: "var(--ui-muted-foreground)" }}>
+              {session.mode === "ssh"
+                ? "The remote connection has been closed"
+                : "Press Enter to reconnect or close this tab"}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SFTP Panel (slide out from right) */}
+      {session.sftpPanelOpen && session.sftpSessionId && session.sshConnectionId && (
+        <>
+          {/* Resize handle */}
+          <div
+            className="w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
+            style={{ backgroundColor: "var(--ui-border)" }}
+            onMouseDown={() => setIsResizingSftp(true)}
+          />
+
+          {/* SFTP Panel */}
+          <div
+            style={{
+              width: `${sftpPanelWidth}%`,
+              transition: isResizingSftp ? "none" : "width 0.2s ease",
+            }}
+          >
+            <SftpPanel
+              connectionId={session.sshConnectionId}
+              hostLabel={session.sshHostLabel || "Remote"}
+              projectPath={(window as any).__sftpInitialPath || "/"}
+              onClose={() => toggleSftpPanel(sessionId)}
+              onOpenInTerminal={handleOpenInTerminal}
             />
-          )}
-          <span>SSH · {session.sshHostLabel}</span>
-          {!sessionEnded && <span>· Connected</span>}
-          {sessionEnded && <span style={{ color: "var(--terminal-red)" }}>· Disconnected</span>}
-        </div>
-      )}
-
-      {/* Session ended overlay */}
-      {sessionEnded && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "var(--ui-background)",
-            border: "1px solid var(--ui-border)",
-            borderRadius: "8px",
-            padding: "24px",
-            textAlign: "center",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>
-            {session.mode === "ssh" ? "SSH Connection Closed" : "Session Ended"}
           </div>
-          <div style={{ fontSize: "14px", color: "var(--ui-muted-foreground)" }}>
-            {session.mode === "ssh"
-              ? "The remote connection has been closed"
-              : "Press Enter to reconnect or close this tab"}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

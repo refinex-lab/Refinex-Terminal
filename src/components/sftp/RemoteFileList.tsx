@@ -12,6 +12,7 @@ interface RemoteFileListProps {
   onPathChange: (path: string) => void;
   selectedFiles: Set<string>;
   onSelectionChange: (selected: Set<string>) => void;
+  onOpenInTerminal?: (path: string) => void;
 }
 
 export function RemoteFileList({
@@ -20,6 +21,7 @@ export function RemoteFileList({
   onPathChange,
   selectedFiles,
   onSelectionChange,
+  onOpenInTerminal,
 }: RemoteFileListProps) {
   const [files, setFiles] = useState<RemoteFileEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -290,6 +292,7 @@ export function RemoteFileList({
                   isSelected={selectedFiles.has(file.path)}
                   onClick={(e) => handleFileClick(file, e)}
                   onDoubleClick={() => handleDoubleClick(file)}
+                  onOpenInTerminal={onOpenInTerminal}
                 />
               ))}
             </tbody>

@@ -28,9 +28,10 @@ interface SftpPanelProps {
   hostLabel: string;
   projectPath: string;
   onClose?: () => void;
+  onOpenInTerminal?: (path: string) => void;
 }
 
-export function SftpPanel({ connectionId, hostLabel, projectPath, onClose }: SftpPanelProps) {
+export function SftpPanel({ connectionId, hostLabel, projectPath, onClose, onOpenInTerminal }: SftpPanelProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState("/");
   const [splitRatio, setSplitRatio] = useState(50);
@@ -269,6 +270,7 @@ export function SftpPanel({ connectionId, hostLabel, projectPath, onClose }: Sft
                   onPathChange={setCurrentPath}
                   selectedFiles={selectedRemoteFiles}
                   onSelectionChange={setSelectedRemoteFiles}
+                  onOpenInTerminal={onOpenInTerminal}
                 />
               </div>
             </>
@@ -280,6 +282,7 @@ export function SftpPanel({ connectionId, hostLabel, projectPath, onClose }: Sft
                 onPathChange={setCurrentPath}
                 selectedFiles={selectedRemoteFiles}
                 onSelectionChange={setSelectedRemoteFiles}
+                onOpenInTerminal={onOpenInTerminal}
               />
             </div>
           )}

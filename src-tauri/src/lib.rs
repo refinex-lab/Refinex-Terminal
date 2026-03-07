@@ -156,6 +156,7 @@ pub fn run() {
             ssh::ssh_write,
             ssh::ssh_resize,
             ssh::ssh_close_channel,
+            ssh::ssh_exec_command,
             ssh::list_ssh_keys_cmd,
             ssh::test_ssh_connection,
             ssh::sftp_open,

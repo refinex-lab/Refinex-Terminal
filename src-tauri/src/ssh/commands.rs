@@ -113,6 +113,19 @@ pub async fn ssh_close_channel(
         .await
 }
 
+/// Execute a command on the remote server and return output
+#[tauri::command]
+pub async fn ssh_exec_command(
+    conn_id: String,
+    command: String,
+    state: State<'_, SshManagerState>,
+) -> Result<String, String> {
+    state
+        .channel_manager
+        .exec_command(&state.conn_manager, &conn_id, &command)
+        .await
+}
+
 /// List SSH keys in a directory
 #[tauri::command]
 pub async fn list_ssh_keys_cmd(dir: Option<String>) -> Result<Vec<SshKeyInfo>, String> {

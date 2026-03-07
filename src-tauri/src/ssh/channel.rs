@@ -195,6 +195,76 @@ impl SshChannelManager {
         tracing::info!("SSH channel loop exited: {}-{}", conn_id, channel_id);
     }
 
+    /// Execute a command on the remote server and return output
+    /// This opens a temporary exec channel, runs the command, and returns the output
+    pub async fn exec_command(
+        &self,
+        conn_manager: &SshConnectionManager,
+        conn_id: &str,
+        command: &str,
+    ) -> Result<String, String> {
+        // Get connection
+        let connection = conn_manager
+            .get_connection(conn_id)
+            .await
+            .ok_or_else(|| format!("Connection not found: {}", conn_id))?;
+
+        // Open a new channel for exec
+        let mut channel = connection
+            .handle
+            .channel_open_session()
+            .await
+            .map_err(|e| format!("Failed to open exec channel: {}", e))?;
+
+        // Execute command
+        channel
+            .exec(false, command)
+            .await
+            .map_err(|e| format!("Failed to execute command: {}", e))?;
+
+        // Collect output
+        let mut output = Vec::new();
+        let mut timeout = tokio::time::interval(std::time::Duration::from_millis(100));
+        let mut no_data_count = 0;
+
+        loop {
+            tokio::select! {
+                msg = channel.wait() => {
+                    match msg {
+                        Some(ChannelMsg::Data { ref data }) => {
+                            output.extend_from_slice(data);
+                            no_data_count = 0;
+                        }
+                        Some(ChannelMsg::ExtendedData { ref data, .. }) => {
+                            // stderr
+                            output.extend_from_slice(data);
+                            no_data_count = 0;
+                        }
+                        Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => {
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                _ = timeout.tick() => {
+                    no_data_count += 1;
+                    if no_data_count > 30 {
+                        // 3 seconds timeout
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Close channel
+        let _ = channel.eof().await;
+
+        // Convert output to string
+        String::from_utf8(output)
+            .map(|s| s.trim().to_string())
+            .map_err(|e| format!("Failed to decode command output: {}", e))
+    }
+
     /// Write data to a channel
     pub async fn write_channel(
         &self,
