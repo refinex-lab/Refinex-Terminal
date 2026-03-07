@@ -1,21 +1,41 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, RefreshCw, FolderPlus, Upload, ArrowUp, List, Grid } from "lucide-react";
-import { sftpReaddir, sftpMkdir, type RemoteFileEntry } from "@/lib/tauri-ssh";
+import { ChevronRight, RefreshCw, FolderPlus, ArrowUp, List, Grid } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
+import { sftpReaddir, sftpMkdir, sftpUpload, sftpDownload, type RemoteFileEntry } from "@/lib/tauri-ssh";
 import { getFileIcon } from "@/lib/file-icons";
 import { formatBytes, formatDate } from "@/lib/utils";
+import { RemoteFileRow } from "./RemoteFileRow";
 
 interface RemoteFileListProps {
   sessionId: string;
   currentPath: string;
   onPathChange: (path: string) => void;
+  selectedFiles: Set<string>;
+  onSelectionChange: (selected: Set<string>) => void;
 }
 
-export function RemoteFileList({ sessionId, currentPath, onPathChange }: RemoteFileListProps) {
+export function RemoteFileList({
+  sessionId,
+  currentPath,
+  onPathChange,
+  selectedFiles,
+  onSelectionChange,
+}: RemoteFileListProps) {
   const [files, setFiles] = useState<RemoteFileEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "size" | "modified">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+
+  // Make the entire remote panel a drop zone for local files
+  const { setNodeRef, isOver } = useDroppable({
+    id: `remote-panel-${currentPath}`,
+    data: {
+      type: "remote-directory",
+      path: currentPath,
+      sessionId,
+    },
+  });
 
   // Load directory contents
   const loadDirectory = async (path: string) => {
@@ -23,6 +43,7 @@ export function RemoteFileList({ sessionId, currentPath, onPathChange }: RemoteF
     try {
       const entries = await sftpReaddir(sessionId, path);
       setFiles(entries);
+      onSelectionChange(new Set()); // Clear selection when changing directory
     } catch (error) {
       console.error("Failed to read directory:", error);
     } finally {
@@ -54,6 +75,23 @@ export function RemoteFileList({ sessionId, currentPath, onPathChange }: RemoteF
     } else {
       // TODO: Preview or download
       console.log("Open file:", file.path);
+    }
+  };
+
+  // Handle file selection
+  const handleFileClick = (file: RemoteFileEntry, event: React.MouseEvent) => {
+    const isMultiSelect = event.metaKey || event.ctrlKey;
+
+    if (isMultiSelect) {
+      const newSelection = new Set(selectedFiles);
+      if (newSelection.has(file.path)) {
+        newSelection.delete(file.path);
+      } else {
+        newSelection.add(file.path);
+      }
+      onSelectionChange(newSelection);
+    } else {
+      onSelectionChange(new Set([file.path]));
     }
   };
 
@@ -91,13 +129,20 @@ export function RemoteFileList({ sessionId, currentPath, onPathChange }: RemoteF
   ];
 
   return (
-    <div className="h-full flex flex-col">
+    <div
+      ref={setNodeRef}
+      className="h-full flex flex-col"
+      style={{
+        outline: isOver ? "2px solid #3b82f6" : "none",
+        outlineOffset: "-2px",
+      }}
+    >
       {/* Header */}
       <div
         className="px-4 py-2 flex items-center justify-between"
         style={{ borderBottom: "1px solid var(--ui-border)" }}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+   <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Breadcrumb navigation */}
           <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
             {breadcrumbs.map((crumb, index) => (
@@ -237,42 +282,31 @@ export function RemoteFileList({ sessionId, currentPath, onPathChange }: RemoteF
               </tr>
             </thead>
             <tbody>
-              {sortedFiles.map((file) => {
-                const Icon = getFileIcon(file.name, file.isDir);
-                return (
-                  <tr
-                    key={file.path}
-                    className="hover:bg-white/5 cursor-pointer"
-                    onDoubleClick={() => handleDoubleClick(file)}
-                  >
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <Icon className="size-4" style={{ color: "var(--ui-muted-foreground)" }} />
-                        <span style={{ color: "var(--ui-foreground)" }}>{file.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-right" style={{ color: "var(--ui-muted-foreground)" }}>
-                      {file.isDir ? "-" : formatBytes(file.size)}
-                    </td>
-                    <td className="px-4 py-2" style={{ color: "var(--ui-muted-foreground)" }}>
-                      {file.modified ? formatDate(file.modified * 1000) : "-"}
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
-                      {file.permissions}
-                    </td>
-                  </tr>
-                );
-              })}
+              {sortedFiles.map((file) => (
+                <RemoteFileRow
+                  key={file.path}
+                  file={file}
+                  sessionId={sessionId}
+                  isSelected={selectedFiles.has(file.path)}
+                  onClick={(e) => handleFileClick(file, e)}
+                  onDoubleClick={() => handleDoubleClick(file)}
+                />
+              ))}
             </tbody>
           </table>
         ) : (
           <div className="grid grid-cols-4 gap-4 p-4">
             {sortedFiles.map((file) => {
               const Icon = getFileIcon(file.name, file.isDir);
+              const isSelected = selectedFiles.has(file.path);
               return (
                 <div
                   key={file.path}
                   className="flex flex-col items-center gap-2 p-4 rounded hover:bg-white/5 cursor-pointer"
+                  style={{
+                    backgroundColor: isSelected ? "rgba(59, 130, 246, 0.2)" : undefined,
+                  }}
+                  onClick={(e) => handleFileClick(file, e)}
                   onDoubleClick={() => handleDoubleClick(file)}
                 >
                   <Icon className="size-8" style={{ color: "var(--ui-muted-foreground)" }} />
