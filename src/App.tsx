@@ -7,6 +7,24 @@ import {
   Suspense,
 } from "react";
 import { Toaster, toast } from "sonner";
+import { FaTerminal, FaCode } from "react-icons/fa";
+import { PiTerminalFill } from "react-icons/pi";
+import { ChevronDown } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { IDETerminalTab } from "@/components/tabs/IDETerminalTab";
 import { TabBar } from "@/components/tabs/TabBar";
 import { SplitContainer } from "@/components/terminal/SplitContainer";
 import { Sidebar } from "@/components/sidebar/Sidebar";
@@ -16,6 +34,7 @@ import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useFileEditorStore } from "@/stores/file-editor-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { loadBuiltinTheme, applyTheme } from "@/lib/theme-engine";
 import { getKeybindingManager } from "@/lib/keybinding-manager";
 import { useActionHandler } from "@/lib/keybinding-manager";
@@ -57,10 +76,11 @@ const CommandPalette = lazy(() =>
 );
 
 function App() {
-  const { sessions, addSession } = useTerminalStore();
+  const { sessions, addSession, activeSessionId } = useTerminalStore();
   const { isVisible: sidebarVisible, toggleVisibility: toggleSidebar } =
     useSidebarStore();
   const { tabs: fileTabs } = useFileEditorStore();
+  const { mode: layoutMode, setMode: setLayoutMode, bottomPanelVisible, toggleBottomPanel, bottomPanelHeight, setBottomPanelHeight } = useLayoutStore();
   const initializedRef = useRef(false);
   const keybindingManagerRef = useRef<ReturnType<
     typeof getKeybindingManager
@@ -71,6 +91,8 @@ function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [editorWidth, setEditorWidth] = useState(600);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
+  const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
+  const [activeTerminalDragId, setActiveTerminalDragId] = useState<string | null>(null);
   const { config } = useConfigStore();
 
   // Initialize keybinding manager
@@ -364,6 +386,59 @@ function App() {
     };
   }, [isResizingEditor]);
 
+  // Handle bottom panel resize (IDE mode)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingBottomPanel) return;
+      const newHeight = window.innerHeight - e.clientY;
+      setBottomPanelHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingBottomPanel(false);
+    };
+
+    if (isResizingBottomPanel) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingBottomPanel, setBottomPanelHeight]);
+
+  // Drag and drop sensors for IDE terminal tabs
+  const terminalTabSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleTerminalDragStart = (event: DragStartEvent) => {
+    setActiveTerminalDragId(event.active.id as string);
+  };
+
+  const handleTerminalDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const { sessions, reorderSessions } = useTerminalStore.getState();
+      const sessionIds = sessions.filter(s => !s.isPane).map(s => s.id);
+      const oldIndex = sessionIds.indexOf(active.id as string);
+      const newIndex = sessionIds.indexOf(over.id as string);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        reorderSessions(oldIndex, newIndex);
+      }
+    }
+
+    setActiveTerminalDragId(null);
+  };
+
   return (
     <div
       style={{
@@ -384,15 +459,103 @@ function App() {
           }
         }}
         style={{
-          height: "28px",
+          height: "40px",
           backgroundColor: "var(--ui-background)",
           borderBottom: "1px solid var(--ui-border)",
           flexShrink: 0,
           cursor: "default",
           userSelect: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          paddingLeft: "80px", // Space for macOS traffic lights
+          paddingRight: "12px",
+          gap: "8px",
         }}
-      />
-      <TabBar />
+      >
+        {/* Terminal toggle button (only in IDE mode) */}
+        {layoutMode === "ide" && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBottomPanel();
+            }}
+            className="p-1.5 rounded hover:bg-white/10 transition-colors"
+            style={{ color: "var(--ui-foreground)" }}
+            title={bottomPanelVisible ? "Hide Terminal" : "Show Terminal"}
+          >
+            <PiTerminalFill className="size-4" />
+          </button>
+        )}
+
+        {/* Layout Mode Toggle (Pill Button) */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "2px",
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            borderRadius: "12px",
+            padding: "3px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLayoutMode("terminal");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 14px",
+              borderRadius: "9px",
+              backgroundColor: layoutMode === "terminal" ? "rgba(255, 255, 255, 0.15)" : "transparent",
+              color: layoutMode === "terminal" ? "#ffffff" : "rgba(255, 255, 255, 0.45)",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: layoutMode === "terminal" ? 600 : 400,
+              transition: "all 0.2s",
+              boxShadow: layoutMode === "terminal" ? "0 1px 2px rgba(0, 0, 0, 0.2)" : "none",
+            }}
+            title="Terminal Mode"
+          >
+            <FaTerminal className="size-3" />
+            Terminal
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLayoutMode("ide");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 14px",
+              borderRadius: "9px",
+              backgroundColor: layoutMode === "ide" ? "rgba(255, 255, 255, 0.15)" : "transparent",
+              color: layoutMode === "ide" ? "#ffffff" : "rgba(255, 255, 255, 0.45)",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: layoutMode === "ide" ? 600 : 400,
+              transition: "all 0.2s",
+              boxShadow: layoutMode === "ide" ? "0 1px 2px rgba(0, 0, 0, 0.2)" : "none",
+            }}
+            title="IDE Mode"
+          >
+            <FaCode className="size-3" />
+            IDE
+          </button>
+        </div>
+      </div>
+      {/* Tab Bar - only show in Terminal mode */}
+      {layoutMode === "terminal" && <TabBar />}
+
+      {/* Main Content Area */}
       <div
         style={{
           flex: 1,
@@ -406,54 +569,225 @@ function App() {
           <Sidebar onOpenFileFinder={() => setFileFinderOpen(true)} />
         )}
 
-        {/* Terminal Area */}
-        <div
-          style={{
-            flex: 1,
-            position: "relative",
-            overflow: "hidden",
-            backgroundColor: "var(--ui-background)",
-          }}
-        >
-          {sessions.map(
-            (session) =>
-              session.isActive && (
-                <SplitContainer key={session.id} tabId={session.id} />
-              ),
-          )}
-        </div>
+        {/* Terminal Mode Layout */}
+        {layoutMode === "terminal" && (
+          <>
+            {/* Terminal Area */}
+            <div
+              style={{
+                flex: 1,
+                position: "relative",
+                overflow: "hidden",
+                backgroundColor: "var(--ui-background)",
+              }}
+            >
+              {sessions.map(
+                (session) =>
+                  session.isActive && (
+                    <SplitContainer key={session.id} tabId={session.id} />
+                  ),
+              )}
+            </div>
 
-        {/* File Editor Panel */}
-        {fileTabs.length > 0 && (
+            {/* File Editor Panel */}
+            {fileTabs.length > 0 && (
+              <div
+                style={{
+                  width: `${editorWidth}px`,
+                  minWidth: "300px",
+                  maxWidth: "1200px",
+                  borderLeft: "1px solid var(--ui-border)",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                }}
+              >
+                {/* Resize Handle */}
+                <div
+                  onMouseDown={() => setIsResizingEditor(true)}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: "4px",
+                    cursor: "col-resize",
+                    backgroundColor: isResizingEditor
+                      ? "rgba(59, 130, 246, 0.5)"
+                      : "transparent",
+                    zIndex: 10,
+                  }}
+                  className="hover:bg-blue-500/50 transition-colors"
+                />
+                <FileEditorPanel />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* IDE Mode Layout */}
+        {layoutMode === "ide" && (
           <div
             style={{
-              width: `${editorWidth}px`,
-              minWidth: "300px",
-              maxWidth: "1200px",
-              borderLeft: "1px solid var(--ui-border)",
+              flex: 1,
               display: "flex",
               flexDirection: "column",
               position: "relative",
+              overflow: "hidden",
             }}
           >
-            {/* Resize Handle */}
+            {/* File Editor Area (full width) */}
             <div
-              onMouseDown={() => setIsResizingEditor(true)}
               style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "4px",
-                cursor: "col-resize",
-                backgroundColor: isResizingEditor
-                  ? "rgba(59, 130, 246, 0.5)"
-                  : "transparent",
-                zIndex: 10,
+                flex: bottomPanelVisible ? `1 1 calc(100% - ${bottomPanelHeight}px)` : "1 1 100%",
+                position: "relative",
+                overflow: "hidden",
+                backgroundColor: "var(--ui-background)",
               }}
-              className="hover:bg-blue-500/50 transition-colors"
-            />
-            <FileEditorPanel />
+            >
+              {fileTabs.length > 0 ? (
+                <FileEditorPanel />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    color: "var(--ui-muted-foreground)",
+                    fontSize: "14px",
+                  }}
+                >
+                  No file open. Select a file from the sidebar to edit.
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Terminal Panel */}
+            {bottomPanelVisible && (
+              <div
+                style={{
+                  height: `${bottomPanelHeight}px`,
+                  minHeight: "200px",
+                  maxHeight: "600px",
+                  borderTop: "1px solid var(--ui-border)",
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  backgroundColor: "var(--ui-background)",
+                }}
+              >
+                {/* Resize Handle */}
+                <div
+                  onMouseDown={() => setIsResizingBottomPanel(true)}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "4px",
+                    cursor: "row-resize",
+                    backgroundColor: isResizingBottomPanel
+                      ? "rgba(59, 130, 246, 0.5)"
+                      : "transparent",
+                    zIndex: 10,
+                  }}
+                  className="hover:bg-blue-500/50 transition-colors"
+                />
+
+                {/* Terminal Tabs */}
+                <div
+                  className="flex items-center gap-1 px-2 border-b"
+                  style={{
+                    backgroundColor: "var(--ui-background)",
+                    borderColor: "var(--ui-border)",
+                    paddingTop: "4px",
+                    paddingBottom: "4px",
+                    minHeight: "32px",
+                  }}
+                >
+                  <DndContext
+                    sensors={terminalTabSensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleTerminalDragStart}
+                    onDragEnd={handleTerminalDragEnd}
+                  >
+                    <div style={{ flex: 1, display: "flex", gap: "4px" }}>
+                      <SortableContext
+                        items={sessions.filter(s => !s.isPane).map(s => s.id)}
+                        strategy={horizontalListSortingStrategy}
+                      >
+                        {sessions
+                          .filter((s) => !s.isPane)
+                          .map((session) => (
+                            <IDETerminalTab
+                              key={session.id}
+                              session={session}
+                              isActive={session.id === activeSessionId}
+                              onSelect={() => useTerminalStore.getState().setActiveSession(session.id)}
+                              onClose={() => useTerminalStore.getState().removeSession(session.id)}
+                            />
+                          ))}
+                      </SortableContext>
+                    </div>
+
+                    <DragOverlay>
+                      {activeTerminalDragId && (() => {
+                        const draggedSession = sessions.find(s => s.id === activeTerminalDragId);
+                        return draggedSession ? (
+                          <div
+                            className="px-2 py-1 rounded text-xs font-medium cursor-grabbing opacity-80"
+                            style={{
+                              backgroundColor: "rgba(255, 255, 255, 0.12)",
+                              color: "var(--ui-foreground)",
+                            }}
+                          >
+                            {draggedSession.title}
+                          </div>
+                        ) : null;
+                      })()}
+                    </DragOverlay>
+                  </DndContext>
+
+                  <button
+                    onClick={() => {
+                      const { addSession } = useTerminalStore.getState();
+                      const { activeProject } = useSidebarStore.getState();
+                      const newSession = {
+                        id: `terminal-${Date.now()}`,
+                        title: `⌘ ${sessions.filter(s => !s.isPane).length + 1}`,
+                        cwd: activeProject?.path || "~",
+                        ptyId: null,
+                      };
+                      addSession(newSession);
+                    }}
+                    className="p-1 rounded hover:bg-white/10 transition-colors"
+                    style={{ color: "var(--ui-foreground)", flexShrink: 0, fontSize: "14px" }}
+                    title="New Terminal"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => toggleBottomPanel()}
+                    className="p-1 rounded hover:bg-white/10 transition-colors"
+                    style={{ color: "var(--ui-foreground)", flexShrink: 0 }}
+                    title="Hide Terminal"
+                  >
+                    <ChevronDown className="size-3" />
+                  </button>
+                </div>
+
+                {/* Terminal Content */}
+                <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+                  {sessions.map(
+                    (session) =>
+                      session.isActive && (
+                        <SplitContainer key={session.id} tabId={session.id} />
+                      ),
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
