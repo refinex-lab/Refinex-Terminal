@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { RemoteFileList } from "./RemoteFileList";
 import { TransferQueue } from "./TransferQueue";
-import { FileTree } from "../sidebar/FileTree";
+import { LocalFileList } from "./LocalFileList";
 import {
   sftpOpen,
   sftpClose,
@@ -249,7 +249,7 @@ export function SftpPanel({ connectionId, hostLabel, projectPath, onClose }: Sft
                     Local
                   </div>
                   <div className="flex-1 overflow-auto">
-                    <FileTree projectPath={projectPath} />
+                    <LocalFileList projectPath={projectPath} />
                   </div>
                 </div>
               </div>
