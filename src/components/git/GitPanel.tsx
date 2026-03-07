@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useFileEditorStore } from "@/stores/file-editor-store";
 import {
@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import { BranchManager } from "./BranchManager";
 import { GitGraphView } from "./GitGraphView";
 
-export function GitPanel() {
+const GitPanelComponent = () => {
   const { activeProject } = useSidebarStore();
   const { openFile } = useFileEditorStore();
   const [status, setStatus] = useState<GitStatus | null>(null);
@@ -592,4 +592,7 @@ export function GitPanel() {
       )}
     </div>
   );
-}
+};
+
+// Memoize GitPanel to prevent unnecessary re-renders
+export const GitPanel = memo(GitPanelComponent);

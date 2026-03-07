@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { ptyKill } from "@/lib/tauri-pty";
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { useActionHandler } from "@/lib/keybinding-manager";
 import {
   DndContext,
@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableTab } from "./SortableTab";
 
-export function TabBar() {
+const TabBarComponent = () => {
   const { sessions, activeSessionId, setActiveSession, removeSession, addSession, reorderSessions } =
     useTerminalStore();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -146,4 +146,7 @@ export function TabBar() {
       </button>
     </div>
   );
-}
+};
+
+// Memoize TabBar to prevent unnecessary re-renders
+export const TabBar = memo(TabBarComponent);

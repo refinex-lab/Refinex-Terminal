@@ -1,14 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
 import { Toaster } from "sonner";
 import { TabBar } from "@/components/tabs/TabBar";
 import { SplitContainer } from "@/components/terminal/SplitContainer";
-import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
 import { StatusBar } from "@/components/editor/StatusBar";
-import { QuickProjectSwitch } from "@/components/sidebar/QuickProjectSwitch";
-import { FuzzyFileFinder } from "@/components/sidebar/FuzzyFileFinder";
-import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -21,6 +17,12 @@ import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import "./styles/editor-selection-debug.css";
 import "./styles/markdown-preview.css";
+
+// Lazy load heavy components for faster startup
+const SettingsPanel = lazy(() => import("@/components/settings/SettingsPanel").then(m => ({ default: m.SettingsPanel })));
+const QuickProjectSwitch = lazy(() => import("@/components/sidebar/QuickProjectSwitch").then(m => ({ default: m.QuickProjectSwitch })));
+const FuzzyFileFinder = lazy(() => import("@/components/sidebar/FuzzyFileFinder").then(m => ({ default: m.FuzzyFileFinder })));
+const CommandPalette = lazy(() => import("@/components/command-palette/CommandPalette").then(m => ({ default: m.CommandPalette })));
 
 function App() {
   const { sessions, addSession } = useTerminalStore();
@@ -296,17 +298,20 @@ function App() {
       {/* Toast Notifications */}
       <Toaster position="bottom-right" theme="dark" />
 
-      {/* Settings Panel */}
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {/* Lazy-loaded overlays */}
+      <Suspense fallback={null}>
+        {/* Settings Panel */}
+        {settingsOpen && <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />}
 
-      {/* Quick Project Switch */}
-      <QuickProjectSwitch isOpen={projectSwitchOpen} onClose={() => setProjectSwitchOpen(false)} />
+        {/* Quick Project Switch */}
+        {projectSwitchOpen && <QuickProjectSwitch isOpen={projectSwitchOpen} onClose={() => setProjectSwitchOpen(false)} />}
 
-      {/* Fuzzy File Finder */}
-      <FuzzyFileFinder isOpen={fileFinderOpen} onClose={() => setFileFinderOpen(false)} />
+        {/* Fuzzy File Finder */}
+        {fileFinderOpen && <FuzzyFileFinder isOpen={fileFinderOpen} onClose={() => setFileFinderOpen(false)} />}
 
-      {/* Command Palette */}
-      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+        {/* Command Palette */}
+        {commandPaletteOpen && <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />}
+      </Suspense>
     </div>
   );
 }

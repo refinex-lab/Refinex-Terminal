@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useCallback } from "react";
 import { FolderOpen, MoreVertical, Terminal, Copy, X, FilePlus, ChevronsDownUp, FolderPlus, Search, GitBranch } from "lucide-react";
 import { BsFolderPlus, BsFolder } from "react-icons/bs";
 import { useSidebarStore, type Project } from "@/stores/sidebar-store";
@@ -15,7 +15,7 @@ interface SidebarProps {
   onOpenFileFinder?: () => void;
 }
 
-export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
+const SidebarComponent = ({ className = "", onOpenFileFinder }: SidebarProps) => {
   const { isVisible, width, projects, activeProjectId, setWidth, addProject, removeProject, setActiveProject } = useSidebarStore();
   const { config, updateConfig } = useConfigStore();
   const { addSession } = useTerminalStore();
@@ -27,9 +27,9 @@ export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
   const [showGitPanel, setShowGitPanel] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  const handleFileClick = (filePath: string, fileName: string) => {
+  const handleFileClick = useCallback((filePath: string, fileName: string) => {
     addTab(filePath, fileName);
-  };
+  }, [addTab]);
 
   // Handle resize
   const handleMouseDown = () => {
@@ -378,4 +378,7 @@ export function Sidebar({ className = "", onOpenFileFinder }: SidebarProps) {
       )}
     </>
   );
-}
+};
+
+// Memoize Sidebar to prevent unnecessary re-renders
+export const Sidebar = memo(SidebarComponent);

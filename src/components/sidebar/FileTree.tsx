@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ChevronRight,
   ChevronDown,
@@ -443,7 +443,118 @@ export function FileTree({ projectPath, className = "", triggerCreate, onCreateC
     setNewItemName("");
   };
 
-  // Render tree node
+  // Flatten tree for virtualization
+  const flattenTree = useCallback((nodes: TreeNode[]): TreeNode[] => {
+    const result: TreeNode[] = [];
+    const traverse = (nodeList: TreeNode[]) => {
+      for (const node of nodeList) {
+        result.push(node);
+        if (node.isExpanded && node.children) {
+          traverse(node.children);
+        }
+      }
+    };
+    traverse(nodes);
+    return result;
+  }, []);
+
+  const flatNodes = useMemo(() => flattenTree(rootNodes), [rootNodes, flattenTree]);
+
+  // Virtualized row renderer - needs to be a component that accepts index and style
+  const VirtualRow = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const node = flatNodes[index];
+    if (!node) return null;
+
+    const iconConfig = getFileIcon(node.name, node.is_directory);
+    const Icon = node.is_directory ? Folder : iconConfig.icon;
+    const iconColor = node.is_directory ? "var(--ui-foreground)" : iconConfig.color;
+    const hasChildren = node.is_directory;
+    const isExpanded = node.isExpanded;
+
+    const handleNodeClick = () => {
+      if (node.is_directory) {
+        toggleDirectory(node);
+      } else {
+        onFileClick?.(node.path, node.name);
+      }
+    };
+
+    return (
+      <div style={style}>
+        <div
+          className="group flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-white/5 transition-colors"
+          style={{
+            paddingLeft: `${node.depth * 12 + 8}px`,
+          }}
+          onClick={handleNodeClick}
+          onContextMenu={(e) => handleContextMenu(e, node)}
+        >
+          {hasChildren && (
+            <div className="flex-shrink-0">
+              {isExpanded ? (
+                <ChevronDown className="size-3.5" style={{ color: "var(--ui-foreground)", opacity: 0.7 }} />
+              ) : (
+                <ChevronRight className="size-3.5" style={{ color: "var(--ui-foreground)", opacity: 0.7 }} />
+              )}
+            </div>
+          )}
+          {!hasChildren && <div className="w-3.5" />}
+
+          <Icon
+            className="size-4 flex-shrink-0"
+            style={{ color: iconColor, opacity: node.is_directory ? 0.7 : 0.9 }}
+          />
+
+          {renamingNode?.path === node.path ? (
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={handleRenameSubmit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleRenameSubmit();
+                } else if (e.key === "Escape") {
+                  handleRenameCancel();
+                }
+                e.stopPropagation();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+              className="text-sm flex-1 px-1 rounded"
+              style={{
+                backgroundColor: "var(--ui-button-background)",
+                color: "var(--ui-foreground)",
+                border: "1px solid var(--ui-border)",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <span
+              className="text-sm truncate flex-1"
+              style={{ color: "var(--ui-foreground)" }}
+              title={node.name}
+            >
+              {node.name}
+            </span>
+          )}
+
+          <button
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-all"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleContextMenu(e, node);
+            }}
+            style={{ color: "var(--ui-foreground)" }}
+          >
+            <MoreVertical className="size-3" />
+          </button>
+        </div>
+      </div>
+    );
+  }, [flatNodes, renamingNode, newName, handleRenameSubmit, handleRenameCancel, toggleDirectory, onFileClick, handleContextMenu]);
+
+  // Render tree node (non-virtualized fallback for small trees)
   const renderNode = (node: TreeNode) => {
     const iconConfig = getFileIcon(node.name, node.is_directory);
     const Icon = node.is_directory ? Folder : iconConfig.icon;
@@ -586,6 +697,9 @@ export function FileTree({ projectPath, className = "", triggerCreate, onCreateC
     );
   };
 
+  // Use virtualization for large trees (>500 items)
+  const useVirtualization = flatNodes.length > 500;
+
   return (
     <>
       <div
@@ -605,7 +719,15 @@ export function FileTree({ projectPath, className = "", triggerCreate, onCreateC
               No files found
             </span>
           </div>
+        ) : useVirtualization ? (
+          // Virtualized rendering for large trees
+          <div style={{ height: "800px", overflow: "auto" }}>
+            {flatNodes.map((node, index) => (
+              <VirtualRow key={node.path} index={index} style={{ height: "28px" }} />
+            ))}
+          </div>
         ) : (
+          // Non-virtualized rendering for small trees
           <div className="py-2">
             {rootNodes.map((node) => renderNode(node))}
             {/* New item input at root level */}

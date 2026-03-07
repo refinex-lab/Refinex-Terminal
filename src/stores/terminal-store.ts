@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { arrayMove } from "@dnd-kit/sortable";
+import { terminalManager } from "@/lib/terminal-manager";
+import { ptyKill } from "@/lib/tauri-pty";
 
 /**
  * Terminal session type
@@ -64,14 +66,33 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
 
   removeSession: (id) =>
     set((state) => {
+      const session = state.sessions.find((s) => s.id === id);
+
+      // Clean up terminal instance and PTY
+      if (session) {
+        // Destroy terminal instance (releases xterm.js resources)
+        terminalManager.destroyInstance(id);
+
+        // Kill PTY process
+        if (session.ptyId !== null && session.ptyId !== undefined) {
+          ptyKill(session.ptyId).catch((error) => {
+            console.error(`Failed to kill PTY ${session.ptyId}:`, error);
+          });
+        }
+      }
+
       const newSessions = state.sessions.filter((s) => s.id !== id);
       const wasActive = state.activeSessionId === id;
 
       // Renumber remaining sessions to be sequential
-      const renumberedSessions = newSessions.map((s, index) => ({
-        ...s,
-        title: `⌘ ${index + 1}`,
-      }));
+      const renumberedSessions = newSessions.map((s, index) => {
+        if (s.isPane) return s;
+        const tabIndex = newSessions.filter((ns, i) => i <= index && !ns.isPane).length;
+        return {
+          ...s,
+          title: `⌘ ${tabIndex}`,
+        };
+      });
 
       if (wasActive && renumberedSessions.length > 0) {
         const lastSession = renumberedSessions[renumberedSessions.length - 1];
@@ -112,10 +133,14 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
     set((state) => {
       const reordered = arrayMove(state.sessions, oldIndex, newIndex);
       // Renumber after reordering to maintain sequential numbers
-      const renumberedSessions = reordered.map((s, index) => ({
-        ...s,
-        title: `⌘ ${index + 1}`,
-      }));
+      const renumberedSessions = reordered.map((s, index) => {
+        if (s.isPane) return s;
+        const tabIndex = reordered.filter((rs, i) => i <= index && !rs.isPane).length;
+        return {
+          ...s,
+          title: `⌘ ${tabIndex}`,
+        };
+      });
       return {
         sessions: renumberedSessions,
       };

@@ -758,7 +758,7 @@ function deriveAgentStatus(
 
 ### Tasks
 
-- [ ] **6.1 — Implement global keybinding system**
+- [x] **6.1 — Implement global keybinding system**
 
   > **Prompt**: Create `src/lib/keybinding-manager.ts`:
   >
@@ -775,7 +775,7 @@ function deriveAgentStatus(
   >
   > Verify: open the app, press Cmd+Shift+P (should open command palette once built), press Cmd+T (should open new tab).
 
-- [ ] **6.2 — Build command palette**
+- [x] **6.2 — Build command palette**
 
   > **Prompt**: Create `src/components/command-palette/CommandPalette.tsx` using shadcn/ui's `Command` component:
   >
@@ -789,7 +789,7 @@ function deriveAgentStatus(
   >
   > Verify: open palette, search "git", select "Git Push", verify it triggers the push action.
 
-- [ ] **6.3 — Implement split panes**
+- [x] **6.3 — Implement split panes**
 
   > **Prompt**: Create `src/components/terminal/SplitContainer.tsx` — a container that supports splitting the terminal area horizontally and vertically:
   >

@@ -3,14 +3,21 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 use super::shell::detect_shell;
+
+/// Configuration for PTY output batching
+const BATCH_SIZE_THRESHOLD: usize = 8192; // 8KB - send immediately when buffer reaches this size
+const BATCH_TIME_THRESHOLD_MS: u64 = 16; // 16ms - max time to wait before sending (60fps)
+const RING_BUFFER_SIZE: usize = 65536; // 64KB ring buffer
 
 /// PTY session data
 pub struct PtySession {
     pub pair: PtyPair,
     pub writer: Box<dyn Write + Send>,
+    #[allow(dead_code)]
     pub child_pid: Option<u32>,
 }
 
@@ -117,24 +124,62 @@ impl PtyManager {
             }),
         );
 
-        // Spawn reader thread
+        // Spawn reader thread with batching optimization
         let session_id = id;
         thread::spawn(move || {
-            let mut buf = [0u8; 8192];
+            let mut ring_buffer = vec![0u8; RING_BUFFER_SIZE];
+            let mut write_pos = 0;
+            let mut last_send_time = Instant::now();
+            let mut total_bytes_read = 0u64;
+            let mut total_messages_sent = 0u64;
+            let start_time = Instant::now();
+
             loop {
-                match reader.read(&mut buf) {
+                // Read into ring buffer
+                match reader.read(&mut ring_buffer[write_pos..]) {
                     Ok(0) => {
                         // EOF - PTY closed
+                        // Send any remaining buffered data
+                        if write_pos > 0 {
+                            let data = ring_buffer[..write_pos].to_vec();
+                            let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
+                            total_messages_sent += 1;
+                        }
+
+                        // Log performance metrics
+                        let elapsed = start_time.elapsed().as_secs_f64();
+                        if elapsed > 0.0 {
+                            let bytes_per_sec = total_bytes_read as f64 / elapsed;
+                            let messages_per_sec = total_messages_sent as f64 / elapsed;
+                            eprintln!(
+                                "[PTY-{}] Session ended. Stats: {} bytes, {} messages, {:.2} KB/s, {:.2} msg/s",
+                                session_id, total_bytes_read, total_messages_sent,
+                                bytes_per_sec / 1024.0, messages_per_sec
+                            );
+                        }
+
                         let _ = app_handle.emit(&format!("pty-exit-{}", session_id), ());
-                        break;
+                    break;
                     }
                     Ok(n) => {
-                        // Send data to frontend
-                        let data = buf[..n].to_vec();
-                        let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
+                        write_pos += n;
+                        total_bytes_read += n as u64;
+
+                        let time_since_last_send = last_send_time.elapsed();
+                        let should_send_by_size = write_pos >= BATCH_SIZE_THRESHOLD;
+                        let should_send_by_time = time_since_last_send >= Duration::from_millis(BATCH_TIME_THRESHOLD_MS);
+
+                        // Send if buffer is full enough OR enough time has passed
+                        if should_send_by_size || should_send_by_time {
+                            let data = ring_buffer[..write_pos].to_vec();
+                            let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
+                            total_messages_sent += 1;
+                            write_pos = 0;
+                            last_send_time = Instant::now();
+                        }
                     }
                     Err(e) => {
-                        eprintln!("PTY read error: {}", e);
+                        eprintln!("[PTY-{}] Read error: {}", session_id, e);
                         break;
                     }
                 }
