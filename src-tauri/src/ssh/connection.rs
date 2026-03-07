@@ -35,6 +35,7 @@ pub struct SshConnection {
 }
 
 /// SSH connection manager
+#[derive(Clone)]
 pub struct SshConnectionManager {
     pub(crate) connections: Arc<Mutex<HashMap<String, Arc<SshConnection>>>>,
     app_handle: AppHandle,

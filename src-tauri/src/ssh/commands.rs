@@ -1,22 +1,28 @@
 use tauri::State;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::ssh::{
     SshChannelManager, SshConnectionManager, SshHostConfig, SshConnectionInfo,
-    SshKeyInfo, list_ssh_keys, HostKeyAction,
+    SshKeyInfo, list_ssh_keys, HostKeyAction, SftpManager,
 };
 
 /// SSH connection manager state
 pub struct SshManagerState {
     conn_manager: SshConnectionManager,
     channel_manager: SshChannelManager,
+    pub sftp_manager: SftpManager,
 }
 
 impl SshManagerState {
     pub fn new(conn_manager: SshConnectionManager, channel_manager: SshChannelManager) -> Self {
+        let conn_manager_arc = Arc::new(conn_manager);
+        let sftp_manager = SftpManager::new(conn_manager_arc.clone());
+
         Self {
-            conn_manager,
+            conn_manager: Arc::try_unwrap(conn_manager_arc).unwrap_or_else(|arc| (*arc).clone()),
             channel_manager,
+            sftp_manager,
         }
     }
 }
