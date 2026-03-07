@@ -9,7 +9,7 @@ import {
 import { Toaster, toast } from "sonner";
 import { FaTerminal, FaCode } from "react-icons/fa";
 import { PiTerminalFill } from "react-icons/pi";
-import { ChevronDown, FolderOpen } from "lucide-react";
+import { ChevronDown, FolderOpen, Server } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -25,6 +25,7 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { IDETerminalTab } from "@/components/tabs/IDETerminalTab";
+import { TerminalView } from "@/components/terminal/TerminalViewSSH";
 import { TabBar } from "@/components/tabs/TabBar";
 import { SplitContainer } from "@/components/terminal/SplitContainer";
 import { Sidebar } from "@/components/sidebar/Sidebar";
@@ -32,6 +33,7 @@ import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
 import { StatusBar } from "@/components/editor/StatusBar";
 import { GitGraphView } from "@/components/git/GitGraphView";
 import { GitGraphViewPanel } from "@/components/git/GitGraphViewPanel";
+import { HostSidebar } from "@/components/ssh/HostSidebar";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -564,6 +566,31 @@ function App() {
             <FaCode className="size-3" />
             IDE
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLayoutMode("ssh");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 14px",
+              borderRadius: "9px",
+              backgroundColor: layoutMode === "ssh" ? "rgba(255, 255, 255, 0.15)" : "transparent",
+              color: layoutMode === "ssh" ? "#ffffff" : "rgba(255, 255, 255, 0.45)",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: layoutMode === "ssh" ? 600 : 400,
+              transition: "all 0.2s",
+              boxShadow: layoutMode === "ssh" ? "0 1px 2px rgba(0, 0, 0, 0.2)" : "none",
+            }}
+            title="SSH Mode"
+          >
+            <Server className="size-3" />
+            SSH
+          </button>
         </div>
       </div>
       {/* Tab Bar - only show in Terminal mode */}
@@ -578,8 +605,8 @@ function App() {
           overflow: "hidden",
         }}
       >
-        {/* Sidebar */}
-        {sidebarVisible && (
+        {/* Sidebar - only show in Terminal and IDE modes */}
+        {sidebarVisible && layoutMode !== "ssh" && (
           <Sidebar onOpenFileFinder={() => setFileFinderOpen(true)} />
         )}
 
@@ -1131,6 +1158,93 @@ function App() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* SSH Mode Layout */}
+        {layoutMode === "ssh" && (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              position: "relative",
+              overflow: "hidden",
+              backgroundColor: "var(--ui-background)",
+            }}
+          >
+            {/* SSH Hosts Sidebar (Left) */}
+            <div
+              style={{
+                width: "280px",
+                borderRight: "1px solid var(--ui-border)",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <HostSidebar />
+            </div>
+
+            {/* Remote Terminal (Center) */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              {activeSessionId && sessions.find(s => s.id === activeSessionId)?.mode === "ssh" ? (
+                <TerminalView sessionId={activeSessionId} />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    color: "var(--ui-muted-foreground)",
+                    fontSize: "14px",
+                    gap: "8px",
+                  }}
+                >
+                  <div>Remote Terminal Area</div>
+                  <div style={{ fontSize: "12px", opacity: 0.7 }}>
+                    Double-click a host in the left panel to connect
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SFTP Browser (Right) */}
+            <div
+              style={{
+                width: "320px",
+                borderLeft: "1px solid var(--ui-border)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  color: "var(--ui-muted-foreground)",
+                  fontSize: "14px",
+                  padding: "20px",
+                  textAlign: "center",
+                  gap: "8px",
+                }}
+              >
+                <div>SFTP Browser</div>
+                <div style={{ fontSize: "12px", opacity: 0.7 }}>
+                  Available after connecting to a host
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

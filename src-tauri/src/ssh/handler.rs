@@ -216,4 +216,19 @@ impl client::Handler for SshHandler {
 
         Ok(())
     }
+
+    async fn disconnected(
+        &mut self,
+        reason: client::DisconnectReason<Self::Error>,
+    ) -> Result<(), Self::Error> {
+        // Emit disconnection event to frontend
+        let event_name = format!("ssh-disconnected-{}", self.conn_id);
+        let reason_str = format!("{:?}", reason);
+
+        self.app_handle
+            .emit(&event_name, reason_str)
+            .map_err(|e| russh::Error::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+        Ok(())
+    }
 }

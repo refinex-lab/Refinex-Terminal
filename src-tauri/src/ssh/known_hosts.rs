@@ -81,9 +81,8 @@ pub fn check_known_host(
 
     let reader = BufReader::new(file);
 
-    // Get key fingerprint for comparison
-    let key_type = key.algorithm().to_string();
-    let key_data = key.to_string();
+    // Serialize the key to OpenSSH format for comparison
+    let key_string = key.to_openssh().map_err(|e| format!("Failed to serialize key: {}", e))?;
 
     // Check each line in known_hosts
     for line in reader.lines() {
@@ -98,7 +97,9 @@ pub fn check_known_host(
 
             if hostname_matches && port_matches {
                 // Host found, check if key matches
-                if entry.key_type == key_type && entry.key_data == key_data {
+                // Compare the full key string (type + data)
+                let entry_key_string = format!("{} {}", entry.key_type, entry.key_data);
+                if key_string == entry_key_string {
                     return Ok(KnownHostStatus::Trusted);
                 } else {
                     // Host found but key is different - this is a security issue!
@@ -126,6 +127,10 @@ pub fn add_known_host(
             .map_err(|e| format!("Failed to create .ssh directory: {}", e))?;
     }
 
+    // First, remove any existing entries for this host
+    // This ensures we don't have duplicate or conflicting entries
+    remove_known_host(hostname, port)?;
+
     // Open file in append mode
     let mut file = OpenOptions::new()
         .create(true)
@@ -140,10 +145,10 @@ pub fn add_known_host(
         format!("[{}]:{}", hostname, port)
     };
 
-    let key_type = key.algorithm().to_string();
-    let key_data = key.to_string();
+    // Serialize the key to OpenSSH format
+    let key_string = key.to_openssh().map_err(|e| format!("Failed to serialize key: {}", e))?;
 
-    let entry = format!("{} {} {}\n", host_part, key_type, key_data);
+    let entry = format!("{} {}\n", host_part, key_string);
 
     // Write to file
     file.write_all(entry.as_bytes())

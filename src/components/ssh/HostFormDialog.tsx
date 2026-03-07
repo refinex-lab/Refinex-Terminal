@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Check, X, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { useSshStore } from "@/stores/ssh-store";
 import type { SSHHostConfig } from "@/lib/tauri-ssh";
 import { testSSHConnection } from "@/lib/tauri-ssh";
+import { NewGroupDialog } from "./NewGroupDialog";
+import { toast } from "sonner";
 
 interface HostFormDialogProps {
   open: boolean;
@@ -52,8 +54,29 @@ export function HostFormDialog({
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
-  const [testError, setTestError] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [newGroupDialogOpen, setNewGroupDialogOpen] = useState(false);
+
+  // Reset form data when editingHost changes
+  useEffect(() => {
+    if (open) {
+      if (editingHost) {
+        setFormData({ ...editingHost });
+      } else {
+        setFormData({
+          id: crypto.randomUUID(),
+          label: "",
+          hostname: "",
+          port: 22,
+          username: "",
+          authMethod: "password",
+          useSSHAgent: false,
+        });
+      }
+      setTestStatus("idle");
+      setShowAdvanced(false);
+    }
+  }, [editingHost, open]);
 
   // Get unique groups from existing hosts
   const existingGroups = Array.from(
@@ -100,27 +123,36 @@ export function HostFormDialog({
     }
 
     setTestStatus("testing");
-    setTestError("");
+    toast.loading("Testing connection...", { id: "ssh-test" });
 
     try {
-      const testConfig: SSHHostConfig = {
+      // Build config with snake_case field names for Rust backend
+      const testConfig: any = {
         id: "test",
         label: "test",
         hostname: formData.hostname,
         port: formData.port || 22,
         username: formData.username,
-        authMethod: formData.authMethod || "password",
-        useSSHAgent: formData.useSSHAgent || false,
-        ...(formData.password && { password: formData.password }),
-        ...(formData.privateKeyPath && { privateKeyPath: formData.privateKeyPath }),
-        ...(formData.passphrase && { passphrase: formData.passphrase }),
+        auth_method: formData.authMethod || "password",
+        use_ssh_agent: formData.useSSHAgent || false,
       };
+
+      if (formData.password) {
+        testConfig.password = formData.password;
+      }
+      if (formData.privateKeyPath) {
+        testConfig.private_key_path = formData.privateKeyPath;
+      }
+      if (formData.passphrase) {
+        testConfig.passphrase = formData.passphrase;
+      }
 
       await testSSHConnection(testConfig);
       setTestStatus("success");
+      toast.success("Connection successful!", { id: "ssh-test" });
     } catch (error) {
       setTestStatus("error");
-      setTestError(String(error));
+      toast.error(`Connection failed: ${error}`, { id: "ssh-test", duration: 5000 });
     }
   };
 
@@ -135,7 +167,6 @@ export function HostFormDialog({
       useSSHAgent: false,
     });
     setTestStatus("idle");
-    setTestError("");
     setShowAdvanced(false);
   };
 
@@ -153,8 +184,8 @@ export function HostFormDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Basic Info */}
+        <div className="space-y-6 py-4">
+          {/* Basic Info - Two columns with equal width */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="label">Label *</Label>
@@ -171,34 +202,48 @@ export function HostFormDialog({
             <div className="space-y-2">
               <Label htmlFor="group">Group</Label>
               <Select
-                value={formData.group || ""}
+                value={formData.group || "__no_group__"}
                 onValueChange={(value) => {
-                  const newFormData = { ...formData };
-                  if (value) {
-                    newFormData.group = value;
+                  if (value === "__new_group__") {
+                    setNewGroupDialogOpen(true);
                   } else {
-                    delete newFormData.group;
+                    const newFormData = { ...formData };
+                    if (value && value !== "__no_group__") {
+                      newFormData.group = value;
+                    } else {
+                      delete newFormData.group;
+                    }
+                    setFormData(newFormData);
                   }
-                  setFormData(newFormData);
                 }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select or type new..." />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select or create new...">
+                    {formData.group || "Select or create new..."}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Group</SelectItem>
+                  <SelectItem value="__no_group__">No Group</SelectItem>
+                  {/* Show current group even if it's not in existingGroups yet */}
+                  {formData.group && !existingGroups.includes(formData.group) && (
+                    <SelectItem value={formData.group}>
+                      {formData.group} (new)
+                    </SelectItem>
+                  )}
                   {existingGroups.map((group) => (
-                    <SelectItem key={group} value={group!}>
+               <SelectItem key={group} value={group!}>
                       {group}
                     </SelectItem>
                   ))}
+                  <SelectItem value="__new_group__">+ Create New Group</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2 space-y-2">
+          {/* Hostname and Port - 3:1 ratio */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="col-span-3 space-y-2">
               <Label htmlFor="hostname">Hostname *</Label>
               <Input
                 id="hostname"
@@ -224,6 +269,7 @@ export function HostFormDialog({
             </div>
           </div>
 
+          {/* Username - Full width */}
           <div className="space-y-2">
             <Label htmlFor="username">Username *</Label>
             <Input
@@ -236,7 +282,7 @@ export function HostFormDialog({
             />
           </div>
 
-          {/* Authentication */}
+          {/* Authentication Method */}
           <div className="space-y-3">
             <Label>Authentication Method</Label>
             <RadioGroup
@@ -244,22 +290,23 @@ export function HostFormDialog({
               onValueChange={(value: any) =>
                 setFormData({ ...formData, authMethod: value })
               }
+              className="flex gap-6"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="password" id="auth-password" />
-                <Label htmlFor="auth-password" className="font-normal">
+                <Label htmlFor="auth-password" className="font-normal cursor-pointer">
                   Password
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="key" id="auth-key" />
-                <Label htmlFor="auth-key" className="font-normal">
+                <Label htmlFor="auth-key" className="font-normal cursor-pointer">
                   Private Key
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="agent" id="auth-agent" />
-                <Label htmlFor="auth-agent" className="font-normal">
+                <Label htmlFor="auth-agent" className="font-normal cursor-pointer">
                   SSH Agent
                 </Label>
               </div>
@@ -283,7 +330,7 @@ export function HostFormDialog({
           )}
 
           {formData.authMethod === "key" && (
-            <>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="privateKeyPath">Private Key Path</Label>
                 <Input
@@ -307,13 +354,13 @@ export function HostFormDialog({
                   }
                 />
               </div>
-            </>
+            </div>
           )}
 
-          {/* Color Picker */}
+          {/* Color Picker - Improved layout */}
           <div className="space-y-2">
             <Label htmlFor="color">Color (optional)</Label>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <Input
                 id="color"
                 type="color"
@@ -321,23 +368,24 @@ export function HostFormDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
-                className="w-20 h-10"
+                className="w-16 h-10 cursor-pointer"
               />
               <Input
-                value={formData.color || ""}
+                value={formData.color || "#3b82f6"}
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
                 placeholder="#3b82f6"
+                className="flex-1"
               />
             </div>
           </div>
 
           {/* Advanced Section */}
-          <div>
+          <div className="border-t pt-4">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-sm font-medium hover:underline"
+              className="flex items-center gap-2 text-sm font-medium hover:underline mb-4"
               style={{ color: "var(--ui-foreground)" }}
             >
               {showAdvanced ? (
@@ -349,7 +397,7 @@ export function HostFormDialog({
             </button>
 
             {showAdvanced && (
-              <div className="mt-4 space-y-4 pl-6">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="proxyJump">Proxy Jump</Label>
                   <Input
@@ -379,53 +427,48 @@ export function HostFormDialog({
               </div>
             )}
           </div>
-
-          {/* Test Connection */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleTestConnection}
-              disabled={
-                !formData.hostname ||
-                !formData.username ||
-                testStatus === "testing"
-              }
-            >
-              {testStatus === "testing" && (
-                <Loader2 className="size-4 mr-2 animate-spin" />
-              )}
-              {testStatus === "success" && (
-                <Check className="size-4 mr-2 text-green-500" />
-              )}
-              {testStatus === "error" && (
-                <X className="size-4 mr-2 text-red-500" />
-              )}
-              Test Connection
-            </Button>
-
-            {testStatus === "success" && (
-              <span className="text-sm text-green-500">
-                Connection successful!
-              </span>
-            )}
-            {testStatus === "error" && (
-              <span className="text-sm text-red-500">{testError}</span>
-            )}
-          </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
+        <DialogFooter className="flex items-center justify-between">
           <Button
-            onClick={handleSubmit}
-            disabled={!formData.label || !formData.hostname || !formData.username}
+            type="button"
+            variant="outline"
+            onClick={handleTestConnection}
+            disabled={
+              !formData.hostname ||
+              !formData.username ||
+              testStatus === "testing"
+            }
           >
-            {editingHost ? "Save Changes" : "Add Host"}
+            {testStatus === "testing" && (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            )}
+            Test Connection
           </Button>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!formData.label || !formData.hostname || !formData.username}
+            >
+              {editingHost ? "Save Changes" : "Add Host"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* New Group Dialog */}
+      <NewGroupDialog
+        open={newGroupDialogOpen}
+        onOpenChange={setNewGroupDialogOpen}
+        onConfirm={(groupName) => {
+          setFormData({ ...formData, group: groupName });
+        }}
+        existingGroups={existingGroups as string[]}
+      />
     </Dialog>
   );
 }

@@ -207,9 +207,13 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
     // Handle terminal input (user typing)
     terminal.onData((data) => {
-      transport.write(data).catch((error) => {
-        console.error("Failed to write to terminal:", error);
-      });
+      if (transport) {
+        transport.write(data).catch((error) => {
+          console.error("Failed to write to terminal:", error);
+          // Show error to user if connection is lost
+          terminal.write("\r\n\x1b[31mError: Connection lost. Please reconnect.\x1b[0m\r\n");
+        });
+      }
     });
 
     // Handle terminal resize
@@ -304,11 +308,14 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
     });
 
     // Store terminal instance globally
-    terminalManager.setInstance(sessionId, {
+    terminalManager.registerInstance(sessionId, {
       terminal,
       fitAddon,
       searchAddon,
       container,
+      cleanupListeners: undefined,
+      disposable: undefined,
+      resizeObserver: new ResizeObserver(() => {}),
     });
 
     // Cleanup function
@@ -339,6 +346,9 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Safety check for event object
+      if (!e) return;
+
       // Cmd/Ctrl + F: Open search
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();

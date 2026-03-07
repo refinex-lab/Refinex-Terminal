@@ -31,11 +31,12 @@ pub struct SshConnection {
     pub handle: client::Handle<SshHandler>,
     pub channels: Arc<Mutex<HashMap<String, ChannelHandle>>>,
     pub connected_at: String,
+    pub keepalive_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 /// SSH connection manager
 pub struct SshConnectionManager {
-    connections: Arc<Mutex<HashMap<String, Arc<SshConnection>>>>,
+    pub(crate) connections: Arc<Mutex<HashMap<String, Arc<SshConnection>>>>,
     app_handle: AppHandle,
 }
 
@@ -82,6 +83,18 @@ impl SshConnectionManager {
         // Authenticate
         self.authenticate(&mut handle, &host_config).await?;
 
+        // Start keepalive task
+        let conn_id_clone = conn_id.clone();
+        let app_handle_clone = self.app_handle.clone();
+        let keepalive_task = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                interval.tick().await;
+                // Emit keepalive event (connection manager can use this to check if connection is alive)
+                let _ = app_handle_clone.emit(&format!("ssh-keepalive-{}", conn_id_clone), ());
+            }
+        });
+
         // Create connection
         let connection = Arc::new(SshConnection {
             id: conn_id.clone(),
@@ -89,6 +102,7 @@ impl SshConnectionManager {
             handle,
             channels: Arc::new(Mutex::new(HashMap::new())),
             connected_at: chrono::Utc::now().to_rfc3339(),
+            keepalive_task: Arc::new(Mutex::new(Some(keepalive_task))),
         });
 
         // Store connection
@@ -223,6 +237,12 @@ impl SshConnectionManager {
         let mut connections = self.connections.lock().await;
 
         if let Some(connection) = connections.remove(conn_id) {
+            // Abort keepalive task
+            let mut keepalive_task = connection.keepalive_task.lock().await;
+            if let Some(task) = keepalive_task.take() {
+                task.abort();
+            }
+
             // Close all channels
             let channels = connection.channels.lock().await;
             for (channel_id, _) in channels.iter() {
@@ -232,7 +252,7 @@ impl SshConnectionManager {
 
             // Emit disconnected event
             self.app_handle
-                .emit(&format!("ssh-disconnected-{}", conn_id), ())
+                .emit(&format!("ssh-disconnected-{}", conn_id), "User disconnected".to_string())
                 .map_err(|e| format!("Failed to emit event: {}", e))?;
 
             Ok(())

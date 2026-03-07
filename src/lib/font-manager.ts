@@ -108,6 +108,9 @@ export function createFontZoomHandler(
   const STEP = 1;
 
   return (event: KeyboardEvent) => {
+    // Safety check for event object
+    if (!event) return;
+
     const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
     const modKey = isMac ? event.metaKey : event.ctrlKey;
 

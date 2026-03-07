@@ -3,7 +3,7 @@ import { create } from "zustand";
 /**
  * Layout mode type
  */
-export type LayoutMode = "terminal" | "ide";
+export type LayoutMode = "terminal" | "ide" | "ssh";
 
 /**
  * Bottom panel type for IDE mode
