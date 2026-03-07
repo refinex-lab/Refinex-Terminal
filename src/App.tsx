@@ -83,6 +83,7 @@ function App() {
     useSidebarStore();
   const { tabs: fileTabs } = useFileEditorStore();
   const { mode: layoutMode, setMode: setLayoutMode, bottomPanelType, toggleBottomPanel, bottomPanelHeight, setBottomPanelHeight } = useLayoutStore();
+  const { loadHistory, projectHistory, addProject } = useSidebarStore();
   const initializedRef = useRef(false);
   const keybindingManagerRef = useRef<ReturnType<
     typeof getKeybindingManager
@@ -187,6 +188,17 @@ function App() {
       });
     }
   }, [sessions.length, addSession]);
+
+  // Load project history on mount
+  useEffect(() => {
+    loadHistory();
+
+    // Auto-open last project if available
+    if (projectHistory.length > 0 && !useSidebarStore.getState().activeProject) {
+      const lastProject = projectHistory[0];
+      addProject(lastProject.path);
+    }
+  }, []);
 
   // Load config from backend on mount
   useEffect(() => {
@@ -781,7 +793,8 @@ function App() {
                     alignItems: "center",
                     justifyContent: "center",
                     height: "100%",
-                    gap: "24px",
+                    gap: "32px",
+                    padding: "40px",
                   }}
                 >
                   <div
@@ -821,6 +834,7 @@ function App() {
                       Open a folder to start editing files, or switch to Terminal mode to use the terminal.
                     </div>
                   </div>
+
                   <button
                     onClick={async () => {
                       try {
@@ -869,6 +883,93 @@ function App() {
                     <FolderOpen className="size-4" />
                     Open Folder
                   </button>
+
+                  {/* Recent Projects */}
+                  {projectHistory.length > 0 && (
+                    <div
+                      style={{
+                        width: "100%",
+                        maxWidth: "500px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "var(--ui-foreground)",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          paddingLeft: "4px",
+                        }}
+                      >
+                        Recent Projects
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "4px",
+                        }}
+                      >
+                        {projectHistory.slice(0, 5).map((project, index) => (
+                          <button
+                            key={index}
+                            onClick={() => addProject(project.path)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.03)";
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              padding: "12px 16px",
+                              backgroundColor: "rgba(255, 255, 255, 0.03)",
+                              border: "1px solid rgba(255, 255, 255, 0.05)",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease",
+                              textAlign: "left",
+                            }}
+                          >
+                            <FolderOpen
+                              className="size-4 flex-shrink-0"
+                              style={{ color: "var(--ui-accent)", opacity: 0.8 }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  color: "var(--ui-foreground)",
+                                  fontSize: "13px",
+                                  fontWeight: 500,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {project.name}
+                              </div>
+                              <div
+                                style={{
+                                  color: "var(--ui-muted-foreground)",
+                                  fontSize: "11px",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  marginTop: "2px",
+                                }}
+                              >
+                                {project.path}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

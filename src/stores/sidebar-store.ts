@@ -7,6 +7,16 @@ export interface Project {
   id: string;
   name: string;
   path: string;
+  lastOpened?: number; // Timestamp of last opened
+}
+
+/**
+ * Project history entry
+ */
+export interface ProjectHistoryEntry {
+  path: string;
+  name: string;
+  lastOpened: number;
 }
 
 /**
@@ -18,6 +28,7 @@ interface SidebarStore {
   projects: Project[];
   activeProjectId: string | null;
   activeProject: Project | null;
+  projectHistory: ProjectHistoryEntry[]; // Recent projects history
 
   // Actions
   toggleVisibility: () => void;
@@ -26,7 +37,14 @@ interface SidebarStore {
   removeProject: (id: string) => void;
   setActiveProject: (id: string | null) => void;
   loadProjects: (paths: string[]) => void;
+  addToHistory: (path: string, name: string) => void;
+  loadHistory: () => void;
+  saveHistory: () => void;
+  clearHistory: () => void;
 }
+
+const HISTORY_STORAGE_KEY = "project-history";
+const MAX_HISTORY_ITEMS = 10;
 
 /**
  * Sidebar store - manages sidebar state and projects
@@ -37,6 +55,7 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
   projects: [],
   activeProjectId: null,
   activeProject: null,
+  projectHistory: [],
 
   toggleVisibility: () =>
     set((state) => ({ isVisible: !state.isVisible })),
@@ -45,16 +64,21 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
     set({ width: Math.max(200, Math.min(400, width)) }),
 
   addProject: (path: string) => {
-    const { projects } = get();
+    const { projects, addToHistory } = get();
 
     // Check if project already exists
     const existingProject = projects.find((p) => p.path === path);
     if (existingProject) {
-      // If project exists, just set it as active
+      // If project exists, just set it as active and history
+      const updatedProjects = projects.map(p =>
+        p.id === existingProject.id ? { ...p, lastOpened: Date.now() } : p
+      );
       set({
+        projects: updatedProjects,
         activeProjectId: existingProject.id,
-        activeProject: existingProject
+        activeProject: { ...existingProject, lastOpened: Date.now() }
       });
+      addToHistory(path, existingProject.name);
       return;
     }
 
@@ -65,6 +89,7 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
       id: `project-${Date.now()}`,
       name,
       path,
+      lastOpened: Date.now(),
     };
 
     // Add project and set it as active
@@ -73,6 +98,9 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
       activeProjectId: newProject.id,
       activeProject: newProject
     });
+
+    // Add to history
+    addToHistory(path, name);
   },
 
   removeProject: (id: string) => {
@@ -89,12 +117,26 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
   },
 
   setActiveProject: (id: string | null) => {
-    const { projects } = get();
+    const { projects, addToHistory } = get();
     const project = id ? projects.find(p => p.id === id) || null : null;
-    set({
-      activeProjectId: id,
-      activeProject: project
-    });
+
+    if (project) {
+      // Update last opened timestamp
+      const updatedProjects = projects.map(p =>
+        p.id === id ? { ...p, lastOpened: Date.now() } : p
+      );
+      set({
+        projects: updatedProjects,
+        activeProjectId: id,
+        activeProject: { ...project, lastOpened: Date.now() }
+      });
+      addToHistory(project.path, project.name);
+    } else {
+      set({
+        activeProjectId: id,
+        activeProject: project
+      });
+    }
   },
 
   loadProjects: (paths: string[]) => {
@@ -114,5 +156,47 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
       activeProjectId: firstProject?.id ?? null,
       activeProject: firstProject ?? null
     });
+  },
+
+  addToHistory: (path: string, name: string) => {
+    const { projectHistory, saveHistory } = get();
+
+    // Remove existing entry if present
+    const filtered = projectHistory.filter(p => p.path !== path);
+
+    // Add to front with current timestamp
+    const newHistory: ProjectHistoryEntry[] = [
+      { path, name, lastOpened: Date.now() },
+      ...filtered
+    ].slice(0, MAX_HISTORY_ITEMS); // Keep only last N items
+
+    set({ projectHistory: newHistory });
+    saveHistory();
+  },
+
+  loadHistory: () => {
+    try {
+      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (stored) {
+        const history: ProjectHistoryEntry[] = JSON.parse(stored);
+        set({ projectHistory: history });
+      }
+    } catch (error) {
+      console.error("Failed to load project history:", error);
+    }
+  },
+
+  saveHistory: () => {
+    try {
+      const { projectHistory } = get();
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(projectHistory));
+    } catch (error) {
+      console.error("Failed to save project history:", error);
+    }
+  },
+
+  clearHistory: () => {
+    set({ projectHistory: [] });
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
   },
 }));
