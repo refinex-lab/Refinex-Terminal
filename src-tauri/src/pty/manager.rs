@@ -144,6 +144,7 @@ impl PtyManager {
             let mut total_bytes_read = 0u64;
             let mut total_messages_sent = 0u64;
             let start_time = Instant::now();
+            let mut is_first_output = true; // Track first output for immediate prompt display
 
             loop {
                 // Read into ring buffer
@@ -183,13 +184,19 @@ impl PtyManager {
                         let should_send_by_size = write_pos >= BATCH_SIZE_THRESHOLD;
                         let should_send_by_time = time_since_last_send >= Duration::from_millis(BATCH_TIME_THRESHOLD_MS);
 
-                        // Send  buffer is full enough OR enough time has passed
-                        if should_send_by_size || should_send_by_time {
+                        // Send first output quickly (50ms) to show initial prompt immediately
+                        let should_send_first_output = is_first_output
+                            && write_pos > 0
+                            && time_since_last_send >= Duration::from_millis(50);
+
+                        // Send if buffer is full enough OR enough time has passed OR first output ready
+                        if should_send_by_size || should_send_by_time || should_send_first_output {
                             let data = ring_buffer[..write_pos].to_vec();
                             let _ = app_handle.emit(&format!("pty-output-{}", session_id), data);
                             total_messages_sent += 1;
                             write_pos = 0;
                             last_send_time = Instant::now();
+                            is_first_output = false; // Mark first output as sent
                         }
                     }
                     Err(e) => {

@@ -34,6 +34,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
   const mountPointRef = useRef<HTMLDivElement>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [fontSize, setFontSize] = useState(14);
+  const [sessionEnded, setSessionEnded] = useState(false);
   const { config } = useConfigStore();
   const blockTracker = useBlockTracker(sessionId);
   const sessions = useTerminalStore((state) => state.sessions);
@@ -284,6 +285,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
         const unlistenExit = await listen(`pty-exit-${session.ptyId}`, () => {
           terminal.write("\r\n\r\n[Process completed]\r\n");
+          setSessionEnded(true);
         });
 
         return () => {
@@ -343,6 +345,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
         // Listen for PTY exit
         const unlistenExit = await listen(`pty-exit-${id}`, () => {
           terminal.write("\r\n\r\n[Process completed]\r\n");
+          setSessionEnded(true);
           clearInterval(cliDetectionInterval);
         });
 
@@ -505,6 +508,61 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
   const instance = terminalManager.getInstance(sessionId);
 
+  // Handle session restart
+  const handleRestart = async () => {
+    setSessionEnded(false);
+
+    // Get terminal instance
+    const terminalInstance = terminalManager.getInstance(sessionId);
+    if (!terminalInstance) return;
+
+    const terminal = terminalInstance.terminal;
+
+    // Clear terminal
+    terminal.clear();
+
+    // Spawn new PTY
+    try {
+      let cwd = session?.cwd;
+      if (!cwd) {
+        cwd = await import("@tauri-apps/api/path").then((m) => m.homeDir());
+      }
+
+      const id = await ptySpawn(cwd || "~", terminal.cols, terminal.rows);
+
+      // Update session with new PTY ID
+      const store = useTerminalStore.getState();
+      const updatedSessions = store.sessions.map((s) =>
+        s.id === sessionId ? { ...s, ptyId: id } : s
+      );
+      store.sessions = updatedSessions;
+
+      // Listen for new PTY output
+      const unlisten = await listen<number[]>(`pty-output-${id}`, (event) => {
+        const data = new Uint8Array(event.payload);
+        terminal.write(data);
+      });
+
+      // Listen for new PTY exit
+      const unlistenExit = await listen(`pty-exit-${id}`, () => {
+        terminal.write("\r\n\r\n[Process completed]\r\n");
+        setSessionEnded(true);
+      });
+
+      // Store cleanup functions
+      if (terminalInstance.cleanupListeners) {
+        terminalInstance.cleanupListeners();
+      }
+      terminalInstance.cleanupListeners = () => {
+        unlisten();
+        unlistenExit();
+      };
+    } catch (error) {
+      console.error("Failed tart PTY:", error);
+      terminal.write(`\r\nError: Failed to restart PTY: ${error}\r\n`);
+    }
+  };
+
   return (
     <TerminalContextMenu terminal={instance?.terminal || null}>
       <div
@@ -524,6 +582,58 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
             height: "100%",
           }}
         />
+
+        {/* Session Ended Overlay */}
+        {sessionEnded && session.isActive && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              backdropFilter: "blur(4px)",
+              zIndex: 100,
+            }}
+          >
+            <div
+              className="flex flex-col items-center gap-4 p-6 rounded-lg"
+              style={{
+                backgroundColor: "var(--ui-background)",
+                border: "1px solid var(--ui-border)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              <div className="text-center">
+                <h3
+                  className="text-lg font-semibold mb-2"
+                  style={{ color: "var(--ui-foreground)" }}
+                >
+                  Session Ended
+                </h3>
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--ui-muted-foreground)" }}
+                >
+                  The tess has exited
+                </p>
+              </div>
+              <button
+                onClick={handleRestart}
+                className="px-4 py-2 rounded motion-safe:transition-colors"
+                style={{
+                  backgroundColor: "var(--ui-button-background)",
+                  color: "var(--ui-button-foreground)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.9";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              >                Restart Session
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* AI Block Overlay */}
         {session.isActive && config.ai.blockMode && instance && (
           <AIBlockOverlay sessionId={sessionId} terminal={instance.terminal} />

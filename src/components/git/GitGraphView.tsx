@@ -63,7 +63,9 @@ export function GitGraphView({
   const loadBranches = async () => {
     try {
       const result = await gitBranches(repoPath);
-      setBranches(result);
+      if (result) {
+        setBranches(result);
+      }
     } catch (error) {
       toast.error(`Failed to load branches: ${error}`);
     }

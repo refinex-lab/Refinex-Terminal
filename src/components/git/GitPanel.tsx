@@ -123,10 +123,11 @@ const GitPanelComponent = () => {
 
     try {
       const hash = await gitCommit(activeProject.path, commitMessage.trim());
-      setCommitMessage("");
-      setShowCommitInput(false);
-      await loadStatus();
-      toast.success(`Committed: ${hash.substring(0, 7)}`);
+      if (hash) {
+        setCommitMessage("");
+        setShowCommitInput(false);
+        await loadStatus();
+      }
     } catch (error) {
       toast.error(`Failed to commit: ${error}`);
     }
@@ -176,8 +177,9 @@ const GitPanelComponent = () => {
 
     try {
       const stashId = await gitStash(activeProject.path);
-      await loadStatus();
-      toast.success(`Stashed: ${stashId.substring(0, 7)}`);
+      if (stashId) {
+        await loadStatus();
+      }
     } catch (error) {
       toast.error(`Failed to stash: ${error}`);
     }
