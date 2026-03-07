@@ -1,7 +1,7 @@
 name = "Catppuccin Mocha"
 
 [terminal]
-background = "#1e1e2e"
+background = "#181825"
 foreground = "#cdd6f4"
 cursor = "#f5e0dc"
 cursorAccent = "#1e1e2e"
@@ -32,7 +32,7 @@ background = "#181825"
 foreground = "#cdd6f4"
 border = "#313244"
 borderActive = "#585b70"
-tabBackground = "#1e1e2e"
+tabBackground = "#181825"
 tabBackgroundActive = "#313244"
 tabForeground = "#6c7086"
 tabForegroundActive = "#cdd6f4"

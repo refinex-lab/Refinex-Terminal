@@ -60,19 +60,14 @@
     border-color: var(--ui-input-border) !important;
   }
 
-  /* Fix xterm.js viewport background to match terminal theme */
+  /* Override xterm.js default black background */
+  /* xterm.js sets .xterm-viewport to #000 by default, we need to use theme colors */
   .xterm .xterm-viewport {
-    background-color: transparent !important;
+    background-color: inherit !important;
   }
 
-  /* Fix xterm.js screen background */
   .xterm .xterm-screen {
-    background-color: transparent !important;
-  }
-
-  /* Fix xterm.js scrollable element background */
-  .xterm .xterm-scrollable-element {
-    background-color: transparent !important;
+    background-color: inherit !important;
   }
 
   /* Custom scrollbar styles for terminal */

@@ -40,6 +40,52 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
   const session = sessions.find((s) => s.id === sessionId);
 
+  // Apply config changes to terminal in real-time (for existing terminals)
+  useEffect(() => {
+    const instance = terminalManager.getInstance(sessionId);
+    if (!instance) return;
+
+    const terminal = instance.terminal;
+
+    // Apply font settings
+    applyFont({
+      family: config.appearance.fontFamily,
+      size: config.appearance.fontSize,
+      lineHeight: config.appearance.lineHeight,
+      ligatures: config.appearance.ligatures,
+    }, terminal);
+
+    // Apply cursor style
+    terminal.options.cursorStyle = config.appearance.cursorStyle;
+
+    // Apply theme
+    loadBuiltinTheme(config.appearance.theme)
+      .then((theme) => {
+        const xtermTheme = themeToXtermTheme(theme);
+        terminal.options.theme = xtermTheme;
+
+        // Force refresh the terminal to apply theme immediately
+        // This is necessary because xterm.js doesn't always repaint on theme change
+        terminal.refresh(0, terminal.rows - 1);
+      })
+      .catch(console.error);
+
+    // Refit terminal after changes
+    instance.fitAddon.fit();
+    if (session?.ptyId !== null && session?.ptyId !== undefined) {
+      ptyResize(session.ptyId, terminal.cols, terminal.rows).catch(console.error);
+    }
+  }, [
+    sessionId,
+    config.appearance.fontFamily,
+    config.appearance.fontSize,
+    config.appearance.lineHeight,
+    config.appearance.ligatures,
+    config.appearance.cursorStyle,
+    config.appearance.theme,
+    session?.ptyId,
+  ]);
+
   // Initialize terminal instance (only once globally)
   useEffect(() => {
     if (!session) return;
@@ -68,7 +114,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
     container.className = `terminal-container ${className}`;
     container.style.width = '100%';
     container.style.height = '100%';
-    container.style.backgroundColor = 'var(--terminal-background)';
+    // Don't set backgroundColor here - let xterm.js handle it via theme
 
     // Attach to mount point
     if (mountPointRef.current) {
@@ -82,8 +128,9 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
     const writeQueueSizeRef = { current: 0 };
 
     // Load theme synchronously before terminal initialization
+    // Note: Don't use transparent background, xterm.js needs actual color
     let initialTheme: ITheme = {
-      background: "transparent",
+      background: "#1e1e1e",
       foreground: "#d4d4d4",
       cursor: "#d4d4d4",
     };
@@ -467,7 +514,6 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
           height: "100%",
           visibility: forceVisible || session.isActive ? "visible" : "hidden",
           position: forceVisible || session.isActive ? "relative" : "absolute",
-          backgroundColor: "var(--terminal-background)",
         }}
       >
         <div
@@ -476,7 +522,6 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
           style={{
             width: "100%",
             height: "100%",
-            backgroundColor: "var(--terminal-background)",
           }}
         />
         {/* AI Block Overlay */}

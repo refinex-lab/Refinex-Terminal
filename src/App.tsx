@@ -251,7 +251,7 @@ function App() {
         {sidebarVisible && <Sidebar onOpenFileFinder={() => setFileFinderOpen(true)} />}
 
         {/* Terminal Area */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        <div style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "var(--ui-background)" }}>
           {sessions.map((session) => (
             session.isActive && <SplitContainer key={session.id} tabId={session.id} />
           ))}

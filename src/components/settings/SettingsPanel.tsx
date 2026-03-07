@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useConfigStore } from "@/stores/config-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { invoke } from "@tauri-apps/api/core";
-import { BUILTIN_THEMES, loadBuiltinTheme, type Theme } from "@/lib/theme-engine";
+import { BUILTIN_THEMES, loadBuiltinTheme, applyTheme, type Theme } from "@/lib/theme-engine";
 import { listSystemFonts } from "@/lib/font-manager";
 import { CLISetupWizard } from "@/components/ai/CLISetupWizard";
 
@@ -48,8 +48,84 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   const handleConfigChange = async (updates: Parameters<typeof updateConfig>[0]) => {
     updateConfig(updates);
+
+    // Apply theme immediately if theme changed
+    if (updates.appearance?.theme) {
+      try {
+        const theme = await loadBuiltinTheme(updates.appearance.theme);
+        applyTheme(theme);
+      } catch (error) {
+        console.error("Failed to apply theme:", error);
+      }
+    }
+
     try {
-      await invoke("update_config", { config: { ...config, ...updates } });
+      // Deep merge the config to ensure all nested fields are included
+      const mergedConfig = {
+        ...config,
+        ...updates,
+        appearance: {
+          ...config.appearance,
+          ...(updates.appearance ?? {}),
+        },
+        terminal: {
+          ...config.terminal,
+          ...(updates.terminal ?? {}),
+        },
+        ai: {
+          ...config.ai,
+          ...(updates.ai ?? {}),
+        },
+        git: {
+          ...config.git,
+          ...(updates.git ?? {}),
+        },
+        keybindings: {
+          ...config.keybindings,
+          ...(updates.keybindings ?? {}),
+        },
+        projects: {
+          ...config.projects,
+          ...(updates.projects ?? {}),
+        },
+      };
+
+      // Transform camelCase to snake_case for Rust backend
+      const rustConfig = {
+        appearance: {
+          theme: mergedConfig.appearance.theme,
+          font_family: mergedConfig.appearance.fontFamily,
+          font_size: mergedConfig.appearance.fontSize,
+          line_height: mergedConfig.appearance.lineHeight,
+          font_ligatures: mergedConfig.appearance.ligatures,
+          opacity: mergedConfig.appearance.opacity,
+          vibrancy: mergedConfig.appearance.vibrancy,
+          cursor_style: mergedConfig.appearance.cursorStyle,
+        },
+        terminal: {
+          shell: mergedConfig.terminal.shell || null,
+          scrollback_lines: mergedConfig.terminal.scrollbackLines,
+          copy_on_select: mergedConfig.terminal.copyOnSelect,
+          bell_mode: mergedConfig.terminal.bellMode,
+          env_vars: [],
+        },
+        ai: {
+          detect_cli: mergedConfig.ai.detectCLI,
+          block_mode: mergedConfig.ai.blockMode,
+          streaming_throttle_ms: mergedConfig.ai.streamingThrottle,
+          max_block_lines: mergedConfig.ai.maxBlockLines,
+        },
+        git: {
+          enabled: mergedConfig.git.enabled,
+          auto_fetch_interval: mergedConfig.git.autoFetchInterval,
+          show_diff: mergedConfig.git.showDiff,
+        },
+        keybindings: {
+          custom: [],
+        },
+      };
+
+      await invoke("update_config", { newConfig: rustConfig });
     } catch (error) {
       console.error("Failed to save config:", error);
     }

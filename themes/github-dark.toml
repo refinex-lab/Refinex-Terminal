@@ -1,7 +1,7 @@
 name = "GitHub Dark"
 
 [terminal]
-background = "#0d1117"
+background = "#010409"
 foreground = "#e6edf3"
 cursor = "#58a6ff"
 cursorAccent = "#0d1117"
@@ -32,7 +32,7 @@ background = "#010409"
 foreground = "#e6edf3"
 border = "#21262d"
 borderActive = "#30363d"
-tabBackground = "#0d1117"
+tabBackground = "#010409"
 tabBackgroundActive = "#161b22"
 tabForeground = "#7d8590"
 tabForegroundActive = "#e6edf3"
