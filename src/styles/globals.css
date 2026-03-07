@@ -26,9 +26,10 @@
   body {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-      "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
-      "Helvetica Neue", sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+      "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--ui-background);
@@ -45,7 +46,11 @@
   }
 
   /* Settings panel input/select borders for light theme */
-  input, select, textarea {
+  /* input, select, textarea {
+    border: 1px solid var(--ui-input-border) !important;
+  } */
+  select,
+  textarea {
     border: 1px solid var(--ui-input-border) !important;
   }
 

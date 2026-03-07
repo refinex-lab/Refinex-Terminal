@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Toaster } from "sonner";
 import { TabBar } from "@/components/tabs/TabBar";
 import { TerminalView } from "@/components/terminal/TerminalView";
@@ -8,11 +8,14 @@ import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
 import { StatusBar } from "@/components/editor/StatusBar";
 import { QuickProjectSwitch } from "@/components/sidebar/QuickProjectSwitch";
 import { FuzzyFileFinder } from "@/components/sidebar/FuzzyFileFinder";
+import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useFileEditorStore } from "@/stores/file-editor-store";
 import { loadBuiltinTheme, applyTheme } from "@/lib/theme-engine";
+import { getKeybindingManager } from "@/lib/keybinding-manager";
+import { useActionHandler } from "@/lib/keybinding-manager";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
@@ -21,15 +24,70 @@ import "./styles/markdown-preview.css";
 
 function App() {
   const { sessions, addSession } = useTerminalStore();
-  const { isVisible: sidebarVisible } = useSidebarStore();
+  const { isVisible: sidebarVisible, toggleVisibility: toggleSidebar } = useSidebarStore();
   const { tabs: fileTabs } = useFileEditorStore();
   const initializedRef = useRef(false);
+  const keybindingManagerRef = useRef<ReturnType<typeof getKeybindingManager> | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [projectSwitchOpen, setProjectSwitchOpen] = useState(false);
   const [fileFinderOpen, setFileFinderOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [editorWidth, setEditorWidth] = useState(600);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const { config } = useConfigStore();
+
+  // Initialize keybinding manager
+  useEffect(() => {
+    if (!keybindingManagerRef.current) {
+      keybindingManagerRef.current = getKeybindingManager();
+    }
+
+    // Don't destroy on cleanup - keep the singleton alive
+  }, []);
+
+  // Register global action handlers
+  useActionHandler("settings.open", useCallback(() => {
+    setSettingsOpen(true);
+  }, []));
+
+  useActionHandler("sidebar.toggle", useCallback(() => {
+    toggleSidebar();
+  }, [toggleSidebar]));
+
+  useActionHandler("command_palette.open", useCallback(() => {
+    setCommandPaletteOpen(true);
+  }, []));
+
+  useActionHandler("command_palette.open_files", useCallback(() => {
+    setFileFinderOpen(true);
+  }, []));
+
+  useActionHandler("terminal.new_tab", useCallback(() => {
+    addSession({
+      id: `terminal-${Date.now()}`,
+      title: `⌘ ${sessions.length + 1}`,
+      cwd: "~",
+      ptyId: null,
+    });
+  }, [addSession, sessions.length]));
+
+  // Register file actions
+  useActionHandler("file.open_folder", useCallback(async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({
+        directory: true,
+        multiple: false,
+      });
+
+      if (selected) {
+        const { addProject } = useSidebarStore.getState();
+        addProject(selected as string);
+      }
+    } catch (error) {
+      console.error("Failed to open folder:", error);
+    }
+  }, []));
 
   // Initialize with one terminal session
   useEffect(() => {
@@ -74,15 +132,12 @@ function App() {
     return luminance < 0.5;
   };
 
-  // Global keyboard shortcut for settings and sidebar
+  // Global keyboard shortcut for double shift (file finder)
   useEffect(() => {
     let lastShiftTime = 0;
     const DOUBLE_SHIFT_THRESHOLD = 300; // ms
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-      const modifier = isMac ? e.metaKey : e.ctrlKey;
-
       // Double Shift: Open file finder
       if (e.key === "Shift") {
         const now = Date.now();
@@ -96,40 +151,27 @@ function App() {
         return;
       }
 
-      // Cmd/Ctrl + ,: Open settings
-      if (modifier && e.key === ",") {
-        e.preventDefault();
-        setSettingsOpen(true);
-      }
-
-      // Cmd/Ctrl + B: Toggle sidebar
-      if (modifier && e.key === "b") {
-        e.preventDefault();
-        useSidebarStore.getState().toggleVisibility();
-      }
-
-      // Cmd/Ctrl + Shift + O: Quick project switch
-      if (modifier && e.shiftKey && e.key === "O") {
-        e.preventDefault();
-        setProjectSwitchOpen(true);
-      }
-
-      // Cmd/Ctrl + P: Fuzzy file finder
-      if (modifier && e.key === "p") {
-        e.preventDefault();
-        setFileFinderOpen(true);
-      }
-
-      // Escape: Close settings
-      if (e.key === "Escape" && settingsOpen) {
-        e.preventDefault();
-        setSettingsOpen(false);
+      // Escape: Close modals
+      if (e.key === "Escape") {
+        if (settingsOpen) {
+          e.preventDefault();
+          setSettingsOpen(false);
+        } else if (commandPaletteOpen) {
+          e.preventDefault();
+          setCommandPaletteOpen(false);
+        } else if (fileFinderOpen) {
+          e.preventDefault();
+          setFileFinderOpen(false);
+        } else if (projectSwitchOpen) {
+          e.preventDefault();
+          setProjectSwitchOpen(false);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [settingsOpen]);
+  }, [settingsOpen, commandPaletteOpen, fileFinderOpen, projectSwitchOpen]);
 
   // Listen for menu events from Rust backend
   useEffect(() => {
@@ -226,6 +268,9 @@ function App() {
 
       {/* Fuzzy File Finder */}
       <FuzzyFileFinder isOpen={fileFinderOpen} onClose={() => setFileFinderOpen(false)} />
+
+      {/* Command Palette */}
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
     </div>
   );
 }

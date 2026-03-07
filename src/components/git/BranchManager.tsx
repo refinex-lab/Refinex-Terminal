@@ -1,5 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Plus, Check, Trash2, GitBranch, MoreVertical, Download, Upload, GitMerge } from "lucide-react";
+import {
+  X,
+  Search,
+  Plus,
+  Check,
+  Trash2,
+  GitBranch,
+  MoreVertical,
+  Download,
+  Upload,
+  GitMerge,
+} from "lucide-react";
 import { gitBranches, gitCheckout, type BranchInfo } from "@/lib/git";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
@@ -64,10 +75,11 @@ export function BranchManager({
 
   const checkUncommittedChanges = async (): Promise<boolean> => {
     try {
-      const status = await invoke<{ staged: unknown[]; unstaged: unknown[]; untracked: unknown[] }>(
-        "git_status",
-        { repoPath }
-      );
+      const status = await invoke<{
+        staged: unknown[];
+        unstaged: unknown[];
+        untracked: unknown[];
+      }>("git_status", { repoPath });
       return (
         status.staged.length > 0 ||
         status.unstaged.length > 0 ||
@@ -170,7 +182,12 @@ export function BranchManager({
   const handleMerge = async (sourceBranch: string, targetBranch: string) => {
     setConfirmDialog({
       type: "merge",
-      branch: { name: sourceBranch, is_current: false, is_remote: false, upstream: null },
+      branch: {
+        name: sourceBranch,
+        is_current: false,
+        is_remote: false,
+        upstream: null,
+      },
       targetBranch,
     });
     setContextMenu(null);
@@ -179,7 +196,12 @@ export function BranchManager({
   const handleRebase = async (sourceBranch: string, targetBranch: string) => {
     setConfirmDialog({
       type: "rebase",
-      branch: { name: sourceBranch, is_current: false, is_remote: false, upstream: null },
+      branch: {
+        name: sourceBranch,
+        is_current: false,
+        is_remote: false,
+        upstream: null,
+      },
       targetBranch,
     });
     setContextMenu(null);
@@ -279,7 +301,7 @@ export function BranchManager({
     const handleClick = (e: MouseEvent) => {
       // Check if click is outside the context menu
       const target = e.target as HTMLElement;
-      const contextMenuElement = document.querySelector('[data-context-menu]');
+      const contextMenuElement = document.querySelector("[data-context-menu]");
 
       if (contextMenuElement && !contextMenuElement.contains(target)) {
         if (contextMenuTimeoutRef.current) {
@@ -327,11 +349,11 @@ export function BranchManager({
   const remoteBranches = branches.filter((b) => b.is_remote);
 
   const filteredLocalBranches = localBranches.filter((b) =>
-    b.name.toLowerCase().includes(searchQuery.toLowerCase())
+    b.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const filteredRemoteBranches = remoteBranches.filter((b) =>
-    b.name.toLowerCase().includes(searchQuery.toLowerCase())
+    b.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -367,8 +389,14 @@ export function BranchManager({
           </div>
 
           {/* Search */}
-          <div className="px-4 py-3 border-b" style={{ borderColor: "var(--ui-border)" }}>
-            <div className="flex items-center gap-2 px-3 py-2 rounded" style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}>
+          <div
+            className="px-4 py-3 border-b"
+            style={{ borderColor: "var(--ui-border)" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded"
+              style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+            >
               <Search className="size-4 opacity-50" />
               <input
                 ref={searchInputRef}
@@ -376,8 +404,8 @@ export function BranchManager({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search branches..."
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{ color: "var(--ui-foreground)" }}
+                className="flex-1 bg-transparent outline-none text-sm border-none"
+                style={{ color: "var(--ui-foreground)", border: "none" }}
               />
             </div>
           </div>
@@ -476,7 +504,9 @@ export function BranchManager({
                 {filteredLocalBranches.length === 0 &&
                   filteredRemoteBranches.length === 0 && (
                     <div className="flex items-center justify-center py-8">
-                      <span className="text-sm opacity-70">No branches found</span>
+                      <span className="text-sm opacity-70">
+                        No branches found
+                      </span>
                     </div>
                   )}
               </>
@@ -485,7 +515,10 @@ export function BranchManager({
 
           {/* New branch input */}
           {showNewBranchInput && (
-            <div className="px-4 py-3 border-t" style={{ borderColor: "var(--ui-border)" }}>
+            <div
+              className="px-4 py-3 border-t"
+              style={{ borderColor: "var(--ui-border)" }}
+            >
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -530,7 +563,10 @@ export function BranchManager({
 
           {/* Rename branch input */}
           {showRenameInput && (
-            <div className="px-4 py-3 border-t" style={{ borderColor: "var(--ui-border)" }}>
+            <div
+              className="px-4 py-3 border-t"
+              style={{ borderColor: "var(--ui-border)" }}
+            >
               <div className="text-xs opacity-70 mb-2">
                 Rename: {showRenameInput.branch.name}
               </div>
@@ -538,7 +574,12 @@ export function BranchManager({
                 <input
                   type="text"
                   value={showRenameInput.newName}
-                  onChange={(e) => setShowRenameInput({ ...showRenameInput, newName: e.target.value })}
+                  onChange={(e) =>
+                    setShowRenameInput({
+                      ...showRenameInput,
+                      newName: e.target.value,
+                    })
+                  }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") performRename();
                     if (e.key === "Escape") setShowRenameInput(null);
@@ -571,7 +612,10 @@ export function BranchManager({
           )}
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t" style={{ borderColor: "var(--ui-border)" }}>
+          <div
+            className="px-4 py-3 border-t"
+            style={{ borderColor: "var(--ui-border)" }}
+          >
             <button
               onClick={() => setShowNewBranchInput(true)}
               disabled={showNewBranchInput || showRenameInput !== null}
@@ -631,12 +675,17 @@ export function BranchManager({
                 <Upload className="size-4" />
                 Push
               </button>
-              <div className="h-px my-1" style={{ backgroundColor: "var(--ui-border)" }} />
+              <div
+                className="h-px my-1"
+                style={{ backgroundColor: "var(--ui-border)" }}
+              />
               <button
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
                 onClick={() => handleRename(contextMenu.branch)}
               >
-                <span className="size-4 flex items-center justify-center text-xs">✏️</span>
+                <span className="size-4 flex items-center justify-center text-xs">
+                  ✏️
+                </span>
                 Rename
               </button>
             </>
@@ -660,35 +709,42 @@ export function BranchManager({
                 <Plus className="size-4" />
                 Create branch from '{contextMenu.branch.name}'
               </button>
-              <div className="h-px my-1" style={{ backgroundColor: "var(--ui-border)" }} />
+              <div
+                className="h-px my-1"
+                style={{ backgroundColor: "var(--ui-border)" }}
+              />
               <button
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
                 onClick={() => {
-                  const currentBranch = branches.find(b => b.is_current);
+                  const currentBranch = branches.find((b) => b.is_current);
                   if (currentBranch) {
                     handleRebase(currentBranch.name, contextMenu.branch.name);
                   }
                 }}
               >
-                <span className="size-4 flex items-center justify-center text-xs">⤴</span>
+                <span className="size-4 flex items-center justify-center text-xs">
+                  ⤴
+                </span>
                 Checkout and rebase onto '{contextMenu.branch.name}'
               </button>
               <button
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
                 onClick={() => {
-                  const currentBranch = branches.find(b => b.is_current);
+                  const currentBranch = branches.find((b) => b.is_current);
                   if (currentBranch) {
                     handleRebase(contextMenu.branch.name, currentBranch.name);
                   }
                 }}
               >
-                <span className="size-4 flex items-center justify-center text-xs">⤵</span>
+                <span className="size-4 flex items-center justify-center text-xs">
+                  ⤵
+                </span>
                 Rebase '{contextMenu.branch.name}' onto current
               </button>
               <button
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
                 onClick={() => {
-                  const currentBranch = branches.find(b => b.is_current);
+                  const currentBranch = branches.find((b) => b.is_current);
                   if (currentBranch) {
                     handleMerge(contextMenu.branch.name, currentBranch.name);
                   }
@@ -697,7 +753,10 @@ export function BranchManager({
                 <GitMerge className="size-4" />
                 Merge '{contextMenu.branch.name}' into current
               </button>
-              <div className="h-px my-1" style={{ backgroundColor: "var(--ui-border)" }} />
+              <div
+                className="h-px my-1"
+                style={{ backgroundColor: "var(--ui-border)" }}
+              />
               <button
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors text-red-500"
                 onClick={() => {
@@ -728,12 +787,15 @@ export function BranchManager({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {confirmDialog.type === "checkout" && confirmDialog.hasUncommitted ? (
+            {confirmDialog.type === "checkout" &&
+            confirmDialog.hasUncommitted ? (
               <>
-                <h3 className="text-lg font-semibold mb-2">Uncommitted Changes</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Uncommitted Changes
+                </h3>
                 <p className="text-sm opacity-70 mb-4">
-                  You have uncommitted changes. Do you want to stash them before switching
-                  branches?
+                  You have uncommitted changes. Do you want to stash them before
+                  switching branches?
                 </p>
                 <div className="flex gap-2 justify-end">
                   <button
@@ -768,8 +830,10 @@ export function BranchManager({
                 <h3 className="text-lg font-semibold mb-2">Delete Branch?</h3>
                 <p className="text-sm opacity-70 mb-4">
                   Are you sure you want to delete branch{" "}
-                  <span className="font-medium">{confirmDialog.branch.name}</span>? This
-                  action cannot be undone.
+                  <span className="font-medium">
+                    {confirmDialog.branch.name}
+                  </span>
+                  ? This action cannot be undone.
                 </p>
                 <div className="flex gap-2 justify-end">
                   <button
@@ -791,8 +855,15 @@ export function BranchManager({
               <>
                 <h3 className="text-lg font-semibold mb-2">Merge Branch?</h3>
                 <p className="text-sm opacity-70 mb-4">
-                  Merge <span className="font-medium">{confirmDialog.branch.name}</span> into{" "}
-                  <span className="font-medium">{confirmDialog.targetBranch}</span>?
+                  Merge{" "}
+                  <span className="font-medium">
+                    {confirmDialog.branch.name}
+                  </span>{" "}
+                  into{" "}
+                  <span className="font-medium">
+                    {confirmDialog.targetBranch}
+                  </span>
+                  ?
                 </p>
                 <div className="flex gap-2 justify-end">
                   <button
@@ -802,7 +873,12 @@ export function BranchManager({
                     Cancel
                   </button>
                   <button
-                    onClick={() => performMerge(confirmDialog.branch.name, confirmDialog.targetBranch!)}
+                    onClick={() =>
+                      performMerge(
+                        confirmDialog.branch.name,
+                        confirmDialog.targetBranch!,
+                      )
+                    }
                     className="px-4 py-2 text-sm rounded transition-colors"
                     style={{ backgroundColor: "#3b82f6", color: "white" }}
                   >
@@ -814,8 +890,15 @@ export function BranchManager({
               <>
                 <h3 className="text-lg font-semibold mb-2">Rebase Branch?</h3>
                 <p className="text-sm opacity-70 mb-4">
-                  Rebase <span className="font-medium">{confirmDialog.branch.name}</span> onto{" "}
-                  <span className="font-medium">{confirmDialog.targetBranch}</span>?
+                  Rebase{" "}
+                  <span className="font-medium">
+                    {confirmDialog.branch.name}
+                  </span>{" "}
+                  onto{" "}
+                  <span className="font-medium">
+                    {confirmDialog.targetBranch}
+                  </span>
+                  ?
                 </p>
                 <div className="flex gap-2 justify-end">
                   <button
@@ -825,7 +908,12 @@ export function BranchManager({
                     Cancel
                   </button>
                   <button
-                    onClick={() => performRebase(confirmDialog.branch.name, confirmDialog.targetBranch!)}
+                    onClick={() =>
+                      performRebase(
+                        confirmDialog.branch.name,
+                        confirmDialog.targetBranch!,
+                      )
+                    }
                     className="px-4 py-2 text-sm rounded transition-colors"
                     style={{ backgroundColor: "#3b82f6", color: "white" }}
                   >
