@@ -14,6 +14,12 @@ export interface TerminalSession {
   ptyId: number | null;
   isActive: boolean;
   isPane?: boolean; // Mark if this is a split pane (not a tab)
+  // SSH mode fields
+  mode?: "local" | "ssh";
+  sshConnectionId?: string;
+  sshChannelId?: string;
+  sshHostLabel?: string; // Display label like "user@hostname"
+  sshColor?: string; // Color indicator for SSH connection
 }
 
 /**
