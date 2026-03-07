@@ -183,11 +183,19 @@ export function GitPanel() {
 
     try {
       const diff = await gitDiff(activeProject.path, file.path, file.staged);
-      // Open diff in editor
+
+      // Open diff viewer in file editor
       openFile({
-        path: `${activeProject.path}/${file.path}`,
-        name: `${file.path} (diff)`,
-        content: diff,
+        path: `git-diff://${activeProject.path}/${file.path}`,
+        name: `${file.path} (${file.staged ? "staged" : "unstaged"})`,
+        content: JSON.stringify({
+          type: "diff",
+          filePath: file.path,
+          diffContent: diff,
+          changeType: file.status,
+          staged: file.staged,
+          repoPath: activeProject.path,
+        }),
         language: "diff",
       });
     } catch (error) {

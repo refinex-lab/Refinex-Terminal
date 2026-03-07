@@ -111,8 +111,8 @@ export const useSidebarStore = create<SidebarStore>((set, get) => ({
     const firstProject = projects.length > 0 ? projects[0] : null;
     set({
       projects,
-      activeProjectId: firstProject?.id || null,
-      activeProject: firstProject
+      activeProjectId: firstProject?.id ?? null,
+      activeProject: firstProject ?? null
     });
   },
 }));

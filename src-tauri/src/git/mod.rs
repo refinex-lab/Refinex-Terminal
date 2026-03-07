@@ -195,8 +195,20 @@ pub async fn git_diff(
 
     let mut diff_text = String::new();
     diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        let origin = line.origin();
         let content = String::from_utf8_lossy(line.content());
-        diff_text.push_str(&content);
+
+        // Add the origin character (+, -, or space) before the content
+        match origin {
+            '+' | '-' | ' ' => {
+                diff_text.push(origin);
+                diff_text.push_str(&content);
+            }
+            _ => {
+                // For other origins (like file headers), just add the content
+                diff_text.push_str(&content);
+            }
+        }
         true
     })
     .map_err(|e| format!("Failed to format diff: {}", e))?;

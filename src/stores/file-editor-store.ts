@@ -20,6 +20,7 @@ interface FileEditorStore {
   activeTabId: string | null;
   addTab: (path: string, name: string) => void;
   removeTab: (id: string) => void;
+  closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTabDirty: (id: string, isDirty: boolean) => void;
   updateTabContent: (id: string, content: string) => void;
@@ -28,6 +29,7 @@ interface FileEditorStore {
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   reorderTabs: (oldIndex: number, newIndex: number) => void;
+  openFile: (file: { path: string; name: string; content: string; language: string }) => void;
 }
 
 /**
@@ -96,6 +98,44 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
         activeTabId: newActiveTabId,
       };
     }),
+
+  closeTab: (id) => get().removeTab(id),
+
+  openFile: (file) => {
+    set((state) => {
+      // Check if tab already exists
+      const existingTab = state.tabs.find((t) => t.path === file.path);
+      if (existingTab) {
+        // Update content and activate it
+        return {
+          tabs: state.tabs.map((t) =>
+            t.id === existingTab.id
+              ? { ...t, isActive: true, content: file.content }
+              : { ...t, isActive: false }
+          ),
+          activeTabId: existingTab.id,
+        };
+      }
+
+      // Create new tab with content
+      const newTab: FileTab = {
+        id: `tab-${Date.now()}-${Math.random()}`,
+        path: file.path,
+        name: file.name,
+        isActive: true,
+        isDirty: false,
+        content: file.content,
+      };
+
+      return {
+        tabs: [
+          ...state.tabs.map((t) => ({ ...t, isActive: false })),
+          newTab,
+        ],
+        activeTabId: newTab.id,
+      };
+    });
+  },
 
   setActiveTab: (id) =>
     set((state) => ({

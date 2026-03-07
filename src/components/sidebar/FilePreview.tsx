@@ -4,8 +4,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { useFileEditorStore } from "@/stores/file-editor-store";
 import { useSettingsStore } from "@/stores/settings-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { CodeEditor, CodeEditorRef } from "@/components/editor/CodeEditor";
 import { MarkdownPreview, MarkdownPreviewRef } from "@/components/editor/MarkdownPreview";
+import { DiffViewer } from "@/components/git/DiffViewer";
 
 interface FilePreviewProps {
   filePath: string;
@@ -59,6 +61,15 @@ function formatDate(timestamp: number): string {
 
 type PreviewMode = 'editor' | 'split' | 'preview';
 
+interface DiffData {
+  type: "diff";
+  filePath: string;
+  diffContent: string;
+  changeType: "modified" | "added" | "deleted" | "renamed";
+  staged: boolean;
+  repoPath: string;
+}
+
 export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchToggle }: FilePreviewProps) {
   const [content, setContent] = useState<string>("");
   const [editedContent, setEditedContent] = useState<string>("");
@@ -74,7 +85,8 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   const [previewMode, setPreviewMode] = useState<PreviewMode>('editor');
   const [splitRatio, setSplitRatio] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
-  const { updateTabDirty, updateTabContent } = useFileEditorStore();
+  const { updateTabDirty, updateTabContent, closeTab, getTabContent } = useFileEditorStore();
+  const { activeProject } = useSidebarStore();
   const { autoSave } = useSettingsStore();
   const editorRef = useRef<CodeEditorRef>(null);
   const previewRef = useRef<MarkdownPreviewRef>(null);
@@ -86,6 +98,17 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   const isImage = isImageFile(fileName);
   const isSVG = isSVGFile(fileName);
   const isMarkdown = isMarkdownFile(fileName);
+  const isDiff = filePath.startsWith("git-diff://");
+
+  // Parse diff data if this is a diff view
+  const diffData: DiffData | null = isDiff && content ? (() => {
+    try {
+      return JSON.parse(content) as DiffData;
+    } catch (e) {
+      console.error("Failed to parse diff data:", e);
+      return null;
+    }
+  })() : null;
 
   // Load file content
   useEffect(() => {
@@ -159,6 +182,17 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
     setError(null);
 
     try {
+      // Handle diff view - content is already in the tab
+      if (isDiff) {
+        const tabContent = getTabContent(tabId);
+        if (tabContent) {
+          setContent(tabContent);
+          setEditedContent(tabContent);
+        }
+        setLoading(false);
+        return;
+      }
+
       // Get file metadata first
       const metadata = await invoke<{ size: number; modified: number }>("get_file_metadata", { path: filePath });
       setFileSize(metadata.size);
@@ -507,6 +541,26 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
               Open with System Editor
             </button>
           </div>
+        ) : isDiff && diffData ? (
+          <DiffViewer
+            filePath={diffData.filePath}
+            diffContent={diffData.diffContent}
+            changeType={diffData.changeType}
+            staged={diffData.staged}
+            onClose={() => closeTab(tabId)}
+            {...(!diffData.staged && activeProject
+              ? {
+                  onDiscard: async () => {
+                    // Discard unstaged changes by checking out the file from HEAD
+                    await invoke("git_checkout", {
+                      repoPath: activeProject.path,
+                      branch: "HEAD",
+                      paths: [diffData.filePath],
+                    });
+                  }
+                }
+              : {})}
+          />
         ) : isImage ? (
           <div className="flex items-center justify-center h-full p-4">
             <img
