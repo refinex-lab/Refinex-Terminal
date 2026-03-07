@@ -707,9 +707,29 @@ pub async fn git_commit_detail(
     }
     .map_err(|e| format!("Failed to get diff: {}", e))?;
 
-    // Collect file changes
+    // Collect file changes with per-file stats
     let mut files_changed = Vec::new();
+    let mut file_stats_map: std::collections::HashMap<String, (usize, usize)> = std::collections::HashMap::new();
 
+    // Collect per-file line stats
+    diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+        let path = delta.new_file().path()
+            .and_then(|p| p.to_str())
+            .unwrap_or("")
+            .to_string();
+
+        let stats = file_stats_map.entry(path).or_insert((0, 0));
+
+        match line.origin() {
+            '+' => stats.0 += 1, // additions
+            '-' => stats.1 += 1, // deletions
+            _ => {}
+        }
+        true
+    })
+    .map_err(|e| format!("Failed to collect file stats: {}", e))?;
+
+    // Collect file changes with stats
     diff.foreach(
         &mut |delta, _progress| {
             let status = match delta.status() {
@@ -733,12 +753,14 @@ pub async fn git_commit_detail(
                 None
             };
 
+            let (additions, deletions) = file_stats_map.get(&path).copied().unwrap_or((0, 0));
+
             files_changed.push(CommitFileChange {
                 path,
                 status: status.to_string(),
                 old_path,
-                additions: 0,
-                deletions: 0,
+                additions,
+                deletions,
             });
 
             true

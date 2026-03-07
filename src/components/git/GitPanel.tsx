@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, memo } from "react";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { useFileEditorStore } from "@/stores/file-editor-store";
 import {
   gitStatus,
@@ -550,7 +551,16 @@ const GitPanelComponent = () => {
 
         {/* Git Graph Button */}
         <button
-          onClick={() => setShowGitGraph(true)}
+          onClick={() => {
+            // In IDE mode, open in bottom panel
+            const { mode, toggleBottomPanel } = useLayoutStore.getState();
+            if (mode === "ide") {
+              toggleBottomPanel("git-graph");
+            } else {
+              // In Terminal mode, open as overlay
+              setShowGitGraph(true);
+            }
+          }}
           className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors mt-2"
           title="Git Graph"
         >

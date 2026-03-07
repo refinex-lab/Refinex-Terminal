@@ -29,7 +29,7 @@ interface FileEditorStore {
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   reorderTabs: (oldIndex: number, newIndex: number) => void;
-  openFile: (file: { path: string; name: string; content: string; language: string }) => void;
+  openFile: (file: { path: string; name?: string; content: string; language: string; metadata?: string }) => void;
 }
 
 /**
@@ -117,11 +117,14 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
         };
       }
 
+      // Extract name from path if not provided
+      const fileName = file.name || file.path.split('/').pop() || file.path;
+
       // Create new tab with content
       const newTab: FileTab = {
         id: `tab-${Date.now()}-${Math.random()}`,
         path: file.path,
-        name: file.name,
+        name: fileName,
         isActive: true,
         isDirty: false,
         content: file.content,

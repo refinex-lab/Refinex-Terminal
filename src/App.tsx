@@ -30,6 +30,8 @@ import { SplitContainer } from "@/components/terminal/SplitContainer";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { FileEditorPanel } from "@/components/sidebar/FileEditorPanel";
 import { StatusBar } from "@/components/editor/StatusBar";
+import { GitGraphView } from "@/components/git/GitGraphView";
+import { GitGraphViewPanel } from "@/components/git/GitGraphViewPanel";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -80,7 +82,7 @@ function App() {
   const { isVisible: sidebarVisible, toggleVisibility: toggleSidebar } =
     useSidebarStore();
   const { tabs: fileTabs } = useFileEditorStore();
-  const { mode: layoutMode, setMode: setLayoutMode, bottomPanelVisible, toggleBottomPanel, bottomPanelHeight, setBottomPanelHeight } = useLayoutStore();
+  const { mode: layoutMode, setMode: setLayoutMode, bottomPanelType, toggleBottomPanel, bottomPanelHeight, setBottomPanelHeight } = useLayoutStore();
   const initializedRef = useRef(false);
   const keybindingManagerRef = useRef<ReturnType<
     typeof getKeybindingManager
@@ -478,11 +480,11 @@ function App() {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              toggleBottomPanel();
+              toggleBottomPanel("terminal");
             }}
             className="p-1.5 rounded hover:bg-white/10 transition-colors"
             style={{ color: "var(--ui-foreground)" }}
-            title={bottomPanelVisible ? "Hide Terminal" : "Show Terminal"}
+            title={bottomPanelType === "terminal" ? "Hide Terminal" : "Show Terminal"}
           >
             <PiTerminalFill className="size-4" />
           </button>
@@ -639,7 +641,7 @@ function App() {
             {/* File Editor Area (full width) */}
             <div
               style={{
-                flex: bottomPanelVisible ? `1 1 calc(100% - ${bottomPanelHeight}px)` : "1 1 100%",
+                flex: bottomPanelType ? `1 1 calc(100% - ${bottomPanelHeight}px)` : "1 1 100%",
                 position: "relative",
                 overflow: "hidden",
                 backgroundColor: "var(--ui-background)",
@@ -871,8 +873,8 @@ function App() {
               )}
             </div>
 
-            {/* Bottom Terminal Panel */}
-            {bottomPanelVisible && (
+            {/* Bottom Panel (Terminal or Git Graph) */}
+            {bottomPanelType && (
               <div
                 style={{
                   height: `${bottomPanelHeight}px`,
@@ -903,97 +905,129 @@ function App() {
                   className="hover:bg-blue-500/50 transition-colors"
                 />
 
-                {/* Terminal Tabs */}
-                <div
-                  className="flex items-center gap-1 px-2 border-b"
-                  style={{
-                    backgroundColor: "var(--ui-background)",
-                    borderColor: "var(--ui-border)",
-                    paddingTop: "4px",
-                    paddingBottom: "4px",
-                    minHeight: "32px",
-                  }}
-                >
-                  <DndContext
-                    sensors={terminalTabSensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleTerminalDragStart}
-                    onDragEnd={handleTerminalDragEnd}
-                  >
-                    <div style={{ flex: 1, display: "flex", gap: "4px" }}>
-                      <SortableContext
-                        items={sessions.filter(s => !s.isPane).map(s => s.id)}
-                        strategy={horizontalListSortingStrategy}
+                {/* Panel Content */}
+                {bottomPanelType === "terminal" && (
+                  <>
+                    {/* Terminal Tabs */}
+                    <div
+                      className="flex items-center gap-1 px-2 border-b"
+                      style={{
+                        backgroundColor: "var(--ui-background)",
+                        borderColor: "var(--ui-border)",
+                        paddingTop: "4px",
+                        paddingBottom: "4px",
+                        minHeight: "32px",
+                      }}
+                    >
+                      <DndContext
+                        sensors={terminalTabSensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleTerminalDragStart}
+                        onDragEnd={handleTerminalDragEnd}
                       >
-                        {sessions
-                          .filter((s) => !s.isPane)
-                          .map((session) => (
-                            <IDETerminalTab
-                              key={session.id}
-                              session={session}
-                              isActive={session.id === activeSessionId}
-                              onSelect={() => useTerminalStore.getState().setActiveSession(session.id)}
-                              onClose={() => useTerminalStore.getState().removeSession(session.id)}
-                            />
-                          ))}
-                      </SortableContext>
+                        <div style={{ flex: 1, display: "flex", gap: "4px" }}>
+                          <SortableContext
+                            items={sessions.filter(s => !s.isPane).map(s => s.id)}
+                            strategy={horizontalListSortingStrategy}
+                          >
+                            {sessions
+                              .filter((s) => !s.isPane)
+                              .map((session) => (
+                                <IDETerminalTab
+                                  key={session.id}
+                                  session={session}
+                                  isActive={session.id === activeSessionId}
+                                  onSelect={() => useTerminalStore.getState().setActiveSession(session.id)}
+                                  onClose={() => useTerminalStore.getState().removeSession(session.id)}
+                                />
+                              ))}
+                          </SortableContext>
+                        </div>
+
+                        <DragOverlay>
+                          {activeTerminalDragId && (() => {
+                            const draggedSession = sessions.find(s => s.id === activeTerminalDragId);
+                            return draggedSession ? (
+                              <div
+                                className="px-2 py-1 rounded text-xs font-medium cursor-grabbing opacity-80"
+                                style={{
+                                  backgroundColor: "rgba(255, 255, 255, 0.12)",
+                                  color: "var(--ui-foreground)",
+                                }}
+                              >
+                                {draggedSession.title}
+                              </div>
+                            ) : null;
+                          })()}
+                        </DragOverlay>
+                      </DndContext>
+
+                      <button
+                        onClick={() => {
+                          const { addSession } = useTerminalStore.getState();
+                          const { activeProject } = useSidebarStore.getState();
+                          const newSession = {
+                            id: `terminal-${Date.now()}`,
+                            title: `⌘ ${sessions.filter(s => !s.isPane).length + 1}`,
+                            cwd: activeProject?.path || "~",
+                            ptyId: null,
+                          };
+                          addSession(newSession);
+                        }}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        style={{ color: "var(--ui-foreground)", flexShrink: 0, fontSize: "14px" }}
+                        title="New Terminal"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => toggleBottomPanel()}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        style={{ color: "var(--ui-foreground)", flexShrink: 0 }}
+                        title="Hide Terminal"
+                      >
+                        <ChevronDown className="size-3" />
+                      </button>
                     </div>
 
-                    <DragOverlay>
-                      {activeTerminalDragId && (() => {
-                        const draggedSession = sessions.find(s => s.id === activeTerminalDragId);
-                        return draggedSession ? (
-                          <div
-                            className="px-2 py-1 rounded text-xs font-medium cursor-grabbing opacity-80"
-                            style={{
-                              backgroundColor: "rgba(255, 255, 255, 0.12)",
-                              color: "var(--ui-foreground)",
-                            }}
-                          >
-                            {draggedSession.title}
-                          </div>
-                        ) : null;
-                      })()}
-                    </DragOverlay>
-                  </DndContext>
+                    {/* Terminal Content */}
+                    <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+                      {sessions.map(
+                        (session) =>
+                          session.isActive && (
+                            <SplitContainer key={session.id} tabId={session.id} />
+                          ),
+                      )}
+                    </div>
+                  </>
+                )}
 
-                  <button
-                    onClick={() => {
-                      const { addSession } = useTerminalStore.getState();
-                      const { activeProject } = useSidebarStore.getState();
-                      const newSession = {
-                        id: `terminal-${Date.now()}`,
-                        title: `⌘ ${sessions.filter(s => !s.isPane).length + 1}`,
-                        cwd: activeProject?.path || "~",
-                        ptyId: null,
-                      };
-                      addSession(newSession);
+                {bottomPanelType === "git-graph" && (
+                  <GitGraphViewPanel
+                    repoPath={useSidebarStore.getState().activeProject?.path || ""}
+                    currentBranch=""
+                    onClose={() => toggleBottomPanel()}
+                    onOpenDiff={(filePath, commitHash) => {
+                      // Open diff in main editor area (same as Terminal mode)
+                      const { openFile } = useFileEditorStore.getState();
+                      const activeProject = useSidebarStore.getState().activeProject;
+
+                      if (!activeProject) return;
+
+                      openFile({
+                        path: `git-commit-diff://${activeProject.path}/${commitHash}/${filePath}`,
+                        name: `${filePath} @ ${commitHash.substring(0, 8)}`,
+                        content: JSON.stringify({
+                          type: "commit-diff",
+                          filePath,
+                          commitHash,
+                          repoPath: activeProject.path,
+                        }),
+                        language: "diff",
+                      });
                     }}
-                    className="p-1 rounded hover:bg-white/10 transition-colors"
-                    style={{ color: "var(--ui-foreground)", flexShrink: 0, fontSize: "14px" }}
-                    title="New Terminal"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => toggleBottomPanel()}
-                    className="p-1 rounded hover:bg-white/10 transition-colors"
-                    style={{ color: "var(--ui-foreground)", flexShrink: 0 }}
-                    title="Hide Terminal"
-                  >
-                    <ChevronDown className="size-3" />
-                  </button>
-                </div>
-
-                {/* Terminal Content */}
-                <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-                  {sessions.map(
-                    (session) =>
-                      session.isActive && (
-                        <SplitContainer key={session.id} tabId={session.id} />
-                      ),
-                  )}
-                </div>
+                  />
+                )}
               </div>
             )}
           </div>
