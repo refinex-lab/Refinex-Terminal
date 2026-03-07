@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, GitBranch, MoreVertical } from "lucide-react";
-import { gitBranches, type BranchInfo } from "@/lib/git";
+import { gitBranches, gitCheckout, type BranchInfo } from "@/lib/git";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 
@@ -488,12 +488,15 @@ export function GitGraphView({
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
                 onClick={async () => {
                   try {
-                    await invoke("git_checkout", {
-                      repoPath,
-                      branchName: contextMenu.branch.name,
-                    });
-                    toast.success(`Checked out to ${contextMenu.branch.name}`);
+                    // Remove "origin/" prefix for remote branches
+                    const branchName = contextMenu.branch.is_remote
+                      ? contextMenu.branch.name.replace(/^origin\//, "")
+                      : contextMenu.branch.name;
+
+                    await gitCheckout(repoPath, branchName);
+                    toast.success(`Switched to branch: ${branchName}`);
                     loadBranches();
+                    loadCommits(branchName);
                   } catch (error) {
                     toast.error(`Failed to checkout: ${error}`);
                   }
