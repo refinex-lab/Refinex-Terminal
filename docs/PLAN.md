@@ -737,7 +737,7 @@ function deriveAgentStatus(
   >
   > The diff viewer opens in the main content area (replacing the terminal temporarily, with a tab). Clicking a file in the Git panel opens it here. Verify with a file that has multiple hunks of changes.
 
-- [ ] **5.4 — Implement branch management UI**
+- [x] **5.4 — Implement branch management UI**
 
   > **Prompt**: Create `src/components/git/BranchManager.tsx` — a dropdown/popover triggered by clicking the branch name in the Git panel:
   >

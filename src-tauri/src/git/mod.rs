@@ -460,21 +460,147 @@ pub async fn git_branches(repo_path: String) -> Result<Vec<BranchInfo>, String> 
 
 /// Checkout branch
 #[command]
-pub async fn git_checkout(repo_path: String, branch: String) -> Result<(), String> {
-    let mut repo = Repository::open(&repo_path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+pub async fn git_checkout(
+    repo_path: String,
+    branch: String,
+    create: Option<bool>,
+) -> Result<(), String> {
+    use std::process::Command;
 
-    let obj = repo
-        .revparse_single(&branch)
-        .map_err(|e| format!("Failed to find branch: {}", e))?;
+    let create_flag = create.unwrap_or(false);
 
-    repo.checkout_tree(&obj, None)
-        .map_err(|e| format!("Failed to checkout tree: {}", e))?;
+    if create_flag {
+        // Create new branch using system git
+        let output = Command::new("git")
+            .arg("checkout")
+            .arg("-b")
+            .arg(&branch)
+            .current_dir(&repo_path)
+            .output()
+            .map_err(|e| format!("Failed to execute git checkout: {}", e))?;
 
-    repo.set_head(&format!("refs/heads/{}", branch))
-        .map_err(|e| format!("Failed to set HEAD: {}", e))?;
+        if output.status.success() {
+            Ok(())
+        } else {
+            Err(String::from_utf8_lossy(&output.stderr).to_string())
+        }
+    } else {
+        // Use libgit2 for existing branch checkout
+        let repo = Repository::open(&repo_path)
+            .map_err(|e| format!("Failed to open repository: {}", e))?;
 
-    Ok(())
+        let obj = repo
+            .revparse_single(&branch)
+            .map_err(|e| format!("Failed to find branch: {}", e))?;
+
+        repo.checkout_tree(&obj, None)
+            .map_err(|e| format!("Failed to checkout tree: {}", e))?;
+
+        repo.set_head(&format!("refs/heads/{}", branch))
+            .map_err(|e| format!("Failed to set HEAD: {}", e))?;
+
+        Ok(())
+    }
+}
+
+/// Delete branch
+#[command]
+pub async fn git_delete_branch(
+    repo_path: String,
+    branch_name: String,
+    force: bool,
+) -> Result<(), String> {
+    use std::process::Command;
+
+    let flag = if force { "-D" } else { "-d" };
+
+    let output = Command::new("git")
+        .arg("branch")
+        .arg(flag)
+        .arg(&branch_name)
+        .current_dir(&repo_path)
+        .output()
+        .map_err(|e| format!("Failed to execute git branch: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Rename branch
+#[command]
+pub async fn git_rename_branch(
+    repo_path: String,
+    old_name: String,
+    new_name: String,
+) -> Result<(), String> {
+    use std::process::Command;
+
+    let output = Command::new("git")
+        .arg("branch")
+        .arg("-m")
+        .arg(&old_name)
+        .arg(&new_name)
+        .current_dir(&repo_path)
+        .output()
+        .map_err(|e| format!("Failed to execute git branch: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Merge branch
+#[command]
+pub async fn git_merge(
+    repo_path: String,
+    source_branch: String,
+    _target_branch: String,
+) -> Result<(), String> {
+    use std::process::Command;
+
+    // Merge source_branch into current branch
+    let output = Command::new("git")
+        .arg("merge")
+        .arg(&source_branch)
+        .arg("--no-edit")
+        .current_dir(&repo_path)
+        .output()
+        .map_err(|e| format!("Failed to execute git merge: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Rebase branch
+#[command]
+pub async fn git_rebase(
+    repo_path: String,
+    _source_branch: String,
+    target_branch: String,
+) -> Result<(), String> {
+    use std::process::Command;
+
+    // Rebase current branch onto target_branch
+    let output = Command::new("git")
+        .arg("rebase")
+        .arg(&target_branch)
+        .current_dir(&repo_path)
+        .output()
+        .map_err(|e| format!("Failed to execute git rebase: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
 }
 
 /// Stash changes

@@ -27,6 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BranchManager } from "./BranchManager";
 
 export function GitPanel() {
   const { activeProject } = useSidebarStore();
@@ -35,6 +36,7 @@ export function GitPanel() {
   const [loading, setLoading] = useState(false);
   const [commitMessage, setCommitMessage] = useState("");
   const [showCommitInput, setShowCommitInput] = useState(false);
+  const [showBranchManager, setShowBranchManager] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     staged: true,
     unstaged: true,
@@ -273,8 +275,10 @@ export function GitPanel() {
     >
       {/* Branch indicator */}
       <div
-        className="flex items-center gap-2 px-4 py-3 border-b"
+        className="flex items-center gap-2 px-4 py-3 border-b cursor-pointer hover:bg-white/5 transition-colors"
         style={{ borderColor: "var(--ui-border)" }}
+        onClick={() => setShowBranchManager(true)}
+        title="Click to manage branches"
       >
         <GitBranch className="size-4" />
         <span className="font-medium">{status.branch}</span>
@@ -539,6 +543,16 @@ export function GitPanel() {
           </button>
         </div>
       </div>
+
+      {/* Branch Manager */}
+      {showBranchManager && activeProject && status && (
+        <BranchManager
+          repoPath={activeProject.path}
+          currentBranch={status.branch}
+          onClose={() => setShowBranchManager(false)}
+          onBranchChanged={loadStatus}
+        />
+      )}
     </div>
   );
 }

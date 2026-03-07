@@ -92,6 +92,10 @@ pub fn run() {
             git::git_fetch,
             git::git_branches,
             git::git_checkout,
+            git::git_delete_branch,
+            git::git_rename_branch,
+            git::git_merge,
+            git::git_rebase,
             git::git_stash,
             git::git_stash_pop
         ])
