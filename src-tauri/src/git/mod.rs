@@ -631,3 +631,207 @@ pub async fn git_stash_pop(repo_path: String) -> Result<(), String> {
 
     Ok(())
 }
+
+/// Git commit file change
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitFileChange {
+    pub path: String,
+    pub status: String, // "added", "modified", "deleted", "renamed"
+    pub old_path: Option<String>,
+    pub additions: usize,
+    pub deletions: usize,
+}
+
+/// Git commit detail
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitDetail {
+    pub hash: String,
+    pub message: String,
+    pub author: String,
+    pub email: String,
+    pub timestamp: i64,
+    pub parent_hashes: Vec<String>,
+    pub files_changed: Vec<CommitFileChange>,
+    pub stats: CommitStats,
+}
+
+/// Git commit stats
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitStats {
+    pub additions: usize,
+    pub deletions: usize,
+    pub files_changed: usize,
+}
+
+/// Get detailed commit information
+#[command]
+pub async fn git_commit_detail(
+    repo_path: String,
+    commit_hash: String,
+) -> Result<CommitDetail, String> {
+    let repo = Repository::open(&repo_path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    let oid = git2::Oid::from_str(&commit_hash)
+        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+
+    let commit = repo
+        .find_commit(oid)
+        .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+    // Extract commit info
+    let hash = commit.id().to_string();
+    let message = commit.message().unwrap_or("").to_string();
+    let author = commit.author().name().unwrap_or("").to_string();
+    let email = commit.author().email().unwrap_or("").to_string();
+    let timestamp = commit.time().seconds();
+
+    // Get parent hashes
+    let parent_hashes: Vec<String> = commit.parent_ids().map(|id| id.to_string()).collect();
+
+    // Get diff from parent (or empty tree if no parent)
+    let mut diff_opts = DiffOptions::new();
+    let diff = if commit.parent_count() > 0 {
+        let parent = commit.parent(0)
+            .map_err(|e| format!("Failed to get parent commit: {}", e))?;
+        let parent_tree = parent.tree()
+            .map_err(|e| format!("Failed to get parent tree: {}", e))?;
+        let commit_tree = commit.tree()
+            .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), Some(&mut diff_opts))
+    } else {
+        // First commit - diff against empty tree
+        let commit_tree = commit.tree()
+            .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+        repo.diff_tree_to_tree(None, Some(&commit_tree), Some(&mut diff_opts))
+    }
+    .map_err(|e| format!("Failed to get diff: {}", e))?;
+
+    // Collect file changes
+    let mut files_changed = Vec::new();
+
+    diff.foreach(
+        &mut |delta, _progress| {
+            let status = match delta.status() {
+                git2::Delta::Added => "added",
+                git2::Delta::Deleted => "deleted",
+                git2::Delta::Modified => "modified",
+                git2::Delta::Renamed => "renamed",
+                _ => "modified",
+            };
+
+            let path = delta.new_file().path()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            let old_path = if status == "renamed" {
+                delta.old_file().path()
+                    .and_then(|p| p.to_str())
+                    .map(|s| s.to_string())
+            } else {
+                None
+            };
+
+            files_changed.push(CommitFileChange {
+                path,
+                status: status.to_string(),
+                old_path,
+                additions: 0,
+                deletions: 0,
+            });
+
+            true
+        },
+        None,
+        None,
+        None,
+    )
+    .map_err(|e| format!("Failed to process diff: {}", e))?;
+
+    // Get overall stats
+    let stats = diff.stats()
+        .map_err(|e| format!("Failed to get diff stats: {}", e))?;
+
+    let total_additions = stats.insertions();
+    let total_deletions = stats.deletions();
+
+    // Note: Per-file stats are approximated from overall stats
+    // libgit2 doesn't provide easy per-file line counts without parsing patches
+    // For now, we'll leave individual file stats at 0 and rely on overall stats
+
+    Ok(CommitDetail {
+        hash,
+        message,
+        author,
+        email,
+        timestamp,
+        parent_hashes,
+        files_changed: files_changed.clone(),
+        stats: CommitStats {
+            additions: total_additions,
+            deletions: total_deletions,
+            files_changed: files_changed.len(),
+        },
+    })
+}
+
+/// Get diff for a specific file in a commit
+#[command]
+pub async fn git_commit_file_diff(
+    repo_path: String,
+    commit_hash: String,
+    file_path: String,
+) -> Result<String, String> {
+    let repo = Repository::open(&repo_path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    let oid = git2::Oid::from_str(&commit_hash)
+        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+
+    let commit = repo
+        .find_commit(oid)
+        .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+    // Get diff from parent (or empty tree if no parent)
+    let mut diff_opts = DiffOptions::new();
+    diff_opts.pathspec(&file_path);
+
+    let diff = if commit.parent_count() > 0 {
+        let parent = commit.parent(0)
+            .map_err(|e| format!("Failed to get parent commit: {}", e))?;
+        let parent_tree = parent.tree()
+            .map_err(|e| format!("Failed to get parent tree: {}", e))?;
+        let commit_tree = commit.tree()
+            .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), Some(&mut diff_opts))
+    } else {
+        // First commit - diff against empty tree
+        let commit_tree = commit.tree()
+            .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+        repo.diff_tree_to_tree(None, Some(&commit_tree), Some(&mut diff_opts))
+    }
+    .map_err(|e| format!("Failed to get diff: {}", e))?;
+
+    let mut diff_text = String::new();
+    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        let origin = line.origin();
+        let content = String::from_utf8_lossy(line.content());
+
+        // Add the origin character (+, -, or space) before the content
+        match origin {
+            '+' | '-' | ' ' => {
+                diff_text.push(origin);
+                diff_text.push_str(&content);
+            }
+            _ => {
+                // For other origins (like file headers), just add the content
+                diff_text.push_str(&content);
+            }
+        }
+        true
+    })
+    .map_err(|e| format!("Failed to format diff: {}", e))?;
+
+    Ok(diff_text)
+}

@@ -25,9 +25,11 @@ import {
   Archive,
   ChevronDown,
   ChevronRight,
+  GitCommit,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BranchManager } from "./BranchManager";
+import { GitGraphView } from "./GitGraphView";
 
 export function GitPanel() {
   const { activeProject } = useSidebarStore();
@@ -37,6 +39,7 @@ export function GitPanel() {
   const [commitMessage, setCommitMessage] = useState("");
   const [showCommitInput, setShowCommitInput] = useState(false);
   const [showBranchManager, setShowBranchManager] = useState(false);
+  const [showGitGraph, setShowGitGraph] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     staged: true,
     unstaged: true,
@@ -542,6 +545,16 @@ export function GitPanel() {
             <Archive className="size-4" />
           </button>
         </div>
+
+        {/* Git Graph Button */}
+        <button
+          onClick={() => setShowGitGraph(true)}
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors mt-2"
+          title="Git Graph"
+        >
+          <GitCommit className="size-4" />
+          <span>Git Graph</span>
+        </button>
       </div>
 
       {/* Branch Manager */}
@@ -551,6 +564,30 @@ export function GitPanel() {
           currentBranch={status.branch}
           onClose={() => setShowBranchManager(false)}
           onBranchChanged={loadStatus}
+        />
+      )}
+
+      {/* Git Graph View */}
+      {showGitGraph && activeProject && status && (
+        <GitGraphView
+          repoPath={activeProject.path}
+          currentBranch={status.branch}
+          onClose={() => setShowGitGraph(false)}
+          onOpenDiff={(filePath, commitHash) => {
+            // Open diff viewer for the file at the specific commit
+            openFile({
+              path: `git-commit-diff://${activeProject.path}/${commitHash}/${filePath}`,
+              name: `${filePath} @ ${commitHash.substring(0, 8)}`,
+              content: JSON.stringify({
+                type: "commit-diff",
+                filePath,
+                commitHash,
+                repoPath: activeProject.path,
+              }),
+              language: "diff",
+            });
+            setShowGitGraph(false);
+          }}
         />
       )}
     </div>

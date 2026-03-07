@@ -97,7 +97,9 @@ pub fn run() {
             git::git_merge,
             git::git_rebase,
             git::git_stash,
-            git::git_stash_pop
+            git::git_stash_pop,
+            git::git_commit_detail,
+            git::git_commit_file_diff
         ])
         .setup(|app| {
             // Create and set menu

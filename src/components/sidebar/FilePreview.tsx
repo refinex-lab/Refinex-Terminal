@@ -62,12 +62,13 @@ function formatDate(timestamp: number): string {
 type PreviewMode = 'editor' | 'split' | 'preview';
 
 interface DiffData {
-  type: "diff";
+  type: "diff" | "commit-diff";
   filePath: string;
-  diffContent: string;
-  changeType: "modified" | "added" | "deleted" | "renamed";
-  staged: boolean;
+  diffContent?: string;
+  changeType?: "modified" | "added" | "deleted" | "renamed";
+  staged?: boolean;
   repoPath: string;
+  commitHash?: string;
 }
 
 export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchToggle }: FilePreviewProps) {
@@ -98,7 +99,7 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
   const isImage = isImageFile(fileName);
   const isSVG = isSVGFile(fileName);
   const isMarkdown = isMarkdownFile(fileName);
-  const isDiff = filePath.startsWith("git-diff://");
+  const isDiff = filePath.startsWith("git-diff://") || filePath.startsWith("git-commit-diff://");
 
   // Parse diff data if this is a diff view
   const diffData: DiffData | null = isDiff && content ? (() => {
@@ -188,6 +189,27 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
         if (tabContent) {
           setContent(tabContent);
           setEditedContent(tabContent);
+
+          // For commit-diff, load the diff content
+          const parsedData = JSON.parse(tabContent) as DiffData;
+          if (parsedData.type === "commit-diff" && parsedData.commitHash) {
+            // Load diff for this specific file at this commit
+            const diffContent = await invoke<string>("git_commit_file_diff", {
+              repoPath: parsedData.repoPath,
+              commitHash: parsedData.commitHash,
+              filePath: parsedData.filePath,
+            });
+
+            // Update the content with the actual diff
+            const updatedData = {
+              ...parsedData,
+              diffContent,
+              changeType: "modified" as const,
+            };
+            const updatedContent = JSON.stringify(updatedData);
+            setContent(updatedContent);
+            setEditedContent(updatedContent);
+          }
         }
         setLoading(false);
         return;
@@ -544,9 +566,9 @@ export function FilePreview({ filePath, fileName, tabId, showSearch, onSearchTog
         ) : isDiff && diffData ? (
           <DiffViewer
             filePath={diffData.filePath}
-            diffContent={diffData.diffContent}
-            changeType={diffData.changeType}
-            staged={diffData.staged}
+            diffContent={diffData.diffContent || ""}
+            changeType={diffData.changeType || "modified"}
+            staged={diffData.staged || false}
             onClose={() => closeTab(tabId)}
             {...(!diffData.staged && activeProject
               ? {
