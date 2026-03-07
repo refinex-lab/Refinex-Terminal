@@ -6,12 +6,14 @@ mod cli;
 mod fs;
 mod git;
 mod logging;
+mod ssh;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, set_window_opacity, set_window_vibrancy, toggle_fullscreen, set_always_on_top, get_window_state, restore_window_state, ConfigState};
 use config::{load_config, get_config_path};
 use cli::{detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile};
 use fs::watcher::FsWatcher;
+use ssh::SshConnectionManager;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 use tracing::{info, error};
@@ -67,6 +69,28 @@ pub fn run() {
         .manage(PtyManager::new())
         .manage(ConfigState::new(config))
         .manage(Arc::new(Mutex::new(FsWatcher::new())))
+        .setup(|app| {
+            // Initialize SSH connection manager
+            let ssh_manager = SshConnectionManager::new(app.handle().clone());
+            app.manage(ssh::SshManagerState::new(ssh_manager));
+
+            // Create and set menu
+            let menu = menu::create_menu(app.handle())?;
+            app.set_menu(menu)?;
+
+            // Handle menu events
+            app.on_menu_event(menu::handle_menu_event);
+
+            #[cfg(target_os = "macos")]
+            {
+                // Disable Tauri's drag-drop handler on macOS to allow HTML5 drag and drop
+                if let Some(window) = app.get_webview_window("main") {
+                    disable_webview_drag_drop(&window);
+                    println!("macOS: Disabled Tauri drag-drop handler for HTML5 compatibility");
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             pty_spawn,
@@ -123,26 +147,11 @@ pub fn run() {
             git::git_stash,
             git::git_stash_pop,
             git::git_commit_detail,
-            git::git_commit_file_diff
+            git::git_commit_file_diff,
+            ssh::ssh_connect,
+            ssh::ssh_disconnect,
+            ssh::ssh_list_connections
         ])
-        .setup(|app| {
-            // Create and set menu
-            let menu = menu::create_menu(app.handle())?;
-            app.set_menu(menu)?;
-
-            // Handle menu events
-            app.on_menu_event(menu::handle_menu_event);
-
-            #[cfg(target_os = "macos")]
-            {
-                // Disable Tauri's drag-drop handler on macOS to allow HTML5 drag and drop
-                if let Some(window) = app.get_webview_window("main") {
-                    disable_webview_drag_drop(&window);
-                    println!("macOS: Disabled Tauri drag-drop handler for HTML5 compatibility");
-                }
-            }
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
