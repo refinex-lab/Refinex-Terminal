@@ -1,5 +1,5 @@
 use russh::client;
-use russh_keys::load_secret_key;
+use russh_keys::{load_secret_key, agent};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
@@ -62,7 +62,12 @@ impl SshConnectionManager {
         let config = Arc::new(client::Config::default());
 
         // Create handler
-        let handler = SshHandler::new(self.app_handle.clone(), conn_id.clone());
+        let handler = SshHandler::new(
+            self.app_handle.clone(),
+            conn_id.clone(),
+            host_config.hostname.clone(),
+            host_config.port,
+        );
 
         // Connect with timeout
         let connect_future = client::connect(config, addr, handler);
@@ -153,8 +158,56 @@ impl SshConnectionManager {
                 }
             }
             AuthMethod::Agent => {
-                // TODO: Implement SSH agent authentication
-                return Err("SSH agent authentication not yet implemented".to_string());
+                // Connect to SSH agent
+                let mut agent_client = agent::client::AgentClient::connect_env()
+                    .await
+                    .map_err(|e| format!("Failed to connect to SSH agent: {}", e))?;
+
+                // Request identities from agent
+                let identities = agent_client
+                    .request_identities()
+                    .await
+                    .map_err(|e| format!("Failed to get identities from SSH agent: {}", e))?;
+
+                if identities.is_empty() {
+                    return Err("No identities found in SSH agent".to_string());
+                }
+
+                // Try each identity until one succeeds
+                let mut last_error = String::new();
+                for identity in identities {
+                    // Use agent to sign authentication request
+                    let auth_result = tokio::time::timeout(
+                        std::time::Duration::from_secs(30),
+                        handle.authenticate_publickey_with(
+                            username.clone(),
+                            identity.clone(),
+                            &mut agent_client,
+                        ),
+                    )
+                    .await;
+
+                    match auth_result {
+                        Ok(Ok(true)) => {
+                            // Authentication succeeded
+                            return Ok(());
+                        }
+                        Ok(Ok(false)) => {
+                            last_error = "SSH agent authentication rejected".to_string();
+                        }
+                        Ok(Err(e)) => {
+                            last_error = format!("SSH agent authentication failed: {}", e);
+                        }
+                        Err(_) => {
+                            last_error = "SSH agent authentication timeout".to_string();
+                        }
+                    }
+                }
+
+                return Err(format!(
+                    "All SSH agent identities failed. Last error: {}",
+                    last_error
+                ));
             }
             AuthMethod::KeyboardInteractive => {
                 // TODO: Implement keyboard-interactive authentication

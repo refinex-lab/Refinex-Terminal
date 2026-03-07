@@ -155,7 +155,9 @@ pub fn run() {
             ssh::ssh_open_shell,
             ssh::ssh_write,
             ssh::ssh_resize,
-            ssh::ssh_close_channel
+            ssh::ssh_close_channel,
+            ssh::list_ssh_keys_cmd,
+            ssh::test_ssh_connection
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

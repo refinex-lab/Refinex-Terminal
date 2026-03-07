@@ -1,6 +1,10 @@
 use tauri::State;
+use std::path::PathBuf;
 
-use crate::ssh::{SshChannelManager, SshConnectionManager, SshHostConfig, SshConnectionInfo};
+use crate::ssh::{
+    SshChannelManager, SshConnectionManager, SshHostConfig, SshConnectionInfo,
+    SshKeyInfo, list_ssh_keys,
+};
 
 /// SSH connection manager state
 pub struct SshManagerState {
@@ -97,4 +101,36 @@ pub async fn ssh_close_channel(
         .channel_manager
         .close_channel(&state.conn_manager, &conn_id, &channel_id)
         .await
+}
+
+/// List SSH keys in a directory
+#[tauri::command]
+pub async fn list_ssh_keys_cmd(dir: Option<String>) -> Result<Vec<SshKeyInfo>, String> {
+    let path = if let Some(dir) = dir {
+        PathBuf::from(dir)
+    } else {
+        // Default to ~/.ssh
+        let home = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
+        home.join(".ssh")
+    };
+
+    list_ssh_keys(&path)
+}
+
+/// Test SSH connection without keeping it open
+#[tauri::command]
+pub async fn test_ssh_connection(
+    host_config: SshHostConfig,
+    app_handle: tauri::AppHandle,
+) -> Result<String, String> {
+    // Create a temporary connection manager
+    let temp_manager = SshConnectionManager::new(app_handle);
+
+    // Try to connect
+    let conn_id = temp_manager.connect(host_config).await?;
+
+    // Immediately disconnect
+    temp_manager.disconnect(&conn_id).await?;
+
+    Ok("Connection successful".to_string())
 }

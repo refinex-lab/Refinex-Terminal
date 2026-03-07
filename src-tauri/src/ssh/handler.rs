@@ -4,19 +4,24 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::{oneshot, Mutex};
 
 use super::types::{HostKeyAction, HostKeyRequest};
+use super::known_hosts::{check_known_host, add_known_host, KnownHostStatus};
 
 /// SSH client handler
 pub struct SshHandler {
     app_handle: AppHandle,
     conn_id: String,
+    hostname: String,
+    port: u16,
     host_key_response: Arc<Mutex<Option<oneshot::Sender<HostKeyAction>>>>,
 }
 
 impl SshHandler {
-    pub fn new(app_handle: AppHandle, conn_id: String) -> Self {
+    pub fn new(app_handle: AppHandle, conn_id: String, hostname: String, port: u16) -> Self {
         Self {
             app_handle,
             conn_id,
+            hostname,
+            port,
             host_key_response: Arc::new(Mutex::new(None)),
         }
     }
@@ -49,14 +54,55 @@ impl client::Handler for SshHandler {
         &mut self,
         server_public_key: &ssh_key::PublicKey,
     ) -> Result<bool, Self::Error> {
-        // Get key fingerprint (simplified - using debug representation)
+        // Check known_hosts first
+        let known_status = check_known_host(&self.hostname, self.port, server_public_key)
+            .map_err(|e| {
+                russh::Error::from(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to check known_hosts: {}", e),
+                ))
+            })?;
+
+        match known_status {
+            KnownHostStatus::Trusted => {
+                // Host key is already trusted
+                return Ok(true);
+            }
+            KnownHostStatus::Changed => {
+                // Host key has changed - this is a security issue!
+                // Emit warning event to frontend
+                let fingerprint = format!("{:?}", server_public_key);
+                let key_type = server_public_key.algorithm().to_string();
+
+                let request = HostKeyRequest {
+                    hostname: self.hostname.clone(),
+                    port: self.port,
+                    key_type,
+                    fingerprint,
+                };
+
+                self.app_handle
+                    .emit(&format!("ssh-host-key-changed-{}", self.conn_id), request)
+                    .map_err(|e| {
+                        russh::Error::from(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    })?;
+
+                // Reject connection by default for security
+                return Ok(false);
+            }
+            KnownHostStatus::Unknown => {
+                // Host key is unknown - ask user
+            }
+        }
+
+        // Get key fingerprint
         let fingerprint = format!("{:?}", server_public_key);
         let key_type = server_public_key.algorithm().to_string();
 
         // Create host key request
         let request = HostKeyRequest {
-            hostname: "unknown".to_string(), // Will be filled by connection manager
-            port: 22,
+            hostname: self.hostname.clone(),
+            port: self.port,
             key_type,
             fingerprint,
         };
@@ -90,7 +136,13 @@ impl client::Handler for SshHandler {
             HostKeyAction::Reject => Ok(false),
             HostKeyAction::AcceptOnce => Ok(true),
             HostKeyAction::AcceptAndRemember => {
-                // TODO: Write to ~/.ssh/known_hosts
+                // Write to ~/.ssh/known_hosts
+                add_known_host(&self.hostname, self.port, server_public_key).map_err(|e| {
+                    russh::Error::from(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Failed to add to known_hosts: {}", e),
+                    ))
+                })?;
                 Ok(true)
             }
         }
