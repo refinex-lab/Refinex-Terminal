@@ -44,6 +44,18 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [claudeSettings, setClaudeSettings] = useState<any>(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Copilot detection state
+  const [copilotDetection, setCopilotDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [detectingCopilot, setDetectingCopilot] = useState(false);
+
+  // Gemini detection state
+  const [geminiDetection, setGeminiDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [detectingGemini, setDetectingGemini] = useState(false);
+
+  // Codex detection state
+  const [codexDetection, setCodexDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [detectingCodex, setDetectingCodex] = useState(false);
   const { config, updateConfig } = useConfigStore();
   const { autoSave, updateAutoSave } = useSettingsStore();
 
@@ -65,6 +77,27 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       detectClaudeCLI();
       loadShellProfilePath();
       loadClaudeSettings();
+    }
+  }, [activeSection]);
+
+  // Detect Copilot when entering Copilot settings
+  useEffect(() => {
+    if (activeSection === "ai-copilot" && !copilotDetection) {
+      detectCopilotCLI();
+    }
+  }, [activeSection]);
+
+  // Detect Gemini when entering Gemini settings
+  useEffect(() => {
+    if (activeSection === "ai-gemini" && !geminiDetection) {
+      detectGeminiCLI();
+    }
+  }, [activeSection]);
+
+  // Detect Codex when entering Codex settings
+  useEffect(() => {
+    if (activeSection === "ai-codex" && !codexDetection) {
+      detectCodexCLI();
     }
   }, [activeSection]);
 
@@ -180,6 +213,87 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       console.error("Failed to detect Claude CLI:", error);
     } finally {
       setDetectingClaude(false);
+    }
+  };
+
+  const detectCopilotCLI = async () => {
+    setDetectingCopilot(true);
+    try {
+      const result = await invoke<Array<{
+        name: string;
+        found: boolean;
+        path: string | null;
+        version: string | null;
+        authenticated: boolean | null;
+      }>>("detect_ai_clis");
+
+      const copilotResult = result.find(r => r.name === "gh-copilot");
+      if (copilotResult) {
+        setCopilotDetection({
+          found: copilotResult.found,
+          path: copilotResult.path,
+          version: copilotResult.version,
+          authenticated: copilotResult.authenticated,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to detect Copilot CLI:", error);
+    } finally {
+      setDetectingCopilot(false);
+    }
+  };
+
+  const detectGeminiCLI = async () => {
+    setDetectingGemini(true);
+    try {
+      const result = await invoke<Array<{
+        name: string;
+        found: boolean;
+        path: string | null;
+        version: string | null;
+        authenticated: boolean | null;
+      }>>("detect_ai_clis");
+
+      const geminiResult = result.find(r => r.name === "gemini");
+      if (geminiResult) {
+        setGeminiDetection({
+          found: geminiResult.found,
+          path: geminiResult.path,
+          version: geminiResult.version,
+          authenticated: geminiResult.authenticated,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to detect Gemini CLI:", error);
+    } finally {
+      setDetectingGemini(false);
+    }
+  };
+
+  const detectCodexCLI = async () => {
+    setDetectingCodex(true);
+    try {
+      const result = await invoke<Array<{
+        name: string;
+        found: boolean;
+        path: string | null;
+        version: string | null;
+        authenticated: boolean | null;
+      }>>("detect_ai_clis");
+
+      const codexResult = result.find(r => r.name === "codex");
+      if (codexResult) {
+        setCodexDetection({
+          found: codexResult.found,
+          path: codexResult.path,
+          version: codexResult.version,
+          authenticated: codexResult.authenticated,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to detect Codex CLI:", error);
+    } finally {
+      setDetectingCodex(false);
     }
   };
 
@@ -797,90 +911,309 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             {/* AI - Codex CLI Section */}
             {activeSection === "ai-codex" && (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Codex CLI</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure OpenAI Codex CLI integration and detection settings.
-                  </p>
-                </div>
-
-                <div className="pt-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold">Codex CLI</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure OpenAI Codex CLI integration and detection settings
+                    </p>
+                  </div>
                   <Button
-                    onClick={() => setWizardOpen(true)}
-                    className="w-full"
+                    variant="outline"
+                    size="sm"
+                    onClick={detectCodexCLI}
+                    disabled={detectingCodex}
                   >
-                    Configure Codex CLI
+                    <RefreshCw className={`size-3 mr-2 ${detectingCodex ? 'animate-spin' : ''}`} />
+                    {detectingCodex ? 'Detecting...' : 'Re-detect'}
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Detect installation, check authentication, and configure shell integration
-                  </p>
                 </div>
 
-                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-                  <p className="text-sm text-muted-foreground">
-                    Additional Codex-specific settings will be available here in future updates.
-                  </p>
+                {/* Installation Status */}
+                <div className="space-y-4">
+                  <Label>Installation Status</Label>
+                  {codexDetection && (
+                    <div
+                      className="p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: codexDetection.found ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                        borderColor: codexDetection.found ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        {codexDetection.found ? (
+                          <Check className="size-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="size-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-medium" style={{ color: "var(--ui-foreground)" }}>
+                            {codexDetection.found ? "Codex CLI is installed" : "Codex CLI not found"}
+                          </p>
+                          {codexDetection.found ? (
+                            <>
+                              {codexDetection.path && (
+                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                  Path: {codexDetection.path}
+                                </p>
+                              )}
+                              {codexDetection.version && (
+                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                  Version: {codexDetection.version}
+                                </p>
+                              )}
+                              {codexDetection.authenticated !== null && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  {codexDetection.authenticated ? (
+                                    <>
+                                      <Check className="size-4 text-green-500" />
+                                      <span className="text-xs text-green-500">Authenticated</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertCircle className="size-4 text-yellow-500" />
+                                      <span className="text-xs text-yellow-500">Not authenticated</span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                Install Codex CLI to get started
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open("https://github.com/openai/codex", "_blank")}
+                              >
+                                <ExternalLink className="size-3 mr-2" />
+                                Installation Guide
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Configuration Placeholder */}
+                {codexDetection?.found && (
+                  <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                    <p className="text-sm text-muted-foreground">
+                      Additional Codex-specific settings will be available here in future updates.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* AI - Gemini CLI Section */}
             {activeSection === "ai-gemini" && (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Gemini CLI</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure Google Gemini CLI integration and detection settings.
-                  </p>
-                </div>
-
-                <div className="pt-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold">Gemini CLI</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure Google Gemini CLI integration and detection settings
+                    </p>
+                  </div>
                   <Button
-                    onClick={() => setWizardOpen(true)}
-                    className="w-full"
+                    variant="outline"
+                    size="sm"
+                    onClick={detectGeminiCLI}
+                    disabled={detectingGemini}
                   >
-                    Configure Gemini CLI
+                    <RefreshCw className={`size-3 mr-2 ${detectingGemini ? 'animate-spin' : ''}`} />
+                    {detectingGemini ? 'Detecting...' : 'Re-detect'}
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Detect installation, check authentication, and configure shell integration
-                  </p>
                 </div>
 
-                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-                  <p className="text-sm text-muted-foreground">
-                    Additional Gemini-specific settings will be available here in future updates.
-                  </p>
+                {/* Installation Status */}
+                <div className="space-y-4">
+                  <Label>Installation Status</Label>
+                  {geminiDetection && (
+                    <div
+                      className="p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: geminiDetection.found ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                        borderColor: geminiDetection.found ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        {geminiDetection.found ? (
+                          <Check className="size-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="size-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-medium" style={{ color: "var(--ui-foreground)" }}>
+                            {geminiDetection.found ? "Gemini CLI is installed" : "Gemini CLI not found"}
+                          </p>
+                          {geminiDetection.found ? (
+                            <>
+                              {geminiDetection.path && (
+                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                  Path: {geminiDetection.path}
+                                </p>
+                              )}
+                              {geminiDetection.version && (
+                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                  Version: {geminiDetection.version}
+                                </p>
+                              )}
+                              {geminiDetection.authenticated !== null && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  {geminiDetection.authenticated ? (
+                                    <>
+                                      <Check className="size-4 text-green-500" />
+                                      <span className="text-xs text-green-500">Authenticated</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertCircle className="size-4 text-yellow-500" />
+                                      <span className="text-xs text-yellow-500">Not authenticated</span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                Install Gemini CLI to get started
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open("https://github.com/google-gemini/gemini-cli", "_blank")}
+                              >
+                                <ExternalLink className="size-3 mr-2" />
+                                Installation Guide
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Configuration Placeholder */}
+                {geminiDetection?.found && (
+                  <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                    <p className="text-sm text-muted-foreground">
+                      Additional Gemini-specific settings will be available here in future updates.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* AI - GitHub Copilot Section */}
             {activeSection === "ai-copilot" && (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">GitHub Copilot CLI</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure GitHub Copilot CLI integration and detection settings.
-                  </p>
-                </div>
-
-                <div className="pt-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold">GitHub Copilot CLI</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure GitHub Copilot CLI integration and detection settings
+                    </p>
+                  </div>
                   <Button
-                    onClick={() => setWizardOpen(true)}
-                    className="w-full"
+                    variant="outline"
+                    size="sm"
+                    onClick={detectCopilotCLI}
+                    disabled={detectingCopilot}
                   >
-                    Configure GitHub Copilot
+                    <RefreshCw className={`size-3 mr-2 ${detectingCopilot ? 'animate-spin' : ''}`} />
+                    {detectingCopilot ? 'Detecting...' : 'Re-detect'}
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Detect installation, check authentication, and configure shell integration
-                  </p>
                 </div>
 
-                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-                  <p className="text-sm text-muted-foreground">
-                    Additional Copilot-specific settings will be available here in future updates.
-                  </p>
+                {/* Installation Status */}
+                <div className="space-y-4">
+                  <Label>Installation Status</Label>
+                  {copilotDetection && (
+                    <div
+                      className="p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: copilotDetection.found ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                        borderColor: copilotDetection.found ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        {copilotDetection.found ? (
+                          <Check className="size-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="size-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-medium" style={{ color: "var(--ui-foreground)" }}>
+                            {copilotDetection.found ? "GitHub Copilot CLI is installed" : "GitHub Copilot CLI not found"}
+                          </p>
+                          {copilotDetection.found ? (
+                  <>
+                              {copilotDetection.path && (
+                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                  Path: {copilotDetection.path}
+                                </p>
+                              )}
+                              {copilotDetection.version && (
+                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                  Version: {copilotDetection.version}
+                                </p>
+                              )}
+                              {copilotDetection.authenticated !== null && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  {copilotDetection.authenticated ? (
+                                    <>
+                                      <Check className="size-4 text-green-500" />
+                                      <span className="text-xs text-green-500">Authenticated</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertCircle className="size-4 text-yellow-500" />
+                                      <span className="text-xs text-yellow-500">Not authenticated</span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                Install GitHub Copilot CLI to get started
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open("https://docs.github.com/en/copilot/github-copilot-in-the-cli", "_blank")}
+                              >
+                                <ExternalLink className="size-3 mr-2" />
+                                Installation Guide
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Configuration Placeholder */}
+                {copilotDetection?.found && (
+                  <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                    <p className="text-sm text-muted-foreground">
+                      Additional Copilot-specific settings will be available here in future updates.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
