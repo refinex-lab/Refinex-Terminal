@@ -872,7 +872,7 @@ function deriveAgentStatus(
 
   > **Prompt**: Create `.github/workflows/ci.yml` that:
   >
-  > - Triggers on push to `main` and on pull requests.
+  > - Triggers on push to `msater` and on pull requests.
   > - Matrix: macOS (ARM runner), Windows (latest).
   > - Steps: checkout, setup Rust (stable), setup Node.js (20), install pnpm, install dependencies, run `cargo check`, run `cargo clippy -- -D warnings`, run `pnpm tsc --noEmit`, run `pnpm build`, run `pnpm tauri build`.
   > - Cache: Rust target directory, pnpm store.
