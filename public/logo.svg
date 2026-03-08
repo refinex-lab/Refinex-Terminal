@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mark-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="60%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#1E3A5F"/>
+    </linearGradient>
+    <linearGradient id="cursor-dark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0369A1"/>
+      <stop offset="100%" stop-color="#0E7490"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Terminal prompt >_ mark only, for use on light backgrounds -->
+  <g transform="translate(256, 240)">
+    <!-- The > chevron -->
+    <path d="
+      M -140, -96
+      L 10, 0
+      L -140, 96
+    " fill="none" stroke="url(#mark-dark)" stroke-width="52" 
+       stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- The _ cursor -->
+    <line x1="56" y1="96" x2="184" y2="96" 
+          stroke="url(#cursor-dark)" stroke-width="52" stroke-linecap="round"/>
+  </g>
+
+  <!-- Lightning accent -->
+  <g transform="translate(352, 100)" opacity="0.75">
+    <path d="
+      M 0, 0
+      L -10, 24
+      L 8, 18
+      L -3, 44
+    " fill="none" stroke="#0369A1" stroke-width="7" 
+       stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
