@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   ChevronDown,
@@ -120,17 +120,35 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const { config, updateConfig } = useConfigStore();
   const { autoSave, updateAutoSave } = useSettingsStore();
 
-  // Load system fonts on mount
+  // Load system fonts only when needed (appearance or terminal section)
   useEffect(() => {
-    listSystemFonts().then(setSystemFonts).catch(console.error);
-  }, []);
+    if ((activeSection === "appearance" || activeSection === "terminal") && systemFonts.length === 0) {
+      // Try to load from cache first
+      const cached = localStorage.getItem("system-fonts");
+      if (cached) {
+        try {
+          setSystemFonts(JSON.parse(cached));
+        } catch (e) {
+          console.error("Failed to parse cached fonts:", e);
+        }
+      }
 
-  // Load preview theme when theme changes
+      // Load fonts in background and update cache
+      listSystemFonts().then(fonts => {
+        setSystemFonts(fonts);
+        localStorage.setItem("system-fonts", JSON.stringify(fonts));
+      }).catch(console.error);
+    }
+  }, [activeSection, systemFonts.length]);
+
+  // Load preview theme only when in appearance section
   useEffect(() => {
-    loadBuiltinTheme(config.appearance.theme)
-      .then(setPreviewTheme)
-      .catch(console.error);
-  }, [config.appearance.theme]);
+    if (activeSection === "appearance" && !previewTheme) {
+      loadBuiltinTheme(config.appearance.theme)
+        .then(setPreviewTheme)
+        .catch(console.error);
+    }
+  }, [activeSection, config.appearance.theme, previewTheme]);
 
   // Detect Claude Code when entering Claude settings (non-blocking)
   useEffect(() => {
@@ -654,29 +672,31 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   ];
 
   return (
-    <div
-      className="fixed z-50 backdrop-blur-sm"
-      style={{
-        top: "40px",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "var(--ui-background)",
-        color: "var(--ui-foreground)",
-      }}
-    >
-      <div className="flex h-full">
-        {/* Left sidebar navigation */}
+    <>
+      {isOpen && (
         <div
-          className="w-48 border-r p-4"
+          className="fixed z-50 backdrop-blur-sm"
           style={{
-            borderColor: "var(--ui-border)",
+            top: "40px",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "var(--ui-background)",
+            color: "var(--ui-foreground)",
           }}
         >
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold">Settings</h2>
-          </div>
-          <nav className="space-y-1">
+          <div className="flex h-full">
+            {/* Left sidebar navigation */}
+            <div
+              className="w-48 border-r p-4"
+              style={{
+                borderColor: "var(--ui-border)",
+              }}
+            >
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold">Settings</h2>
+              </div>
+              <nav className="space-y-1">
             {/* Render sections, inserting AI before Git */}
             {sections
               .filter(
@@ -1945,13 +1965,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             )}
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* CLI Setup Wizard */}
-      <CLISetupWizard
-        isOpen={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-      />
-    </div>
+        {/* CLI Setup Wizard */}
+        {wizardOpen && (
+          <CLISetupWizard
+            isOpen={wizardOpen}
+            onClose={() => setWizardOpen(false)}
+          />
+        )}
+      </div>
+    )}
+    </>
   );
 }
