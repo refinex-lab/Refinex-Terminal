@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, ChevronDown, Palette, Terminal, FileText, GitBranch, Keyboard, Sparkles, Settings } from "lucide-react";
+import { X, ChevronDown, Palette, Terminal, FileText, GitBranch, Keyboard, Sparkles, Settings, Check, RefreshCw, AlertCircle, Plus, Trash2, ExternalLink } from "lucide-react";
 import { VscVscode } from "react-icons/vsc";
 import { SiIntellijidea } from "react-icons/si";
 import { MdOutlineEditNote } from "react-icons/md";
+import { toast } from "sonner";
 import claudeIcon from "@/assets/icons/claude.svg";
 import codexIcon from "@/assets/icons/codex.svg";
 import geminiIcon from "@/assets/icons/gemini.svg";
@@ -20,6 +21,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { BUILTIN_THEMES, loadBuiltinTheme, applyTheme, type Theme } from "@/lib/theme-engine";
 import { listSystemFonts } from "@/lib/font-manager";
 import { CLISetupWizard } from "@/components/ai/CLISetupWizard";
+import { ClaudeCodeSettings } from "@/components/settings/ClaudeCodeSettings";
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -34,6 +36,14 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
+  const [claudeDetection, setClaudeDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [detectingClaude, setDetectingClaude] = useState(false);
+  const [shellProfilePath, setShellProfilePath] = useState<string>("");
+  const [isClaudeInProfile, setIsClaudeInProfile] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [claudeSettings, setClaudeSettings] = useState<any>(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const { config, updateConfig } = useConfigStore();
   const { autoSave, updateAutoSave } = useSettingsStore();
 
@@ -48,6 +58,130 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       .then(setPreviewTheme)
       .catch(console.error);
   }, [config.appearance.theme]);
+
+  // Detect Claude Code when entering Claude settings
+  useEffect(() => {
+    if (activeSection === "ai-claude" && !claudeDetection) {
+      detectClaudeCLI();
+      loadShellProfilePath();
+      loadClaudeSettings();
+    }
+  }, [activeSection]);
+
+  const loadShellProfilePath = async () => {
+    try {
+      const path = await invoke<string>("get_shell_profile_path");
+      setShellProfilePath(path);
+    } catch (error) {
+      console.error("Failed to get shell profile path:", error);
+    }
+  };
+
+  const loadClaudeSettings = async () => {
+    setLoadingSettings(true);
+    try {
+      const settingsJson = await invoke<string>("read_claude_settings");
+      const settings = JSON.parse(settingsJson);
+      setClaudeSettings(settings);
+    } catch (error) {
+      console.error("Failed to load Claude settings:", error);
+      // Initialize with default structure if file doesn't exist
+      setClaudeSettings({
+        env: {},
+        skipDangerousModePermissionPrompt: false,
+      });
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const saveClaudeSettings = async () => {
+    if (!claudeSettings) return;
+
+    setSavingSettings(true);
+    try {
+      const settingsJson = JSON.stringify(claudeSettings, null, 2);
+      await invoke("write_claude_settings", { content: settingsJson });
+      toast.success("Settings saved successfully");
+    } catch (error) {
+      toast.error(`Failed to save settings: ${error}`);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const updateClaudeEnv = (key: string, value: string) => {
+    setClaudeSettings((prev: any) => ({
+      ...prev,
+      env: {
+        ...prev.env,
+        [key]: value,
+      },
+    }));
+  };
+
+  const deleteClaudeEnv = (key: string) => {
+    setClaudeSettings((prev: any) => {
+      const newEnv = { ...prev.env };
+      delete newEnv[key];
+      return {
+        ...prev,
+        env: newEnv,
+      };
+    });
+  };
+
+  const addClaudeEnv = (key: string, value: string) => {
+    if (!key.trim()) return;
+    updateClaudeEnv(key, value);
+  };
+
+  const checkShellProfile = async (claudePath: string) => {
+    setCheckingProfile(true);
+    try {
+      const pathDir = claudePath.replace(/[/\\][^/\\]+$/, ''); // Remove binary name
+      const checkLine = `export PATH="$PATH:${pathDir}"`;
+      const exists = await invoke<boolean>("check_shell_profile", { line: checkLine });
+      setIsClaudeInProfile(exists);
+    } catch (error) {
+      console.error("Failed to check shell profile:", error);
+      setIsClaudeInProfile(false);
+    } finally {
+      setCheckingProfile(false);
+    }
+  };
+
+  const detectClaudeCLI = async () => {
+    setDetectingClaude(true);
+    try {
+      const result = await invoke<Array<{
+        name: string;
+        found: boolean;
+        path: string | null;
+        version: string | null;
+        authenticated: boolean | null;
+      }>>("detect_ai_clis");
+
+      const claudeResult = result.find(r => r.name === "claude");
+      if (claudeResult) {
+        setClaudeDetection({
+          found: claudeResult.found,
+          path: claudeResult.path,
+          version: claudeResult.version,
+          authenticated: claudeResult.authenticated,
+        });
+
+        // Check if already in shell profile
+        if (claudeResult.found && claudeResult.path) {
+          checkShellProfile(claudeResult.path);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to detect Claude CLI:", error);
+    } finally {
+      setDetectingClaude(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -634,32 +768,30 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
             {/* AI - Claude Code Section */}
             {activeSection === "ai-claude" && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Claude Code</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure Claude Code CLI integration and detection settings.
-                  </p>
-                </div>
-
-                <div className="pt-4">
-                  <Button
-                    onClick={() => setWizardOpen(true)}
-                    className="w-full"
-                  >
-                    Configure Claude Code
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Detect installation, check authentication, and configure shell integration
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-                  <p className="text-sm text-muted-foreground">
-                    Additional Claude Code-specific settings will be available here in future updates.
-                  </p>
-                </div>
-              </div>
+              <ClaudeCodeSettings
+                claudeDetection={claudeDetection}
+                detectingClaude={detectingClaude}
+                onDetect={detectClaudeCLI}
+                shellProfilePath={shellProfilePath}
+                isClaudeInProfile={isClaudeInProfile}
+                checkingProfile={checkingProfile}
+                onAddToProfile={async () => {
+                  try {
+                    const pathDir = claudeDetection?.path?.replace(/[/\\][^/\\]+$/, '');
+                    const line = `# Claude Code CLI\nexport PATH="$PATH:${pathDir}"`;
+                    await invoke("add_to_shell_profile", { line });
+                    toast.success(`Added to ${shellProfilePath}`);
+                    setIsClaudeInProfile(true);
+                  } catch (error) {
+                    if (String(error).includes("Already configured")) {
+                      setIsClaudeInProfile(true);
+                      toast.info("Already configured");
+                    } else {
+                      toast.error(`Failed: ${error}`);
+                    }
+                  }
+                }}
+              />
             )}
 
             {/* AI - Codex CLI Section */}

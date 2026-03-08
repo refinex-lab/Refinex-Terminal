@@ -465,13 +465,59 @@ pub fn add_to_shell_profile(line: String) -> Result<(), String> {
 
     // Check if line already exists
     if existing.contains(&line) {
-        return Ok(());
+        return Err("Already configured".to_string());
     }
 
     // Append the line
     let new_content = format!("{}\n{}\n", existing.trim(), line);
     std::fs::write(&profile_path, new_content)
         .map_err(|e| format!("Failed to write to profile: {}", e))?;
+
+    Ok(())
+}
+
+/// Check if a line exists in the shell profile
+#[tauri::command]
+pub fn check_shell_profile(line: String) -> Result<bool, String> {
+    let profile_path = get_shell_profile_path()?;
+
+    // Read existing content
+    let existing = std::fs::read_to_string(&profile_path).unwrap_or_default();
+
+    // Check if line exists
+    Ok(existing.contains(&line))
+}
+
+/// Read Claude Code settings.json
+#[tauri::command]
+pub fn read_claude_settings() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let settings_path = home.join(".claude").join("settings.json");
+
+    if !settings_path.exists() {
+        return Err("Settings file not found".to_string());
+    }
+
+    std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read settings: {}", e))
+}
+
+/// Write Claude Code settings.json
+#[tauri::command]
+pub fn write_claude_settings(content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let claude_dir = home.join(".claude");
+    let settings_path = claude_dir.join("settings.json");
+
+    // Create .claude directory if it doesn't exist
+    if !claude_dir.exists() {
+        std::fs::create_dir_all(&claude_dir)
+            .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+    }
+
+    // Write settings
+    std::fs::write(&settings_path, content)
+        .map_err(|e| format!("Failed to write settings: {}", e))?;
 
     Ok(())
 }
