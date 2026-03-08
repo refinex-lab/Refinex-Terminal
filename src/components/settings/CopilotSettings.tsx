@@ -14,6 +14,7 @@ import { MCPServerManager } from "@/components/settings/copilot/MCPServerManager
 import { CustomInstructionsManager } from "@/components/settings/copilot/CustomInstructionsManager";
 import { CustomAgentsManager } from "@/components/settings/copilot/CustomAgentsManager";
 import { SkillsManager } from "@/components/settings/copilot/SkillsManager";
+import CopilotIcon from "@/assets/icons/copilot.svg?react";
 
 interface CopilotSettingsProps {
   copilotDetection: { found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null;
@@ -93,10 +94,9 @@ export function CopilotSettings({
   const [newDeniedUrl, setNewDeniedUrl] = useState("");
 
   useEffect(() => {
-    if (copilotDetection?.found) {
-      loadCopilotConfig();
-    }
-  }, [copilotDetection?.found]);
+    // Load config immediately, don't wait for detection
+    loadCopilotConfig();
+  }, []);
 
   const loadCopilotConfig = async () => {
     setLoadingConfig(true);
@@ -207,11 +207,14 @@ export function CopilotSettings({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold">GitHub Copilot CLI</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure GitHub Copilot CLI integration and settings
-          </p>
+        <div className="flex items-center gap-3">
+          <CopilotIcon className="size-6" />
+          <div>
+            <h3 className="text-lg font-semibold">GitHub Copilot CLI</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure GitHub Copilot CLI integration and settings
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button

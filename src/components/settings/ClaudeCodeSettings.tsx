@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Check, RefreshCw, AlertCircle, Plus, Trash2, ExternalLink, Save, Bot } from "lucide-react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { Check, RefreshCw, AlertCircle, Plus, Trash2, ExternalLink, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,17 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
-import { PermissionsManager } from "./claude/PermissionsManager";
-import { HooksManager } from "./claude/HooksManager";
-import { ClaudeInstructionsManager } from "./claude/ClaudeInstructionsManager";
-import { EnvironmentManager } from "./claude/EnvironmentManager";
-import { SandboxManager } from "./claude/SandboxManager";
-import { AgentsManager } from "./claude/AgentsManager";
-import { SkillsManager } from "./claude/SkillsManager";
-import { CommandsManager } from "./claude/CommandsManager";
+import ClaudeIcon from "@/assets/icons/claude.svg?react";
+
+// Lazy load heavy manager components
+const PermissionsManager = lazy(() => import("./claude/PermissionsManager").then(m => ({ default: m.PermissionsManager })));
+const HooksManager = lazy(() => import("./claude/HooksManager").then(m => ({ default: m.HooksManager })));
+const ClaudeInstructionsManager = lazy(() => import("./claude/ClaudeInstructionsManager").then(m => ({ default: m.ClaudeInstructionsManager })));
+const EnvironmentManager = lazy(() => import("./claude/EnvironmentManager").then(m => ({ default: m.EnvironmentManager })));
+const SandboxManager = lazy(() => import("./claude/SandboxManager").then(m => ({ default: m.SandboxManager })));
+const AgentsManager = lazy(() => import("./claude/AgentsManager").then(m => ({ default: m.AgentsManager })));
+const SkillsManager = lazy(() => import("./claude/SkillsManager").then(m => ({ default: m.SkillsManager })));
+const CommandsManager = lazy(() => import("./claude/CommandsManager").then(m => ({ default: m.CommandsManager })));
 
 interface ClaudeCodeSettingsProps {
   claudeDetection: { found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null;
@@ -49,10 +52,9 @@ export function ClaudeCodeSettings({
   const [newEnvValue, setNewEnvValue] = useState("");
 
   useEffect(() => {
-    if (claudeDetection?.found) {
-      loadClaudeSettings();
-    }
-  }, [claudeDetection?.found]);
+    // Load settings immediately, don't wait for detection
+    loadClaudeSettings();
+  }, []);
 
   const loadClaudeSettings = async () => {
     setLoadingSettings(true);
@@ -61,7 +63,8 @@ export function ClaudeCodeSettings({
       const settings = JSON.parse(settingsJson);
       setClaudeSettings(settings);
     } catch (error) {
-      console.error("Failed to load Claude settings:", error);
+      console.error("[ClaudeCodeSettings] Failed to load Claude settings:", error);
+      // Initialize with default structure if file doesn't exist
       setClaudeSettings({
         env: {},
         skipDangerousModePermissionPrompt: false,
@@ -137,7 +140,7 @@ export function ClaudeCodeSettings({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Bot className="size-6" />
+          <ClaudeIcon className="size-6" />
           <div>
             <h3 className="text-lg font-semibold">Claude Code</h3>
             <p className="text-sm text-muted-foreground">
@@ -286,7 +289,7 @@ export function ClaudeCodeSettings({
       )}
 
       {/* Configuration Settings */}
-      {claudeDetection?.found && claudeSettings && (
+      {claudeSettings && (
         <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="grid w-full grid-cols-9">
@@ -360,42 +363,58 @@ export function ClaudeCodeSettings({
 
             {/* Permissions */}
             <TabsContent value="permissions" className="mt-6">
-              <PermissionsManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <PermissionsManager />
+              </Suspense>
             </TabsContent>
 
             {/* Hooks */}
             <TabsContent value="hooks" className="mt-6">
-              <HooksManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <HooksManager />
+              </Suspense>
             </TabsContent>
 
             {/* Instructions */}
             <TabsContent value="instructions" className="mt-6">
-              <ClaudeInstructionsManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <ClaudeInstructionsManager />
+              </Suspense>
             </TabsContent>
 
             {/* Environment */}
             <TabsContent value="environment" className="mt-6">
-              <EnvironmentManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <EnvironmentManager />
+              </Suspense>
             </TabsContent>
 
             {/* Sandbox */}
             <TabsContent value="sandbox" className="mt-6">
-              <SandboxManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <SandboxManager />
+              </Suspense>
             </TabsContent>
 
             {/* Agents */}
             <TabsContent value="agents" className="mt-6">
-              <AgentsManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <AgentsManager />
+              </Suspense>
             </TabsContent>
 
             {/* Skills */}
             <TabsContent value="skills" className="mt-6">
-              <SkillsManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <SkillsManager />
+              </Suspense>
             </TabsContent>
 
             {/* Commands */}
             <TabsContent value="commands" className="mt-6">
-              <CommandsManager />
+              <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+                <CommandsManager />
+              </Suspense>
             </TabsContent>
           </Tabs>
         </div>

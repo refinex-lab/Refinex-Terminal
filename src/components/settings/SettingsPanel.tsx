@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import {
   X,
   ChevronDown,
@@ -132,35 +132,108 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       .catch(console.error);
   }, [config.appearance.theme]);
 
-  // Detect Claude Code when entering Claude settings
+  // Detect Claude Code when entering Claude settings (non-blocking)
   useEffect(() => {
     if (activeSection === "ai-claude" && !claudeDetection) {
-      detectClaudeCLI();
-      loadShellProfilePath();
-      loadClaudeSettings();
+      // Load cached detection result immediately
+      const cached = localStorage.getItem("claude-detection");
+      if (cached) {
+        try {
+          setClaudeDetection(JSON.parse(cached));
+        } catch (e) {
+          console.error("[Claude] Failed to parse cached detection:", e);
+        }
+      }
+
+      // Trigger background detection if no cache or cache is old
+      const lastCheck = localStorage.getItem("claude-detection-time");
+      const shouldCheck = !lastCheck || Date.now() - parseInt(lastCheck) > 5 * 60 * 1000;
+
+      if (shouldCheck) {
+        detectClaudeCLI();
+      }
+
+      // Load shell profile path in background
+      if (!shellProfilePath) {
+        loadShellProfilePath();
+      }
     }
   }, [activeSection]);
 
-  // Detect Copilot when entering Copilot settings
+  // Detect Copilot when entering Copilot settings (non-blocking)
   useEffect(() => {
     if (activeSection === "ai-copilot" && !copilotDetection) {
-      detectCopilotCLI();
-      loadShellProfilePath();
-      checkCopilotShellProfile();
+      // Load cached detection result immediately
+      const cached = localStorage.getItem("copilot-detection");
+      if (cached) {
+        try {
+          setCopilotDetection(JSON.parse(cached));
+        } catch (e) {
+          console.error("[Copilot] Failed to parse cached detection:", e);
+        }
+      }
+
+      // Trigger background detection if no cache or cache is old
+      const lastCheck = localStorage.getItem("copilot-detection-time");
+      const shouldCheck = !lastCheck || Date.now() - parseInt(lastCheck) > 5 * 60 * 1000;
+
+      if (shouldCheck) {
+        detectCopilotCLI();
+      }
+
+      // Load shell profile in background
+      if (!shellProfilePath) {
+        loadShellProfilePath();
+      }
+      if (!isCopilotInProfile) {
+        checkCopilotShellProfile();
+      }
     }
   }, [activeSection]);
 
-  // Detect Gemini when entering Gemini settings
+  // Detect Gemini when entering Gemini settings (non-blocking)
   useEffect(() => {
     if (activeSection === "ai-gemini" && !geminiDetection) {
-      detectGeminiCLI();
+      // Load cached detection result immediately
+      const cached = localStorage.getItem("gemini-detection");
+      if (cached) {
+        try {
+          setGeminiDetection(JSON.parse(cached));
+        } catch (e) {
+          console.error("Failed to parse cached detection:", e);
+        }
+      }
+
+      // Trigger background detection if no cache or cache is old
+      const lastCheck = localStorage.getItem("gemini-detection-time");
+      const shouldCheck = !lastCheck || Date.now() - parseInt(lastCheck) > 5 * 60 * 1000;
+
+      if (shouldCheck) {
+        detectGeminiCLI();
+      }
     }
   }, [activeSection]);
 
-  // Detect Codex when entering Codex settings
+  // Detect Codex when entering Codex settings (non-blocking)
   useEffect(() => {
     if (activeSection === "ai-codex" && !codexDetection) {
-      detectCodexCLI();
+      // Load cached detection result immediately
+      const cached = localStorage.getItem("codex-detection");
+      if (cached) {
+        try {
+          setCodexDetection(JSON.parse(cached));
+        } catch (e) {
+          console.error("Failed to parse cached detection:", e);
+        }
+      }
+
+      // Trigger background detection if no cache or cache is old
+      const lastCheck = localStorage.getItem("codex-detection-time");
+      const shouldCheck = !lastCheck || Date.now() - parseInt(lastCheck) > 5 * 60 * 1000;
+
+      if (shouldCheck) {
+        detectCodexCLI();
+      }
     }
   }, [activeSection]);
 
@@ -278,6 +351,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       }
     } catch (error) {
       console.error("Failed to detect Claude CLI:", error);
+      toast.error("Failed to detect Claude Code CLI");
     } finally {
       setDetectingClaude(false);
     }
@@ -298,12 +372,18 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
       const copilotResult = result.find((r) => r.name === "gh-copilot");
       if (copilotResult) {
-        setCopilotDetection({
+        const detection = {
           found: copilotResult.found,
           path: copilotResult.path,
           version: copilotResult.version,
           authenticated: copilotResult.authenticated,
-        });
+        };
+
+        setCopilotDetection(detection);
+
+        // Cache the result
+        localStorage.setItem("copilot-detection", JSON.stringify(detection));
+        localStorage.setItem("copilot-detection-time", Date.now().toString());
 
         // Check shell profile if Copilot is found
         if (copilotResult.found && copilotResult.path) {
@@ -312,6 +392,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       }
     } catch (error) {
       console.error("Failed to detect Copilot CLI:", error);
+      toast.error("Failed to detect GitHub Copilot CLI");
     } finally {
       setDetectingCopilot(false);
     }
@@ -367,15 +448,22 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
       const geminiResult = result.find((r) => r.name === "gemini");
       if (geminiResult) {
-        setGeminiDetection({
+        const detection = {
           found: geminiResult.found,
           path: geminiResult.path,
           version: geminiResult.version,
           authenticated: geminiResult.authenticated,
-        });
+        };
+
+        setGeminiDetection(detection);
+
+        // Cache the result
+        localStorage.setItem("gemini-detection", JSON.stringify(detection));
+        localStorage.setItem("gemini-detection-time", Date.now().toString());
       }
     } catch (error) {
       console.error("Failed to detect Gemini CLI:", error);
+      toast.error("Failed to detect Gemini CLI");
     } finally {
       setDetectingGemini(false);
     }
@@ -396,15 +484,22 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
       const codexResult = result.find((r) => r.name === "codex");
       if (codexResult) {
-        setCodexDetection({
+        const detection = {
           found: codexResult.found,
           path: codexResult.path,
           version: codexResult.version,
           authenticated: codexResult.authenticated,
-        });
+        };
+
+        setCodexDetection(detection);
+
+        // Cache the result
+        localStorage.setItem("codex-detection", JSON.stringify(detection));
+        localStorage.setItem("codex-detection-time", Date.now().toString());
       }
     } catch (error) {
       console.error("Failed to detect Codex CLI:", error);
+      toast.error("Failed to detect Codex CLI");
     } finally {
       setDetectingCodex(false);
     }
@@ -1284,12 +1379,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-semibold">Codex CLI</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Configure OpenAI Codex CLI integration and detection
-                      settings
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <img src={codexIcon} className="size-6" alt="Codex" />
+                    <div>
+                      <h3 className="text-lg font-semibold">Codex CLI</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure OpenAI Codex CLI integration and detection
+                        settings
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="outline"
@@ -1425,12 +1523,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-semibold">Gemini CLI</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Configure Google Gemini CLI integration and detection
-                      settings
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <img src={geminiIcon} className="size-6" alt="Gemini" />
+                    <div>
+                      <h3 className="text-lg font-semibold">Gemini CLI</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure Google Gemini CLI integration and detection
+                        settings
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="outline"
