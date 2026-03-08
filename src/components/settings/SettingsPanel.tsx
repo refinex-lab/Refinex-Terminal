@@ -142,8 +142,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 backdrop-blur-sm"
+      className="fixed z-50 backdrop-blur-sm"
       style={{
+        top: "40px",
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: "var(--ui-background)",
         color: "var(--ui-foreground)",
       }}
