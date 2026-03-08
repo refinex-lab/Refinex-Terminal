@@ -2,8 +2,9 @@
 
 # ⚡ Refinex Terminal
 
-**A high-performance, AI-first terminal emulator built for Claude Code, Codex CLI, Copilot CLI and more.**
-**Optimized for Apple Silicon (macOS ARM) and Windows.**
+**An AI-first terminal emulator built for modern development workflows**
+
+Optimized for Claude Code, GitHub Copilot CLI, Codex CLI, and Gemini CLI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange.svg)](https://www.rust-lang.org/)
@@ -11,9 +12,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
-<img src="docs/assets/banner.jpg" alt="Refinex Terminal Banner" width="800" />
-
-[中文](./README.zh-CN.md) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Configuration](#-configuration) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+[Features](#-features) · [Quick Start](#-quick-start) · [Documentation](#-documentation) · [Contributing](#-contributing)
 
 </div>
 
@@ -21,167 +20,178 @@
 
 ## 🎯 Why Refinex Terminal?
 
-The rise of AI coding agents (Claude Code, Codex CLI, Gemini CLI, Copilot CLI) has fundamentally changed how developers work in the terminal. Yet existing terminals remain passive shells with no awareness of AI workflows. **Refinex Terminal bridges this gap** — purpose-built for the agentic development era.
+The rise of AI coding assistants has fundamentally changed how developers work. **Refinex Terminal** is purpose-built for this new era — a specialized command center that seamlessly integrates with AI CLI tools while providing a powerful, modern terminal experience.
 
-### The Problem
+### What Makes It Different
 
-- Traditional terminals treat AI CLI output as plain text — no structure, no interaction
-- Long AI outputs (thousands of lines) cause scroll-back lag and viewport freeze
-- No native way to manage multiple AI agents across different repositories simultaneously
-- Git operations triggered by AI require constant context-switching to external tools
-- No file tree or diff viewer integrated with the terminal for AI-generated changes
-
-### The Solution
-
-Refinex Terminal is **not another general-purpose terminal**. It is a specialized command center for AI-assisted development, providing first-class support for agent workflows, intelligent output handling, integrated Git, and a multi-project sidebar — all wrapped in a blazing-fast native shell.
+- **AI CLI Integration**: First-class support for Claude Code, GitHub Copilot CLI, Codex CLI, and Gemini CLI
+- **Project-Centric**: Multi-project sidebar with file tree, Git integration, and code editor
+- **Native Performance**: Built with Rust and Tauri 2 — fast startup, low memory, small binary
+- **Modern UX**: Command palette, split panes, fuzzy finder, and keyboard-driven workflow
+- **Fully Customizable**: Themes, fonts, keybindings, and comprehensive configuration
 
 ---
 
 ## ✨ Features
 
-### 🚀 Core Terminal Engine
+### 🚀 Core Terminal
 
-- **Native performance** — Rust backend (via Tauri 2) with system WebView, no bundled Chromium
-- **Sub-second launch** — cold start < 500ms on Apple Silicon, < 800ms on Windows
-- **xterm.js rendering** with WebGL addon for GPU-accelerated terminal output
-- **Full VT100/VT220/xterm-256color** escape sequence support
-- **Unicode & emoji** support with ligature-capable font rendering
-- **Scrollback buffer** — configurable up to 100,000 lines with virtualized rendering
+- **Full-featured terminal** powered by xterm.js with WebGL rendering
+- **Multi-tab support** with drag-and-drop reordering
+- **Split panes** (horizontal and vertical) for multi-terminal workflows
+- **Terminal search** with regex support and match navigation
+- **Copy/paste** with configurable copy-on-select
+- **Scrollback buffer** with configurable line limit (up to 100,000 lines)
+- **Shell detection** (zsh, bash, PowerShell, cmd) with environment variable management
 
-### 🤖 AI-First Experience
+### 🤖 AI CLI Integration
 
-- **Smart output blocks** — AI responses are grouped into collapsible, navigable blocks
-- **Streaming-safe viewport** — zero-jank rendering during AI long-output (10,000+ lines)
-- **One-click CLI setup** — built-in configuration wizard for Claude Code, Codex CLI, Copilot CLI, Gemini CLI
-- **Agent status indicator** — real-time display of running agent state (thinking, writing, idle)
-- **Prompt bookmarking** — save and recall frequently used AI prompts
-- **Output search & filter** — regex-powered search within AI output blocks
+- **Automatic detection** of AI coding assistants:
+  - [Claude Code](https://code.claude.com/) by Anthropic
+  - [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli)
+  - [Codex CLI](https://github.com/openai/codex) by OpenAI
+  - [Gemini CLI](https://github.com/google-gemini/gemini-cli) by Google
+- **Setup wizard** with detection, configuration, and testing
+- **Settings panels** for each AI CLI with full configuration support
+- **Shell integration** for easy AI CLI access
 
-### 📂 Multi-Project Sidebar
+### 📂 Project Management
 
-- **Repository navigator** — open multiple code repos in a sidebar tree
-- **Per-repo terminal tabs** — each project gets its own isolated terminal session
-- **File tree browser** — expand, click-to-preview, and edit files directly
-- **AI change tracker** — highlights files modified by AI agents with diff indicators
+- **Multi-project sidebar** with file tree navigation
+- **File preview** with syntax highlighting (20+ languages)
+- **Built-in code editor** powered by CodeMirror 6
+- **File system watcher** for real-time updates
+- **Fuzzy file finder** (Cmd/Ctrl + P)
+- **Quick project switch** (Cmd/Ctrl + Shift + O)
+- **Global search and replace** across project files
 
-### 🔀 Integrated Git
+### 🔀 Git Integration
 
-- **Native Git integration** — leverages locally installed `git` binary
-- **Change overview panel** — staged/unstaged files with inline diff preview
-- **One-click operations** — commit, push, pull, fetch, branch, stash from the UI
-- **AI commit messages** — auto-generate commit messages from AI-produced diffs
-- **Diff viewer** — side-by-side and inline diff for AI-modified files
-- **Branch management** — visual branch switcher with merge/rebase support
+- **Git status panel** with staged/unstaged/untracked files
+- **Diff viewer** with syntax highlighting (unified and split views)
+- **Branch management** with create, switch, and delete
+- **Commit workflow** with message editor
+- **Git graph visualization** with commit history
+- **Push/pull/fetch** operations
+- **Stash management**
+
+### 🔗 SSH Support
+
+- **SSH connection manager** with saved hosts
+- **SFTP file browser** with upload/download
+- **Multiple SSH sessions** in tabs
+- **SSH key management**
+- **Connection testing** and diagnostics
 
 ### ⌨️ Keyboard-Driven Workflow
 
-- **Command palette** — `Cmd/Ctrl + Shift + P` for all actions
-- **Split panes** — horizontal/vertical splits with `Cmd/Ctrl + D` / `Cmd/Ctrl + Shift + D`
-- **Tab management** — `Cmd/Ctrl + T` new tab, `Cmd/Ctrl + W` close, `Cmd/Ctrl + [1-9]` switch
-- **Quick project switch** — `Cmd/Ctrl + Shift + O` to jump between repos
-- **Fuzzy file finder** — `Cmd/Ctrl + P` to open any file from the active project
-- **Fully customizable** — remap any keybinding via JSON configuration
+- **Command palette** (Cmd/Ctrl + Shift + P) for quick actions
+- **Split panes**: Cmd/Ctrl + D (horizontal), Cmd/Ctrl + Shift + D (vertical)
+- **Tab management**: Cmd/Ctrl + T (new), Cmd/Ctrl + W (close), Cmd/Ctrl + 1-9 (switch)
+- **Quick project switch**: Cmd/Ctrl + Shift + O
+- **Fuzzy file finder**: Cmd/Ctrl + P
+- **Global search**: Cmd/Ctrl + Shift + F
+- **Fully customizable** keybindings
 
 ### 🎨 Themes & Customization
 
-- **Built-in themes** — ships with 20+ curated themes (dark & light)
-- **Custom themes** — define themes via TOML configuration
-- **Font control** — family, size, line height, letter spacing, ligature toggle
-- **Opacity & blur** — window transparency with vibrancy/acrylic backdrop
-- **Layout presets** — save and restore window layouts
+- **5 built-in themes**:
+  - Refinex Dark (default)
+  - Refinex Light
+  - Tokyo Night
+  - Catppuccin Mocha
+  - GitHub Dark
+- **Custom themes** via TOML configuration
+- **Font customization** with system font detection
+- **Window opacity and vibrancy** (macOS) / acrylic (Windows)
+- **TOML-based configuration** with hot-reload
 
-### ⚡ Performance Optimizations
+### ⚡ Performance
 
-- **Virtualized scrollback** — only visible lines are in the DOM
-- **Output throttling** — batched rendering at 60fps during high-throughput streams
-- **Lazy file tree** — directories loaded on-demand, not upfront
-- **Background process isolation** — each PTY runs in a separate Rust thread
-- **Memory-mapped large files** — preview large files without loading into memory
-- **Incremental search** — search indexes built progressively, no UI blocking
+- **60fps rendering** during terminal output
+- **WebGL acceleration** for smooth scrolling
+- **Lazy loading** for large file trees
+- **Efficient PTY management** with Rust backend
+- **Fast startup** (< 500ms on Apple Silicon)
+- **Small binary** (~10-15 MB)
+- **Low memory** (~30-50 MB idle)
 
 ---
 
 ## 🏗 Architecture
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  Refinex Terminal                     │
-│                                                       │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │              Frontend (WebView)                  │ │
-│  │  React 19 + TypeScript + Tailwind CSS v4        │ │
-│  │  xterm.js + WebGL Addon + shadcn/ui             │ │
-│  │  Zustand (state) + TanStack Query (async)       │ │
-│  └──────────────────┬──────────────────────────────┘ │
-│                     │ Tauri IPC (invoke/events)       │
-│  ┌──────────────────▼──────────────────────────────┐ │
-│  │              Backend (Rust / Tauri 2)            │ │
-│  │  PTY Manager (portable-pty)                     │ │
-│  │  Git Operations (git2-rs)                       │ │
-│  │  File System Watcher (notify)                   │ │
-│  │  Config Manager (toml + serde)                  │ │
-│  │  CLI Registry & Process Manager                 │ │
-│  └─────────────────────────────────────────────────┘ │
-│                                                       │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │              System Layer                        │ │
-│  │  macOS: WebKit WebView + Metal GPU              │ │
-│  │  Windows: WebView2 (Edge/Chromium)              │ │
-│  │  PTY: /dev/ptmx (macOS) / ConPTY (Windows)     │ │
-│  └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (WebView)"]
+        React["React 19 + TypeScript"]
+        UI["xterm.js + WebGL<br/>CodeMirror 6<br/>shadcn/ui + Zustand"]
+    end
+
+    subgraph Backend["Backend (Rust / Tauri 2)"]
+        PTY["PTY Manager<br/>(portable-pty)"]
+        Git["Git Operations<br/>(git2-rs)"]
+        FS["File System Watcher<br/>(notify)"]
+        Config["Config Manager<br/>(TOML + serde)"]
+        SSH["SSH/SFTP<br/>(ssh2-rs)"]
+    end
+
+    subgraph System["System Layer"]
+        macOS["macOS: WebKit + Metal GPU"]
+        Windows["Windows: WebView2 (Edge)"]
+    end
+
+    Frontend -->|Tauri IPC| Backend
+    Backend --> System
+
+    style Frontend fill:#61dafb20,stroke:#61dafb,stroke-width:2px
+    style Backend fill:#f7768e20,stroke:#f7768e,stroke-width:2px
+    style System fill:#9ece6a20,stroke:#9ece6a,stroke-width:2px
 ```
 
 ### Technology Stack
 
-| Layer                 | Technology                 | Rationale                                                         |
+| Layer                 | Technology                 | Why                                                               |
 | --------------------- | -------------------------- | ----------------------------------------------------------------- |
-| **Desktop Shell**     | Tauri 2.x                  | Native WebView, ~3MB binary, Rust backend, no Chromium bundle     |
-| **Backend**           | Rust                       | Memory safety, thread-safe PTY management, native Git via git2    |
-| **Frontend**          | React 19 + TypeScript 5.6  | Component model, ecosystem, developer familiarity                 |
-| **Terminal Emulator** | xterm.js 5.x + WebGL addon | Industry standard (powers VS Code), GPU-accelerated rendering     |
-| **PTY**               | portable-pty (Rust)        | Cross-platform pseudoterminal, avoids node-pty native compilation |
-| **Styling**           | Tailwind CSS v4            | Utility-first, tree-shakable, zero-runtime                        |
-| **UI Components**     | shadcn/ui + Radix          | Accessible, composable, copy-paste components                     |
-| **Icons**             | Lucide React               | Consistent, tree-shakable, 1400+ icons                            |
-| **State Management**  | Zustand                    | Minimal boilerplate, no Provider wrapper, performant selectors    |
-| **Git**               | git2-rs                    | Rust bindings to libgit2, no shell-out overhead                   |
-| **File Watching**     | notify (Rust)              | Cross-platform fs events with debouncing                          |
-| **Config Format**     | TOML                       | Human-readable, Rust-native serde support                         |
-| **Build**             | Vite 6                     | Fast HMR, optimized production builds                             |
-| **Package Manager**   | pnpm                       | Efficient disk usage, strict dependency resolution                |
-
-### Why Tauri over Electron?
-
-| Metric           | Tauri 2                             | Electron                     |
-| ---------------- | ----------------------------------- | ---------------------------- |
-| Binary size      | ~3–10 MB                            | ~150 MB+                     |
-| Memory (idle)    | ~30–50 MB                           | ~150–300 MB                  |
-| Startup time     | < 500ms                             | 1–2s                         |
-| Backend language | Rust (native perf)                  | Node.js (interpreted)        |
-| Security model   | Capability-based, locked by default | Permissive, manual hardening |
-| Bundled runtime  | None (uses system WebView)          | Full Chromium + Node.js      |
+| **Desktop Shell**     | Tauri 2.x                  | Native WebView, small binary, Rust backend, no Chromium bundle    |
+| **Backend**           | Rust                       | Memory safety, performance, native Git via git2-rs                |
+| **Frontend**          | React 19 + TypeScript 5.6  | Modern UI framework with strong typing                            |
+| **Terminal Emulator** | xterm.js 5.x + WebGL       | Industry standard (powers VS Code), GPU-accelerated               |
+| **Code Editor**       | CodeMirror 6               | Extensible, performant, modern code editing                       |
+| **PTY**               | portable-pty               | Cross-platform pseudoterminal in Rust                             |
+| **Styling**           | Tailwind CSS v4            | Utility-first, zero-runtime                                       |
+| **UI Components**     | shadcn/ui + Radix          | Accessible, composable components                                 |
+| **State Management**  | Zustand                    | Minimal boilerplate, performant                                   |
+| **Git**               | git2-rs                    | Rust bindings to libgit2                                          |
+| **SSH**               | ssh2-rs                    | Native SSH/SFTP support                                           |
+| **Config Format**     | TOML                       | Human-readable, Rust-native                                       |
+| **Build**             | Vite 6                     | Fast HMR, optimized builds                                        |
+| **Package Manager**   | pnpm 9                     | Efficient, strict dependency resolution                           |
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Download Pre-built Binaries
 
-- **macOS**: macOS 12+ (Monterey) on Apple Silicon or Intel
+**Coming soon!** Pre-built binaries will be available on the [Releases](https://github.com/refinex/refinex-terminal/releases) page.
+
+### Build from Source
+
+#### Prerequisites
+
+- **macOS**: macOS 10.15+ (Catalina) on Apple Silicon or Intel
 - **Windows**: Windows 10 1809+ (WebView2 required)
 - **Rust**: 1.82+ via [rustup](https://rustup.rs/)
 - **Node.js**: 20 LTS+ via [fnm](https://github.com/Schniz/fnm) or nvm
 - **pnpm**: 9+ (`corepack enable && corepack prepare pnpm@latest --activate`)
-- **Git**: 2.40+ (must be in PATH)
 
 > See [`docs/SETUP.md`](docs/SETUP.md) for detailed environment setup instructions.
 
-### Build from Source
+#### Build Steps
 
 ```bash
 # Clone the repository
-git clone https://github.com/refinex-lab/refinex-terminal.git
+git clone https://github.com/refinex/refinex-terminal.git
 cd refinex-terminal
 
 # Install frontend dependencies
@@ -194,64 +204,60 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-The production binary will be output to `src-tauri/target/release/bundle/`.
+**Output locations**:
+- macOS: `src-tauri/target/release/bundle/dmg/*.dmg`
+- Windows: `src-tauri/target/release/bundle/nsis/*.exe`
 
 ---
 
 ## ⚙️ Configuration
 
-Refinex Terminal uses a layered TOML configuration system. The default config path:
+Refinex Terminal uses a TOML configuration file located at:
 
-- **macOS**: `~/Library/Application Support/com.refinex.terminal/config.toml`
-- **Windows**: `%APPDATA%\com.refinex.terminal\config.toml`
+- **macOS**: `~/.refinex/config.toml`
+- **Windows**: `%USERPROFILE%\.refinex\config.toml`
 
-### Example `config.toml`
+### Example Configuration
 
 ```toml
 [appearance]
-theme = "refinex-dark"          # Built-in theme name or path to custom .toml theme
-font_family = "JetBrains Mono"  # Any locally installed font
-font_size = 14                  # In pixels
-line_height = 1.4               # Multiplier
+theme = "refinex-dark"
+font_family = "JetBrains Mono"
+font_size = 14
+line_height = 1.4
 ligatures = true
-cursor_style = "bar"            # "block" | "bar" | "underline"
+cursor_style = "bar"
 cursor_blink = true
-opacity = 0.95                  # 0.0 – 1.0 (1.0 = fully opaque)
-vibrancy = true                 # macOS vibrancy / Windows acrylic
+opacity = 0.95
+vibrancy = true
 
 [terminal]
-shell = "auto"                  # "auto" | "/bin/zsh" | "powershell.exe" | custom path
+shell = "auto"
 scrollback_lines = 50000
 copy_on_select = true
-word_separators = " \\t{}()[]'\""
-bell = "visual"                 # "audio" | "visual" | "none"
+bell = "visual"
 
-[terminal.env]                  # Extra environment variables injected into every session
+[terminal.env]
 EDITOR = "code --wait"
 LANG = "en_US.UTF-8"
 
 [ai]
-detect_cli = true               # Auto-detect Claude Code, Codex CLI, etc.
-block_mode = true               # Group AI output into collapsible blocks
-streaming_throttle_ms = 16      # Render batching interval (~60fps)
-max_block_lines = 50000         # Max lines before auto-collapse
+detect_cli = true
 
 [git]
 enabled = true
-auto_fetch_interval = 300       # Seconds (0 = disabled)
+auto_fetch_interval = 300
 show_diff_on_select = true
-sign_commits = false
 
-[keybindings]                   # Override any default keybinding
+[keybindings]
 "Cmd+Shift+P" = "command_palette"
 "Cmd+D" = "split_horizontal"
 "Cmd+Shift+D" = "split_vertical"
 "Cmd+T" = "new_tab"
 "Cmd+W" = "close_tab"
-"Cmd+Shift+O" = "quick_project_switch"
 "Cmd+P" = "fuzzy_file_finder"
 
-[projects]                      # Pinned project directories
+[projects]
 paths = [
   "~/Code/my-app",
   "~/Code/backend-api",
@@ -260,10 +266,12 @@ paths = [
 
 ### Custom Themes
 
-Create a `.toml` file anywhere and reference it via `theme = "/path/to/my-theme.toml"`:
+Create a `.toml` file with your color scheme:
 
 ```toml
-[colors]
+name = "My Custom Theme"
+
+[terminal]
 background = "#1a1b26"
 foreground = "#a9b1d6"
 cursor = "#c0caf5"
@@ -276,7 +284,27 @@ blue = "#7aa2f7"
 magenta = "#bb9af7"
 cyan = "#7dcfff"
 white = "#c0caf5"
+# ... (bright colors)
+
+[ui]
+background = "#1a1b26"
+foreground = "#a9b1d6"
+border = "#292e42"
+# ... (other UI colors)
 ```
+
+Then reference it in your config: `theme = "/path/to/my-theme.toml"`
+
+---
+
+## 📚 Documentation
+
+- **[Setup Guide](docs/SETUP.md)** - Detailed environment setup instructions
+- **[Auto-Updater](docs/AUTO_UPDATER.md)** - Configure automatic updates
+- **[macOS Signing](docs/MACOS_SIGNING.md)** - Code signing and notarization guide
+- **[Windows Installer](docs/WINDOWS_INSTALLER.md)** - Windows installer configuration
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+- **[Contributing](CONTRIBUTING.md)** - Contribution guidelines
 
 ---
 
@@ -284,108 +312,99 @@ white = "#c0caf5"
 
 ```
 refinex-terminal/
-├── CLAUDE.md                   # AI agent instructions (Claude Code)
-├── README.md                   # This file
-├── LICENSE                     # MIT License
-├── CONTRIBUTING.md             # Contribution guidelines
-├── package.json                # Frontend dependencies & scripts
-├── pnpm-lock.yaml
-├── tsconfig.json               # TypeScript configuration
-├── vite.config.ts              # Vite build config
-├── tailwind.config.ts          # Tailwind CSS v4 config
-├── docs/
-│   ├── PPLAN.md                # Phased implementation plan
-│   ├── SETUP.md                # Environment setup guide
-│   └── assets/                 # Documentation images
-├── .github/
-│   ├── COMMIT_CONVENTION.md    # Git commit standards
-│   └── workflows/              # CI/CD pipelines
-├── src/                        # Frontend source (React + TypeScript)
-│   ├── main.tsx                # React entry point
-│   ├── App.tsx                 # Root application component
+├── src/                        # Frontend (React + TypeScript)
 │   ├── components/
-│   │   ├── terminal/           # Terminal emulator components
-│   │   ├── sidebar/            # Project navigator & file tree
-│   │   ├── git/                # Git panel components
-│   │   ├── tabs/               # Tab bar & management
-│   │   ├── command-palette/    # Command palette overlay
-│   │   └── ui/                 # shadcn/ui base components
+│   │   ├── terminal/           # Terminal emulator
+│   │   ├── sidebar/            # File tree & project navigation
+│   │   ├── git/                # Git integration UI
+│   │   ├── settings/           # Settings panels
+│   │   ├── tabs/               # Tab management
+│   │   └── ui/                 # shadcn/ui components
 │   ├── hooks/                  # Custom React hooks
 │   ├── stores/                 # Zustand state stores
-│   ├── lib/                    # Utility functions & Tauri IPC wrappers
-│   ├── styles/                 # Global styles & Tailwind imports
-│   └── types/                  # TypeScript type definitions
-├── src-tauri/                  # Rust backend (Tauri 2)
-│   ├── Cargo.toml              # Rust dependencies
-│   ├── tauri.conf.json         # Tauri application config
-│   ├── capabilities/           # Tauri permission capabilities
+│   ├── lib/                    # Utilities & Tauri IPC
+│   └── types/                  # TypeScript types
+├── src-tauri/                  # Backend (Rust + Tauri)
 │   ├── src/
-│   │   ├── main.rs             # Tauri entry point
-│   │   ├── lib.rs              # Library root
-│   │   ├── pty/                # PTY manager module
-│   │   ├── git/                # Git operations module
-│   │   ├── fs/                 # File system module
-│   │   ├── config/             # Configuration module
-│   │   ├── cli/                # AI CLI detection & management
-│   │   └── commands/           # Tauri IPC command handlers
-│   └── icons/                  # Application icons
-└── themes/                     # Built-in theme TOML files
+│   │   ├── pty/                # PTY management
+│   │   ├── git/                # Git operations
+│   │   ├── fs/                 # File system
+│   │   ├── config/             # Configuration
+│   │   ├── cli/                # AI CLI detection
+│   │   ├── ssh/                # SSH/SFTP
+│   │   └── commands/           # Tauri commands
+│   └── icons/                  # App icons
+├── themes/                     # Built-in themes
+├── docs/                       # Documentation
+└── .github/                    # CI/CD & templates
 ```
 
 ---
 
 ## 🗺 Roadmap
 
-### v0.1.0 — Foundation (Milestone 1)
+### ✅ v0.1.0 - Initial Release (Current)
 
-- [x] Project scaffolding (Tauri 2 + React 19 + TypeScript)
-- [ ] Basic terminal emulation (xterm.js + PTY)
-- [ ] Tab management (new, close, switch)
-- [ ] Configurable appearance (font, theme, opacity)
+- Core terminal emulation with xterm.js
+- Multi-tab and split pane support
+- AI CLI integration (Claude Code, Copilot CLI, Codex CLI, Gemini CLI)
+- Project sidebar with file tree
+- Git integration with diff viewer
+- SSH/SFTP support
+- Command palette and keyboard shortcuts
+- 5 built-in themes
+- Auto-updater
+- macOS and Windows installers
 
-### v0.2.0 — AI Integration (Milestone 2)
+### 🔮 Future Plans
 
-- [ ] AI output block detection & grouping
-- [ ] Streaming-safe rendering pipeline
-- [ ] CLI auto-detection (Claude Code, Codex, etc.)
-- [ ] Agent status indicators
-
-### v0.3.0 — Multi-Project & File System (Milestone 3)
-
-- [ ] Sidebar project navigator
-- [ ] File tree with click-to-open
-- [ ] In-app file preview & basic editor
-- [ ] Quick project switching
-
-### v0.4.0 — Git Integration (Milestone 4)
-
-- [ ] Git status panel (staged, unstaged, untracked)
-- [ ] Inline diff viewer
-- [ ] Commit, push, pull, fetch from UI
-- [ ] AI-generated commit messages
-
-### v0.5.0 — Polish & Performance (Milestone 5)
-
-- [ ] Command palette
-- [ ] Split panes
-- [ ] Keybinding customization
-- [ ] Performance profiling & optimization
-- [ ] Accessibility audit
-
-### v1.0.0 — Production Release
-
-- [ ] Auto-updater
-- [ ] Installer signing (macOS notarization, Windows code signing)
-- [ ] User documentation site
-- [ ] Plugin API (experimental)
+- **AI Output Enhancement**
+  - Smart output block detection and grouping
+  - Agent status indicators (thinking, writing, waiting)
+  - Streaming output optimization
+- **Performance**
+  - File tree virtualization for large projects
+  - Memory optimization for long-running sessions
+- **Features**
+  - Custom theme editor
+  - Plugin system
+  - Session persistence
+  - Terminal recording and playback
+- **Platforms**
+  - Linux support (Ubuntu, Fedora, Arch)
+  - Portable mode (no installation)
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions of all kinds! Whether it's a bug report, a feature suggestion, a documentation improvement, or a code contribution — every bit helps.
+We welcome contributions! Whether it's:
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
+- 🐛 Bug reports
+- 💡 Feature suggestions
+- 📖 Documentation improvements
+- 🔧 Code contributions
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run with hot-reload
+pnpm tauri dev
+
+# Type check
+pnpm tsc --noEmit
+
+# Lint Rust code
+cd src-tauri && cargo clippy -- -D warnings
+
+# Build production
+pnpm tauri build
+```
 
 ---
 
@@ -395,10 +414,26 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 ---
 
+## 🙏 Acknowledgments
+
+Built with amazing open-source projects:
+
+- [Tauri](https://tauri.app/) - Desktop app framework
+- [xterm.js](https://xtermjs.org/) - Terminal emulator
+- [React](https://react.dev/) - UI framework
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [shadcn/ui](https://ui.shadcn.com/) - UI components
+- [CodeMirror](https://codemirror.net/) - Code editor
+- [Zustand](https://zustand-demo.pmnd.rs/) - State management
+
+---
+
 <div align="center">
 
-**If Refinex Terminal helps your AI-powered development workflow, please consider giving it a ⭐**
+**If Refinex Terminal improves your development workflow, please give it a ⭐**
 
-Made with ❤️ and 🦀 Rust · [refinex-lab](https://github.com/refinex-lab)
+Made with ❤️ and 🦀 Rust
+
+[GitHub](https://github.com/refinex/refinex-terminal) · [Issues](https://github.com/refinex/refinex-terminal/issues) · [Discussions](https://github.com/refinex/refinex-terminal/discussions)
 
 </div>

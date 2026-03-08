@@ -2,8 +2,9 @@
 
 # ⚡ Refinex Terminal
 
-**专为 Claude Code、Codex CLI、Copilot CLI 等 AI 编程工具打造的高性能终端模拟器。**
-**针对 Apple Silicon（macOS ARM）及 Windows 深度优化。**
+**专为现代开发工作流打造的 AI 优先终端模拟器**
+
+针对 Claude Code、GitHub Copilot CLI、Codex CLI 和 Gemini CLI 优化
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.82+-orange.svg)](https://www.rust-lang.org/)
@@ -11,9 +12,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
-<img src="docs/assets/banner.jpg" alt="Refinex Terminal Banner" width="800" />
-
-[English](README.md) · [功能特性](#-功能特性) · [架构设计](#-架构设计) · [快速开始](#-快速开始) · [配置说明](#-配置说明) · [开发路线图](#-开发路线图) · [参与贡献](#-参与贡献)
+[功能特性](#-功能特性) · [快速开始](#-快速开始) · [文档](#-文档) · [参与贡献](#-参与贡献)
 
 </div>
 
@@ -21,160 +20,178 @@
 
 ## 🎯 为什么选择 Refinex Terminal？
 
-AI 编程助手（Claude Code、Codex CLI、Gemini CLI、Copilot CLI）的兴起从根本上改变了开发者使用终端的方式。然而现有终端工具对 AI 工作流毫无感知，依然是被动的命令行界面。**Refinex Terminal 正是为填补这一空白而生** —— 专为 AI 代理开发时代量身打造。
+AI 编程助手的兴起从根本上改变了开发者的工作方式。**Refinex Terminal** 正是为这个新时代而生 —— 一个专门的命令中心，与 AI CLI 工具无缝集成，同时提供强大、现代的终端体验。
 
-### 现有痛点
+### 与众不同之处
 
-- 传统终端将 AI CLI 输出视为纯文本，缺乏结构化展示与交互能力
-- 大量 AI 输出（动辄数千行）导致滚动卡顿、视口冻结
-- 无法同时管理多个跨项目运行的 AI 代理
-- AI 触发的 Git 操作需要频繁切换到外部工具
-- 缺少与终端集成的文件树及 AI 生成变更的差异对比视图
-
-### 解决方案
-
-Refinex Terminal **不是又一款通用终端**。它是专为 AI 辅助开发打造的专属指挥中心，为代理工作流、智能输出处理、集成式 Git 操作和多项目侧边栏提供第一流的支持 —— 全部封装在一个极速的原生 Shell 中。
+- **AI CLI 集成**：对 Claude Code、GitHub Copilot CLI、Codex CLI 和 Gemini CLI 的一流支持
+- **项目为中心**：多项目侧边栏，包含文件树、Git 集成和代码编辑器
+- **原生性能**：基于 Rust 和 Tauri 2 构建 —— 快速启动、低内存占用、小体积二进制
+- **现代用户体验**：命令面板、分屏、模糊查找和键盘驱动的工作流
+- **完全可定制**：主题、字体、快捷键和全面的配置
 
 ---
 
 ## ✨ 功能特性
 
-### 🚀 核心终端引擎
-- **原生性能** —— 基于 Tauri 2 的 Rust 后端，使用系统 WebView，无需捆绑 Chromium
-- **秒级启动** —— Apple Silicon 冷启动 < 500ms，Windows 下 < 800ms
-- **xterm.js 渲染** —— 搭配 WebGL 插件，GPU 加速终端输出
-- **完整 VT100/VT220/xterm-256color** 转义序列支持
-- **Unicode 与 Emoji** 支持，兼容连字字体渲染
-- **滚动缓冲区** —— 最多可配置 100,000 行，虚拟化渲染
+### 🚀 核心终端
 
-### 🤖 AI 优先体验
-- **智能输出块** —— AI 响应内容被归组为可折叠、可导航的独立块
-- **流式视口安全** —— AI 长输出（10,000+ 行）期间零卡顿渲染
-- **一键 CLI 配置** —— 内置 Claude Code、Codex CLI、Copilot CLI、Gemini CLI 配置向导
-- **代理状态指示器** —— 实时显示代理运行状态（思考中、写入中、空闲）
-- **提示词书签** —— 保存并快速调用常用 AI 提示词
-- **输出搜索与过滤** —— 支持正则表达式在 AI 输出块中搜索
+- **全功能终端**，由 xterm.js 驱动，支持 WebGL 渲染
+- **多标签页支持**，可拖放重新排序
+- **分屏**（水平和垂直），支持多终端工作流
+- **终端搜索**，支持正则表达式和匹配导航
+- **复制/粘贴**，可配置选中即复制
+- **滚动缓冲区**，可配置行数限制（最多 100,000 行）
+- **Shell 检测**（zsh、bash、PowerShell、cmd），支持环境变量管理
 
-### 📂 多项目侧边栏
-- **仓库导航器** —— 在侧边栏树形视图中打开多个代码仓库
-- **按仓库独立标签页** —— 每个项目拥有独立隔离的终端会话
-- **文件树浏览器** —— 展开、点击预览并直接编辑文件
-- **AI 变更追踪** —— 高亮显示 AI 代理修改过的文件，附带差异指示器
+### 🤖 AI CLI 集成
 
-### 🔀 集成 Git
-- **原生 Git 集成** —— 调用本地安装的 `git` 二进制
-- **变更概览面板** —— 已暂存/未暂存文件及内联差异预览
-- **一键操作** —— 从 UI 完成提交、推送、拉取、获取、分支、暂存
-- **AI 提交信息** —— 根据 AI 产生的差异自动生成提交信息
-- **差异查看器** —— AI 修改文件的并排与内联差异展示
-- **分支管理** —— 可视化分支切换器，支持合并/变基
+- **自动检测** AI 编程助手：
+  - [Claude Code](https://code.claude.com/) by Anthropic
+  - [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli)
+  - [Codex CLI](https://github.com/openai/codex) by OpenAI
+  - [Gemini CLI](https://github.com/google-gemini/gem-cli) by Google
+- **设置向导**，包含检测、配置和测试
+- **设置面板**，为每个 AI CLI 提供完整配置支持
+- **Shell 集成**，方便访问 AI CLI
+
+### 📂 项目管理
+
+- **多项目侧边栏**，带文件树导航
+- **文件预览**，支持语法高亮（20+ 种语言）
+- **内置代码编辑器**，由 CodeMirror 6 驱动
+- **文件系统监视器**，实时更新
+- **模糊文件查找器**（Cmd/Ctrl + P）
+- **快速项目切换**（Cmd/Ctrl + Shift + O）
+- **全局搜索和替换**，跨项目文件
+
+### 🔀 Git 集成
+
+- **Git 状态面板**，显示已暂存/未暂存/未跟踪文件
+- **差异查看器**，支持语法高亮（统一视图和分屏视图）
+- **分支管理**，支持创建、切换和删除
+- **提交工作流**，带消息编辑器
+- **Git 图形可视化**，显示提交历史
+- **推送/拉取/获取**操作
+- **暂存管理**
+
+### 🔗 SSH 支持
+
+- **SSH 连接管理器**，可保存主机
+- **SFTP 文件浏览器**，支持上传/下载
+- **多个 SSH 会话**，在标签页中
+- **SSH 密钥管理**
+- **连接测试**和诊断
 
 ### ⌨️ 键盘驱动工作流
-- **命令面板** —— `Cmd/Ctrl + Shift + P` 访问所有操作
-- **分屏** —— `Cmd/Ctrl + D` 水平分屏 / `Cmd/Ctrl + Shift + D` 垂直分屏
-- **标签页管理** —— `Cmd/Ctrl + T` 新建，`Cmd/Ctrl + W` 关闭，`Cmd/Ctrl + [1-9]` 切换
-- **快速项目切换** —— `Cmd/Ctrl + Shift + O` 在仓库间跳转
-- **模糊文件查找** —— `Cmd/Ctrl + P` 从当前项目快速打开任意文件
-- **完全可定制** —— 通过 JSON 配置重新映射任意快捷键
+
+- **命令面板**（Cmd/Ctrl + Shift + P）快速操作
+- **分屏**：Cmd/Ctrl + D（水平），Cmd/Ctrl + Shift + D（垂直）
+- **标签页管理**：Cmd/Ctrl + T（新建），Cmd/Ctrl + W（关闭），Cmd/Ctrl + 1-9（切换）
+- **快速项目切换**：Cmd/Ctrl + Shift + O
+- **模糊文件查找器**：Cmd/Ctrl + P
+- **全局搜索**：Cmd/Ctrl + Shift + F
+- **完全可定制**的快捷键
 
 ### 🎨 主题与自定义
-- **内置主题** —— 预置 20+ 精选主题（深色与浅色）
-- **自定义主题** —— 通过 TOML 配置定义个人主题
-- **字体控制** —— 字体族、字号、行高、字间距、连字开关
-- **透明度与模糊** —— 窗口透明效果，支持 macOS 毛玻璃/Windows 亚克力背景
-- **布局预设** —— 保存并恢复窗口布局
 
-### ⚡ 性能优化
-- **虚拟化滚动缓冲区** —— 仅可见行存在于 DOM 中
-- **输出节流** —— 高吞吐流期间以 60fps 批量渲染
-- **懒加载文件树** —— 目录按需加载，非预先全量展开
-- **后台进程隔离** —— 每个 PTY 运行在独立的 Rust 线程中
-- **内存映射大文件** —— 预览大文件无需全量加载至内存
-- **增量搜索** —— 搜索索引渐进构建，不阻塞 UI
+- **5 个内置主题**：
+  - Refinex Dark（默认）
+  - Refinex Light
+  - Tokyo Night
+  - Catppuccin Mocha
+  - GitHub Dark
+- **自定义主题**，通过 TOML 配置
+- **字体自定义**，支持系统字体检测
+- **窗口透明度和毛玻璃效果**（macOS）/ 亚克力效果（Windows）
+- **基于 TOML 的配置**，支持热重载
+
+### ⚡ 性能
+
+- **60fps 渲染**，在终端输出期间
+- **WebGL 加速**，流畅滚动
+- **懒加载**，用于大型文件树
+- **高效的 PTY 管理**，使用 Rust 后端
+- **快速启动**（Apple Silicon 上 < 500ms）
+- **小体积二进制**（~10-15 MB）
+- **低内存占用**（空闲时 ~30-50 MB）
 
 ---
 
-## 🏗 架构设计
+## 🏗 架构
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  Refinex Terminal                     │
-│                                                       │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │              前端（WebView）                     │ │
-│  │  React 19 + TypeScript + Tailwind CSS v4        │ │
-│  │  xterm.js + WebGL Addon + shadcn/ui             │ │
-│  │  Zustand（状态管理）+ TanStack Query（异步）    │ │
-│  └──────────────────┬──────────────────────────────┘ │
-│                     │ Tauri IPC（invoke/events）      │
-│  ┌──────────────────▼──────────────────────────────┐ │
-│  │              后端（Rust / Tauri 2）              │ │
-│  │  PTY 管理器（portable-pty）                     │ │
-│  │  Git 操作（git2-rs）                            │ │
-│  │  文件系统监视器（notify）                       │ │
-│  │  配置管理器（toml + serde）                     │ │
-│  │  CLI 注册表 & 进程管理器                        │ │
-│  └─────────────────────────────────────────────────┘ │
-│                                                       │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │              系统层                              │ │
-│  │  macOS: WebKit WebView + Metal GPU              │ │
-│  │  Windows: WebView2（Edge/Chromium）             │ │
-│  │  PTY: /dev/ptmx（macOS）/ ConPTY（Windows）    │ │
-│  └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["前端 (WebView)"]
+        React["React 19 + TypeScript"]
+        UI["xterm.js + WebGL<br/>CodeMirror 6<br/>shadcn/ui + Zustand"]
+    end
+
+    subgraph Backend["后端 (Rust / Tauri 2)"]
+        PTY["PTY 管理器<br/>(portable-pty)"]
+        Git["Git 操作<br/>(git2-rs)"]
+        FS["文件系统监视器<br/>(notify)"]
+        Config["配置管理器<br/>(TOML + serde)"]
+        SSH["SSH/SFTP<br/>(ssh2-rs)"]
+    end
+
+    subgraph System["系统层"]
+        macOS["macOS: WebKit + Metal GPU"]
+        Windows["Windows: WebView2 (Edge)"]
+    end
+
+    Frontend -->|Tauri IPC| Backend
+    Backend --> System
+
+    style Frontend fill:#61dafb20,stroke:#61dafb,stroke-width:2px
+    style Backend fill:#f7768e20,stroke:#f7768e,stroke-width:2px
+    style System fill:#9ece6a20,stroke:#9ece6a,stroke-width:2px
 ```
 
 ### 技术栈
 
-| 层级 | 技术 | 选型理由 |
-|------|------|----------|
-| **桌面框架** | Tauri 2.x | 原生 WebView，~3MB 二进制，Rust 后端，无需捆绑 Chromium |
-| **后端** | Rust | 内存安全，线程安全的 PTY 管理，通过 git2 原生 Git 支持 |
-| **前端** | React 19 + TypeScript 5.6 | 组件模型成熟，生态完善，开发者友好 |
-| **终端模拟器** | xterm.js 5.x + WebGL addon | 行业标准（VS Code 同款），GPU 加速渲染 |
-| **PTY** | portable-pty（Rust） | 跨平台伪终端，避免 node-pty 的原生编译问题 |
-| **样式** | Tailwind CSS v4 | 原子化，可 tree-shake，零运行时开销 |
-| **UI 组件** | shadcn/ui + Radix | 可访问，可组合，复制即用 |
-| **图标** | Lucide React | 一致美观，可 tree-shake，1400+ 图标 |
-| **状态管理** | Zustand | 极简样板代码，无 Provider 包裹，高性能选择器 |
-| **Git** | git2-rs | libgit2 的 Rust 绑定，无 shell 调用开销 |
-| **文件监视** | notify（Rust） | 跨平台文件系统事件，内置防抖 |
-| **配置格式** | TOML | 人类可读，Rust 原生 serde 支持 |
-| **构建工具** | Vite 6 | 极速 HMR，优化生产构建 |
-| **包管理器** | pnpm | 高效磁盘利用，严格依赖解析 |
-
-### 为什么选择 Tauri 而非 Electron？
-
-| 指标 | Tauri 2 | Electron |
-|------|---------|----------|
-| 二进制大小 | ~3–10 MB | ~150 MB+ |
-| 内存占用（空闲）| ~30–50 MB | ~150–300 MB |
-| 启动时间 | < 500ms | 1–2s |
-| 后端语言 | Rust（原生性能） | Node.js（解释执行） |
-| 安全模型 | 基于能力，默认锁定 | 宽松，需手动加固 |
-| 捆绑运行时 | 无（使用系统 WebView） | 完整 Chromium + Node.js |
+| 层级                 | 技术                       | 选型理由                                                      |
+| -------------------| -------------------------- | ------------------------------------------------------------- |
+| **桌面框架**         | Tauri 2.x                  | 原生 WebView，小体积二进制，Rust 后端，无需捆绑 Chromium     |
+| **后端**             | Rust                       | 内存安全，性能优异，通过 git2-rs 原生支持 Git                |
+| **前端**             | React 19 + TypeScript 5.6  | 现代 UI 框架，强类型支持                                      |
+| **终端模拟器**       | xterm.js 5.x + WebGL       | 行业标准（VS Code 同款），GPU 加速                            |
+| **代码编辑器**       | CodeMirror 6               | 可扩展，高性能，现代代码编辑                                  |
+| **PTY**              | portable-pty               | Rust 跨平台伪终端                                             |
+| **样式**             | Tailwind CSS v4            | 原子化，零运行时                                              |
+| **UI 组件**          | shadcn/ui + Radix          | 可访问，可组合的组件                                          |
+| **状态管理**         | Zustand                    | 极简样板代码，高性能                                          |
+| **Git**              | git2-rs                    | libgit2 的 Rust 绑定                                          |
+| **SSH**              | ssh2-rs                    | 原生 SSH/SFTP 支持                                            |
+| **配置格式**         | TOML                       | 人类可读，Rust 原生支持                                       |
+| **构建工具**         | Vite 6                     | 快速 HMR，优化构建                                            |
+| **包管理器**         | pnpm 9                     | 高效，严格的依赖解析                                          |
 
 ---
 
 ## 🚀 快速开始
 
-### 环境要求
+### 下载预构建二进制
 
-- **macOS**：macOS 12+（Monterey），支持 Apple Silicon 和 Intel
+**即将推出！** 预构建二进制将在 [Releases](https://github.com/refinex/refinex-terminal/releases) 页面提供。
+
+### 从源码构建
+
+#### 环境要求
+
+- **macOS**：macOS 10.15+（Catalina），支持 Apple Silicon 或 Intel
 - **Windows**：Windows 10 1809+（需要 WebView2）
 - **Rust**：1.82+，通过 [rustup](https://rustup.rs/) 安装
 - **Node.js**：20 LTS+，通过 [fnm](https://github.com/Schniz/fnm) 或 nvm 安装
 - **pnpm**：9+（`corepack enable && corepack prepare pnpm@latest --activate`）
-- **Git**：2.40+（需在 PATH 中）
 
 > 详细环境配置请参阅 [`docs/SETUP.md`](docs/SETUP.md)。
 
-### 从源码构建
+#### 构建步骤
 
 ```bash
 # 克隆仓库
-git clone https://github.com/refinex-lab/refinex-terminal.git
+git clone https://github.com/refinex/refinex-terminal.git
 cd refinex-terminal
 
 # 安装前端依赖
@@ -187,64 +204,60 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-生产版本二进制将输出至 `src-tauri/target/release/bundle/`。
+**输出位置**：
+- macOS：`src-tauri/target/release/bundle/dmg/*.dmg`
+- Windows：`src-tauri/target/release/bundle/nsis/*.exe`
 
 ---
 
-## ⚙️ 配置说明
+## ⚙️ 配置
 
-Refinex Terminal 使用分层 TOML 配置系统，默认配置文件路径：
+Refinex Terminal 使用 TOML 配置文件，位于：
 
-- **macOS**：`~/Library/Application Support/com.refinex.terminal/config.toml`
-- **Windows**：`%APPDATA%\com.refinex.terminal\config.toml`
+- **macOS**：`~/.refinex/config.toml`
+- **Windows**：`%USERPROFILE%\.refinex\config.toml`
 
-### `config.toml` 示例
+### 配置示例
 
 ```toml
 [appearance]
-theme = "refinex-dark"          # 内置主题名称或自定义 .toml 主题路径
-font_family = "JetBrains Mono"  # 任意本地已安装字体
-font_size = 14                  # 单位：像素
-line_height = 1.4               # 行高倍数
+theme = "refinex-dark"
+font_family = "JetBrains Mono"
+font_size = 14
+line_height = 1.4
 ligatures = true
-cursor_style = "bar"            # "block" | "bar" | "underline"
+cursor_style = "bar"
 cursor_blink = true
-opacity = 0.95                  # 0.0 – 1.0（1.0 = 完全不透明）
-vibrancy = true                 # macOS 毛玻璃效果 / Windows 亚克力效果
+opacity = 0.95
+vibrancy = true
 
 [terminal]
-shell = "auto"                  # "auto" | "/bin/zsh" | "powershell.exe" | 自定义路径
+shell = "auto"
 scrollback_lines = 50000
 copy_on_select = true
-word_separators = " \\t{}()[]'\""
-bell = "visual"                 # "audio" | "visual" | "none"
+bell = "visual"
 
-[terminal.env]                  # 注入到每个会话的额外环境变量
+[terminal.env]
 EDITOR = "code --wait"
-LANG = "zh_CN.UTF-8"
+LANG = "en_US.UTF-8"
 
 [ai]
-detect_cli = true               # 自动检测 Claude Code、Codex CLI 等
-block_mode = true               # 将 AI 输出归组为可折叠块
-streaming_throttle_ms = 16      # 渲染批处理间隔（约 60fps）
-max_block_lines = 50000         # 自动折叠前的最大行数
+detect_cli = true
 
 [git]
 enabled = true
-auto_fetch_interval = 300       # 秒（0 = 禁用）
+auto_fetch_interval = 300
 show_diff_on_select = true
-sign_commits = false
 
-[keybindings]                   # 覆盖任意默认快捷键
+[keybindings]
 "Cmd+Shift+P" = "command_palette"
 "Cmd+D" = "split_horizontal"
 "Cmd+Shift+D" = "split_vertical"
 "Cmd+T" = "new_tab"
 "Cmd+W" = "close_tab"
-"Cmd+Shift+O" = "quick_project_switch"
 "Cmd+P" = "fuzzy_file_finder"
 
-[projects]                      # 固定项目目录
+[projects]
 paths = [
   "~/Code/my-app",
   "~/Code/backend-api",
@@ -253,10 +266,12 @@ paths = [
 
 ### 自定义主题
 
-在任意位置创建 `.toml` 文件，并通过 `theme = "/path/to/my-theme.toml"` 引用：
+创建 `.toml` 文件定义您的配色方案：
 
 ```toml
-[colors]
+name = "My Custom Theme"
+
+[terminal]
 background = "#1a1b26"
 foreground = "#a9b1d6"
 cursor = "#c0caf5"
@@ -269,7 +284,27 @@ blue = "#7aa2f7"
 magenta = "#bb9af7"
 cyan = "#7dcfff"
 white = "#c0caf5"
+# ... (亮色)
+
+[ui]
+background = "#1a1b26"
+foreground = "#a9b1d6"
+border = "#292e42"
+# ... (其他 UI 颜色)
 ```
+
+然后在配置中引用：`theme = "/path/to/my-theme.toml"`
+
+---
+
+## 📚 文档
+
+- **[环境配置指南](docs/SETUP.md)** - 详细的环境配置说明
+- **[自动更新器](docs/AUTO_UPDATER.md)** - 配置自动更新
+- **[macOS 签名](docs/MACOS_SIGNING.md)** - 代码签名和公证指南
+- **[Windows 安装程序](docs/WINDOWS_INSTALLER.md)** - Windows 安装程序配置
+- **[更新日志](CHANGELOG.md)** - 版本历史和发布说明
+- **[贡献指南](CONTRIBUTING.md)** - 贡献指南
 
 ---
 
@@ -277,103 +312,99 @@ white = "#c0caf5"
 
 ```
 refinex-terminal/
-├── CLAUDE.md                   # AI 代理指令（Claude Code）
-├── README.md                   # 英文文档
-├── README.zh-CN.md             # 中文文档（本文件）
-├── LICENSE                     # MIT 许可证
-├── CONTRIBUTING.md             # 贡献指南
-├── package.json                # 前端依赖与脚本
-├── pnpm-lock.yaml
-├── tsconfig.json               # TypeScript 配置
-├── vite.config.ts              # Vite 构建配置
-├── tailwind.config.ts          # Tailwind CSS v4 配置
-├── docs/
-│   ├── PPLAN.md                # 分阶段实施计划
-│   ├── SETUP.md                # 环境配置指南
-│   └── assets/                 # 文档图片资源
-├── .github/
-│   ├── COMMIT_CONVENTION.md    # Git 提交规范
-│   └── workflows/              # CI/CD 流水线
-├── src/                        # 前端源码（React + TypeScript）
-│   ├── main.tsx                # React 入口
-│   ├── App.tsx                 # 根组件
+├── src/                        # 前端（React + TypeScript）
 │   ├── components/
-│   │   ├── terminal/           # 终端模拟器组件
-│   │   ├── sidebar/            # 项目导航器与文件树
-│   │   ├── git/                # Git 面板组件
-│   │   ├── tabs/               # 标签栏与管理
-│   │   ├── command-palette/    # 命令面板覆层
-│   │   └── ui/                 # shadcn/ui 基础组件
-│   ├── hooks/                  # 自定义 React Hooks
-│   ├── stores/                 # Zustand 状态仓库
-│   ├── lib/                    # 工具函数 & Tauri IPC 封装
-│   ├── styles/                 # 全局样式 & Tailwind 引入
-│   └── types/                  # TypeScript 类型定义
-├── src-tauri/                  # Rust 后端（Tauri 2）
-│   ├── Cargo.toml              # Rust 依赖
-│   ├── tauri.conf.json         # Tauri 应用配置
-│   ├── capabilities/           # Tauri 权限能力
+│   │   ├── terminal/           # 终端模拟器
+│   │   ├── sidebar/            # 文件树和项目导航
+│   │   ├── git/                # Git 集成 UI
+│   │   ├── settings/           # 设置面板
+│   │   ├── tabs/               # 标签页管理
+│   │   └── ui/                 # shadcn/ui 组件
+│   ├── hooks/                  # 自定义 React hooks
+│   ├── stores/                 # Zustand 状态存储
+│   ├── lib/                    # 工具函数和 Tauri IPC
+│   └── types/                  # TypeScript 类型
+├── src-tauri/                  # 后端（Rust + Tauri）
 │   ├── src/
-│   │   ├── main.rs             # Tauri 入口
-│   │   ├── lib.rs              # 库根模块
-│   │   ├── pty/                # PTY 管理模块
-│   │   ├── git/                # Git 操作模块
-│   │   ├── fs/                 # 文件系统模块
-│   │   ├── config/             # 配置模块
-│   │   ├── cli/                # AI CLI 检测与管理
-│   │   └── commands/           # Tauri IPC 命令处理器
+│   │   ├── pty/                # PTY 管理
+│   │   ├── git/                # Git 操作
+│   │   ├── fs/                 # 文件系统
+│   │   ├── config/             # 配置
+│   │   ├── cli/                # AI CLI 检测
+│   │   ├── ssh/                # SSH/SFTP
+│   │   └── commands/           # Tauri 命令
 │   └── icons/                  # 应用图标
-└── themes/                     # 内置主题 TOML 文件
+├── themes/                     # 内置主题
+├── docs/                       # 文档
+└── .github/                    # CI/CD 和模板
 ```
 
 ---
 
 ## 🗺 开发路线图
 
-### v0.1.0 — 基础框架（里程碑 1）
-- [x] 项目脚手架（Tauri 2 + React 19 + TypeScript）
-- [ ] 基础终端模拟（xterm.js + PTY）
-- [ ] 标签页管理（新建、关闭、切换）
-- [ ] 可配置外观（字体、主题、透明度）
+### ✅ v0.1.0 - 初始版本（当前）
 
-### v0.2.0 — AI 集成（里程碑 2）
-- [ ] AI 输出块检测与归组
-- [ ] 流式安全渲染管线
-- [ ] CLI 自动检测（Claude Code、Codex 等）
-- [ ] 代理状态指示器
+- 基于 xterm.js 的核心终端模拟
+- 多标签页和分屏支持
+- AI CLI 集成（Claude Code、Copilot CLI、Codex CLI、Gemini CLI）
+- 带文件树的项目侧边栏
+- Git 集成和差异查看器
+- SSH/SFTP 支持
+- 命令面板和快捷键
+- 5 个内置主题
+- 自动更新器
+- macOS 和 Windows 安装程序
 
-### v0.3.0 — 多项目与文件系统（里程碑 3）
-- [ ] 侧边栏项目导航器
-- [ ] 文件树点击打开
-- [ ] 应用内文件预览与基础编辑器
-- [ ] 快速项目切换
+### 🔮 未来计划
 
-### v0.4.0 — Git 集成（里程碑 4）
-- [ ] Git 状态面板（已暂存、未暂存、未跟踪）
-- [ ] 内联差异查看器
-- [ ] 从 UI 完成提交、推送、拉取、获取
-- [ ] AI 自动生成提交信息
-
-### v0.5.0 — 打磨与性能（里程碑 5）
-- [ ] 命令面板
-- [ ] 分屏布局
-- [ ] 快捷键自定义
-- [ ] 性能分析与优化
-- [ ] 无障碍审计
-
-### v1.0.0 — 正式发布
-- [ ] 自动更新
-- [ ] 安装包签名（macOS 公证，Windows 代码签名）
-- [ ] 用户文档站点
-- [ ] 插件 API（实验性）
+- **AI 输出增强**
+  - 智能输出块检测和分组
+  - 代理状态指示器（思考中、写入中、等待中）
+  - 流式输出优化
+- **性能**
+  - 大型项目的文件树虚拟化
+  - 长时间运行会话的内存优化
+- **功能**
+  - 自定义主题编辑器
+  - 插件系统
+  - 会话持久化
+  - 终端录制和回放
+- **平台**
+  - Linux 支持（Ubuntu、Fedora、Arch）
+  - 便携模式（无需安装）
 
 ---
 
 ## 🤝 参与贡献
 
-我们欢迎各种形式的贡献！无论是 Bug 报告、功能建议、文档完善，还是代码提交 —— 每一份帮助都弥足珍贵。
+我们欢迎各种形式的贡献！无论是：
 
-提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 🐛 Bug 报告
+- 💡 功能建议
+- 📖 文档改进
+- 🔧 代码贡献
+
+请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解指南。
+
+### 开发
+
+```bash
+# 安装依赖
+pnpm install
+
+# 热重载运行
+pnpm tauri dev
+
+# 类型检查
+pnpm tsc --noEmit
+
+# Rust 代码检查
+cd src-tauri && cargo clippy -- -D warnings
+
+# 构建生产版本
+pnpm tauri build
+```
 
 ---
 
@@ -383,10 +414,26 @@ refinex-terminal/
 
 ---
 
+## 🙏 致谢
+
+基于优秀的开源项目构建：
+
+- [Tauri](https://tauri.app/) - 桌面应用框架
+- [xterm.js](https://xtermjs.org/) - 终端模拟器
+- [React](https://react.dev/) - UI 框架
+- [Tailwind CSS](https://tailwindcss.com/) - 样式
+- [shadcn/ui](https://ui.shadcn.com/) - UI 组件
+- [CodeMirror](https://codemirror.net/) - 代码编辑器
+- [Zustand](https://zustand-demo.pmnd.rs/) - 状态管理
+
+---
+
 <div align="center">
 
-**如果 Refinex Terminal 对你的 AI 辅助开发工作流有所帮助，请考虑给项目点一个 ⭐**
+**如果 Refinex Terminal 改善了您的开发工作流，请给它一个 ⭐**
 
-用 ❤️ 和 🦀 Rust 打造 · [refinex-lab](https://github.com/refinex-lab)
+用 ❤️ 和 🦀 Rust 打造
+
+[GitHub](https://github.com/refinex/refinex-terminal) · [Issues](https://github.com/refinex/refinex-terminal/issues) · [Discussions](https://github.com/refinex/refinex-terminal/discussions)
 
 </div>
