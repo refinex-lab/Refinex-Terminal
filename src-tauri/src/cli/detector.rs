@@ -561,6 +561,254 @@ pub fn write_claude_settings(content: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Read Claude Code instructions (CLAUDE.md)
+#[tauri::command]
+pub fn read_claude_instructions() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let instructions_path = home.join(".claude").join("CLAUDE.md");
+
+    if !instructions_path.exists() {
+        return Ok(String::new());
+    }
+
+    std::fs::read_to_string(&instructions_path)
+        .map_err(|e| format!("Failed to read instructions: {}", e))
+}
+
+/// Write Claude Code instructions (CLAUDE.md)
+#[tauri::command]
+pub fn write_claude_instructions(content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let claude_dir = home.join(".claude");
+    let instructions_path = claude_dir.join("CLAUDE.md");
+
+    if !claude_dir.exists() {
+        std::fs::create_dir_all(&claude_dir)
+            .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+    }
+
+    std::fs::write(&instructions_path, content)
+        .map_err(|e| format!("Failed to write instructions: {}", e))?;
+
+    Ok(())
+}
+
+/// List Claude Code agents
+#[tauri::command]
+pub fn list_claude_agents() -> Result<Vec<serde_json::Value>, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let agents_dir = home.join(".claude").join("agents");
+
+    if !agents_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut agents = Vec::new();
+    let entries = std::fs::read_dir(&agents_dir)
+        .map_err(|e| format!("Failed to read agents directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            let content = std::fs::read_to_string(&path)
+                .unwrap_or_default();
+
+            let name = file_name.replace(".md", "");
+
+            agents.push(serde_json::json!({
+                "name": name,
+                "fileName": file_name,
+                "content": content,
+            }));
+        }
+    }
+
+    Ok(agents)
+}
+
+/// Save Claude Code agent
+#[tauri::command]
+pub fn save_claude_agent(file_name: String, content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let agents_dir = home.join(".claude").join("agents");
+    let agent_path = agents_dir.join(&file_name);
+
+    if !agents_dir.exists() {
+        std::fs::create_dir_all(&agents_dir)
+            .map_err(|e| format!("Failed to create agents directory: {}", e))?;
+    }
+
+    std::fs::write(&agent_path, content)
+        .map_err(|e| format!("Failed to write agent: {}", e))?;
+
+    Ok(())
+}
+
+/// Delete Claude Code agent
+#[tauri::command]
+pub fn delete_claude_agent(file_name: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let agent_path = home.join(".claude").join("agents").join(&file_name);
+
+    if agent_path.exists() {
+        std::fs::remove_file(&agent_path)
+            .map_err(|e| format!("Failed to delete agent: {}", e))?;
+    }
+
+    Ok(())
+}
+
+/// List Claude Code skills
+#[tauri::command]
+pub fn list_claude_skills() -> Result<Vec<serde_json::Value>, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let skills_dir = home.join(".claude").join("skills");
+
+    if !skills_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut skills = Vec::new();
+    let entries = std::fs::read_dir(&skills_dir)
+        .map_err(|e| format!("Failed to read skills directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            let content = std::fs::read_to_string(&path)
+                .unwrap_or_default();
+
+            let name = file_name.replace(".md", "");
+
+            skills.push(serde_json::json!({
+                "name": name,
+                "fileName": file_name,
+                "content": content,
+            }));
+        }
+    }
+
+    Ok(skills)
+}
+
+/// Save Claude Code skill
+#[tauri::command]
+pub fn save_claude_skill(file_name: String, content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let skills_dir = home.join(".claude").join("skills");
+    let skill_path = skills_dir.join(&file_name);
+
+    if !skills_dir.exists() {
+        std::fs::create_dir_all(&skills_dir)
+            .map_err(|e| format!("Failed to create skills directory: {}", e))?;
+    }
+
+    std::fs::write(&skill_path, content)
+        .map_err(|e| format!("Failed to write skill: {}", e))?;
+
+    Ok(())
+}
+
+/// Delete Claude Code skill
+#[tauri::command]
+pub fn delete_claude_skill(file_name: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let skill_path = home.join(".claude").join("skills").join(&file_name);
+
+    if skill_path.exists() {
+        std::fs::remove_file(&skill_path)
+            .map_err(|e| format!("Failed to delete skill: {}", e))?;
+    }
+
+    Ok(())
+}
+
+/// List Claude Code commands
+#[tauri::command]
+pub fn list_claude_commands() -> Result<Vec<serde_json::Value>, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let commands_dir = home.join(".claude").join("commands");
+
+    if !commands_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut commands = Vec::new();
+    let entries = std::fs::read_dir(&commands_dir)
+        .map_err(|e| format!("Failed to read commands directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            let content = std::fs::read_to_string(&path)
+                .unwrap_or_default();
+
+            let name = file_name.replace(".md", "");
+
+            commands.push(serde_json::json!({
+                "name": name,
+                "fileName": file_name,
+                "content": content,
+            }));
+        }
+    }
+
+    Ok(commands)
+}
+
+/// Save Claude Code command
+#[tauri::command]
+pub fn save_claude_command(file_name: String, content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let commands_dir = home.join(".claude").join("commands");
+    let command_path = commands_dir.join(&file_name);
+
+    if !commands_dir.exists() {
+        std::fs::create_dir_all(&commands_dir)
+            .map_err(|e| format!("Failed to create commands directory: {}", e))?;
+    }
+
+    std::fs::write(&command_path, content)
+        .map_err(|e| format!("Failed to write command: {}", e))?;
+
+    Ok(())
+}
+
+/// Delete Claude Code command
+#[tauri::command]
+pub fn delete_claude_command(file_name: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let command_path = home.join(".claude").join("commands").join(&file_name);
+
+    if command_path.exists() {
+        std::fs::remove_file(&command_path)
+            .map_err(|e| format!("Failed to delete command: {}", e))?;
+    }
+
+    Ok(())
+}
+
 /// Read GitHub Copilot CLI config.json
 #[tauri::command]
 pub fn read_copilot_config() -> Result<String, String> {

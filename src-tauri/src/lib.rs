@@ -12,7 +12,20 @@ mod search;
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, set_window_opacity, set_window_vibrancy, toggle_fullscreen, set_always_on_top, get_window_state, restore_window_state, ConfigState};
 use config::{load_config, get_config_path};
-use cli::{detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile, check_shell_profile, read_claude_settings, write_claude_settings, read_copilot_config, write_copilot_config, read_copilot_mcp_config, write_copilot_mcp_config, read_copilot_instructions, write_copilot_instructions, list_copilot_agents, list_copilot_skills, save_copilot_agent, delete_copilot_agent, save_copilot_skill, delete_copilot_skill};
+use cli::{
+    detect_ai_clis, test_cli, get_shell_profile_path, add_to_shell_profile, check_shell_profile,
+    read_claude_settings, write_claude_settings,
+    read_claude_instructions, write_claude_instructions,
+    list_claude_agents, save_claude_agent, delete_claude_agent,
+    list_claude_skills, save_claude_skill, delete_claude_skill,
+    list_claude_commands, save_claude_command, delete_claude_command,
+    read_copilot_config, write_copilot_config,
+    read_copilot_mcp_config, write_copilot_mcp_config,
+    read_copilot_instructions, write_copilot_instructions,
+    list_copilot_agents, list_copilot_skills,
+    save_copilot_agent, delete_copilot_agent,
+    save_copilot_skill, delete_copilot_skill
+};
 use fs::watcher::FsWatcher;
 use ssh::SshConnectionManager;
 use std::sync::{Arc, Mutex};
@@ -119,6 +132,17 @@ pub fn run() {
             check_shell_profile,
             read_claude_settings,
             write_claude_settings,
+            read_claude_instructions,
+            write_claude_instructions,
+            list_claude_agents,
+            save_claude_agent,
+            delete_claude_agent,
+            list_claude_skills,
+            save_claude_skill,
+            delete_claude_skill,
+            list_claude_commands,
+            save_claude_command,
+            delete_claude_command,
             read_copilot_config,
             write_copilot_config,
             read_copilot_mcp_config,

@@ -1,5 +1,21 @@
 import { useState, useEffect } from "react";
-import { X, ChevronDown, Palette, Terminal, FileText, GitBranch, Keyboard, Sparkles, Settings, Check, RefreshCw, AlertCircle, Plus, Trash2, ExternalLink } from "lucide-react";
+import {
+  X,
+  ChevronDown,
+  Palette,
+  Terminal,
+  FileText,
+  GitBranch,
+  Keyboard,
+  Sparkles,
+  Settings,
+  Check,
+  RefreshCw,
+  AlertCircle,
+  Plus,
+  Trash2,
+  ExternalLink,
+} from "lucide-react";
 import { VscVscode } from "react-icons/vsc";
 import { SiIntellijidea } from "react-icons/si";
 import { MdOutlineEditNote } from "react-icons/md";
@@ -12,13 +28,24 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { useConfigStore } from "@/stores/config-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { invoke } from "@tauri-apps/api/core";
-import { BUILTIN_THEMES, loadBuiltinTheme, applyTheme, type Theme } from "@/lib/theme-engine";
+import {
+  BUILTIN_THEMES,
+  loadBuiltinTheme,
+  applyTheme,
+  type Theme,
+} from "@/lib/theme-engine";
 import { listSystemFonts } from "@/lib/font-manager";
 import { CLISetupWizard } from "@/components/ai/CLISetupWizard";
 import { ClaudeCodeSettings } from "@/components/settings/ClaudeCodeSettings";
@@ -29,15 +56,32 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
-type SettingsSection = "appearance" | "terminal" | "ai" | "ai-general" | "ai-claude" | "ai-codex" | "ai-gemini" | "ai-copilot" | "git" | "keybindings" | "editor";
+type SettingsSection =
+  | "appearance"
+  | "terminal"
+  | "ai"
+  | "ai-general"
+  | "ai-claude"
+  | "ai-codex"
+  | "ai-gemini"
+  | "ai-copilot"
+  | "git"
+  | "keybindings"
+  | "editor";
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
+  const [activeSection, setActiveSection] =
+    useState<SettingsSection>("appearance");
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
-  const [claudeDetection, setClaudeDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [claudeDetection, setClaudeDetection] = useState<{
+    found: boolean;
+    path: string | null;
+    version: string | null;
+    authenticated: boolean | null;
+  } | null>(null);
   const [detectingClaude, setDetectingClaude] = useState(false);
   const [shellProfilePath, setShellProfilePath] = useState<string>("");
   const [isClaudeInProfile, setIsClaudeInProfile] = useState(false);
@@ -47,16 +91,31 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Copilot detection state
-  const [copilotDetection, setCopilotDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [copilotDetection, setCopilotDetection] = useState<{
+    found: boolean;
+    path: string | null;
+    version: string | null;
+    authenticated: boolean | null;
+  } | null>(null);
   const [detectingCopilot, setDetectingCopilot] = useState(false);
   const [isCopilotInProfile, setIsCopilotInProfile] = useState(false);
 
   // Gemini detection state
-  const [geminiDetection, setGeminiDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [geminiDetection, setGeminiDetection] = useState<{
+    found: boolean;
+    path: string | null;
+    version: string | null;
+    authenticated: boolean | null;
+  } | null>(null);
   const [detectingGemini, setDetectingGemini] = useState(false);
 
   // Codex detection state
-  const [codexDetection, setCodexDetection] = useState<{ found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null>(null);
+  const [codexDetection, setCodexDetection] = useState<{
+    found: boolean;
+    path: string | null;
+    version: string | null;
+    authenticated: boolean | null;
+  } | null>(null);
   const [detectingCodex, setDetectingCodex] = useState(false);
   const { config, updateConfig } = useConfigStore();
   const { autoSave, updateAutoSave } = useSettingsStore();
@@ -176,9 +235,11 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const checkShellProfile = async (claudePath: string) => {
     setCheckingProfile(true);
     try {
-      const pathDir = claudePath.replace(/[/\\][^/\\]+$/, ''); // Remove binary name
+      const pathDir = claudePath.replace(/[/\\][^/\\]+$/, ""); // Remove binary name
       const checkLine = `export PATH="$PATH:${pathDir}"`;
-      const exists = await invoke<boolean>("check_shell_profile", { line: checkLine });
+      const exists = await invoke<boolean>("check_shell_profile", {
+        line: checkLine,
+      });
       setIsClaudeInProfile(exists);
     } catch (error) {
       console.error("Failed to check shell profile:", error);
@@ -191,15 +252,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const detectClaudeCLI = async () => {
     setDetectingClaude(true);
     try {
-      const result = await invoke<Array<{
-        name: string;
-        found: boolean;
-        path: string | null;
-        version: string | null;
-        authenticated: boolean | null;
-      }>>("detect_ai_clis");
+      const result = await invoke<
+        Array<{
+          name: string;
+          found: boolean;
+          path: string | null;
+          version: string | null;
+          authenticated: boolean | null;
+        }>
+      >("detect_ai_clis");
 
-      const claudeResult = result.find(r => r.name === "claude");
+      const claudeResult = result.find((r) => r.name === "claude");
       if (claudeResult) {
         setClaudeDetection({
           found: claudeResult.found,
@@ -223,15 +286,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const detectCopilotCLI = async () => {
     setDetectingCopilot(true);
     try {
-      const result = await invoke<Array<{
-        name: string;
-        found: boolean;
-        path: string | null;
-        version: string | null;
-        authenticated: boolean | null;
-      }>>("detect_ai_clis");
+      const result = await invoke<
+        Array<{
+          name: string;
+          found: boolean;
+          path: string | null;
+          version: string | null;
+          authenticated: boolean | null;
+        }>
+      >("detect_ai_clis");
 
-      const copilotResult = result.find(r => r.name === "gh-copilot");
+      const copilotResult = result.find((r) => r.name === "gh-copilot");
       if (copilotResult) {
         setCopilotDetection({
           found: copilotResult.found,
@@ -257,7 +322,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     try {
       // Check for 'copilot' command in PATH
       const checkLine = "copilot";
-      const exists = await invoke<boolean>("check_shell_profile", { line: checkLine });
+      const exists = await invoke<boolean>("check_shell_profile", {
+        line: checkLine,
+      });
       setIsCopilotInProfile(exists);
     } catch (error) {
       console.error("Failed to check Copilot in shell profile:", error);
@@ -288,15 +355,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const detectGeminiCLI = async () => {
     setDetectingGemini(true);
     try {
-      const result = await invoke<Array<{
-        name: string;
-        found: boolean;
-        path: string | null;
-        version: string | null;
-        authenticated: boolean | null;
-      }>>("detect_ai_clis");
+      const result = await invoke<
+        Array<{
+          name: string;
+          found: boolean;
+          path: string | null;
+          version: string | null;
+          authenticated: boolean | null;
+        }>
+      >("detect_ai_clis");
 
-      const geminiResult = result.find(r => r.name === "gemini");
+      const geminiResult = result.find((r) => r.name === "gemini");
       if (geminiResult) {
         setGeminiDetection({
           found: geminiResult.found,
@@ -315,15 +384,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const detectCodexCLI = async () => {
     setDetectingCodex(true);
     try {
-      const result = await invoke<Array<{
-        name: string;
-        found: boolean;
-        path: string | null;
-        version: string | null;
-        authenticated: boolean | null;
-      }>>("detect_ai_clis");
+      const result = await invoke<
+        Array<{
+          name: string;
+          found: boolean;
+          path: string | null;
+          version: string | null;
+          authenticated: boolean | null;
+        }>
+      >("detect_ai_clis");
 
-      const codexResult = result.find(r => r.name === "codex");
+      const codexResult = result.find((r) => r.name === "codex");
       if (codexResult) {
         setCodexDetection({
           found: codexResult.found,
@@ -341,7 +412,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   if (!isOpen) return null;
 
-  const handleConfigChange = async (updates: Parameters<typeof updateConfig>[0]) => {
+  const handleConfigChange = async (
+    updates: Parameters<typeof updateConfig>[0],
+  ) => {
     updateConfig(updates);
 
     // Apply theme immediately if theme changed
@@ -426,17 +499,63 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     }
   };
 
-  const sections: { id: SettingsSection; label: string; icon?: React.ReactNode; indent?: boolean }[] = [
-    { id: "appearance", label: "Appearance", icon: <Palette className="size-4" /> },
-    { id: "terminal", label: "Terminal", icon: <Terminal className="size-4" /> },
-    { id: "editor", label: "File Editor", icon: <FileText className="size-4" /> },
+  const sections: {
+    id: SettingsSection;
+    label: string;
+    icon?: React.ReactNode;
+    indent?: boolean;
+  }[] = [
+    {
+      id: "appearance",
+      label: "Appearance",
+      icon: <Palette className="size-4" />,
+    },
+    {
+      id: "terminal",
+      label: "Terminal",
+      icon: <Terminal className="size-4" />,
+    },
+    {
+      id: "editor",
+      label: "File Editor",
+      icon: <FileText className="size-4" />,
+    },
     { id: "git", label: "Git", icon: <GitBranch className="size-4" /> },
-    { id: "ai-general", label: "General", icon: <Settings className="size-4" />, indent: true },
-    { id: "ai-claude", label: "Claude Code", icon: <img src={claudeIcon} className="size-4" alt="Claude" />, indent: true },
-    { id: "ai-codex", label: "Codex CLI", icon: <img src={codexIcon} className="size-4" alt="Codex" />, indent: true },
-    { id: "ai-gemini", label: "Gemini CLI", icon: <img src={geminiIcon} className="size-4" alt="Gemini" />, indent: true },
-    { id: "ai-copilot", label: "GitHub Copilot", icon: <img src={copilotIcon} className="size-4" alt="Copilot" />, indent: true },
-    { id: "keybindings", label: "Keybindings", icon: <Keyboard className="size-4" /> },
+    {
+      id: "ai-general",
+      label: "General",
+      icon: <Settings className="size-4" />,
+      indent: true,
+    },
+    {
+      id: "ai-claude",
+      label: "Claude Code",
+      icon: <img src={claudeIcon} className="size-4" alt="Claude" />,
+      indent: true,
+    },
+    {
+      id: "ai-codex",
+      label: "Codex CLI",
+      icon: <img src={codexIcon} className="size-4" alt="Codex" />,
+      indent: true,
+    },
+    {
+      id: "ai-gemini",
+      label: "Gemini CLI",
+      icon: <img src={geminiIcon} className="size-4" alt="Gemini" />,
+      indent: true,
+    },
+    {
+      id: "ai-copilot",
+      label: "GitHub Copilot",
+      icon: <img src={copilotIcon} className="size-4" alt="Copilot" />,
+      indent: true,
+    },
+    {
+      id: "keybindings",
+      label: "Keybindings",
+      icon: <Keyboard className="size-4" />,
+    },
   ];
 
   return (
@@ -464,33 +583,47 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           </div>
           <nav className="space-y-1">
             {/* Render sections, inserting AI before Git */}
-            {sections.filter(s => !s.id.startsWith("ai-") && s.id !== "git" && s.id !== "keybindings").map((section) => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2"
-                style={{
-                  backgroundColor: activeSection === section.id ? "var(--ui-button-background)" : "transparent",
-                  color: activeSection === section.id ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
-                  fontWeight: activeSection === section.id ? 500 : 400,
-                }}
-                onMouseEnter={(e) => {
-                  if (activeSection !== section.id) {
-                    e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
-                    e.currentTarget.style.color = "var(--ui-foreground)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeSection !== section.id) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "var(--ui-tab-foreground)";
-                  }
-                }}
-              >
-                {section.icon}
-                <span>{section.label}</span>
-              </button>
-            ))}
+            {sections
+              .filter(
+                (s) =>
+                  !s.id.startsWith("ai-") &&
+                  s.id !== "git" &&
+                  s.id !== "keybindings",
+              )
+              .map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2"
+                  style={{
+                    backgroundColor:
+                      activeSection === section.id
+                        ? "var(--ui-button-background)"
+                        : "transparent",
+                    color:
+                      activeSection === section.id
+                        ? "var(--ui-foreground)"
+                        : "var(--ui-tab-foreground)",
+                    fontWeight: activeSection === section.id ? 500 : 400,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSection !== section.id) {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--ui-tab-background-active)";
+                      e.currentTarget.style.color = "var(--ui-foreground)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSection !== section.id) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "var(--ui-tab-foreground)";
+                    }
+                  }}
+                >
+                  {section.icon}
+                  <span>{section.label}</span>
+                </button>
+              ))}
 
             {/* AI Parent Item */}
             <button
@@ -502,20 +635,30 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               }}
               className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between"
               style={{
-                backgroundColor: activeSection.startsWith("ai-") ? "var(--ui-button-background)" : "transparent",
-                color: activeSection.startsWith("ai-") ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
+                backgroundColor: activeSection.startsWith("ai-")
+                  ? "var(--ui-button-background)"
+                  : "transparent",
+                color: activeSection.startsWith("ai-")
+                  ? "var(--ui-foreground)"
+                  : "var(--ui-tab-foreground)",
                 fontWeight: activeSection.startsWith("ai-") ? 500 : 400,
               }}
               onMouseEnter={(e) => {
                 if (!activeSection.startsWith("ai-")) {
-                  e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+                  e.currentTarget.style.backgroundColor =
+                    "var(--ui-tab-background-active)";
                   e.currentTarget.style.color = "var(--ui-foreground)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!activeSection.startsWith("ai-")) {
-                  e.currentTarget.style.backgroundColor = activeSection.startsWith("ai-") ? "var(--ui-button-background)" : "transparent";
-                  e.currentTarget.style.color = activeSection.startsWith("ai-") ? "var(--ui-foreground)" : "var(--ui-tab-foreground)";
+                  e.currentTarget.style.backgroundColor =
+                    activeSection.startsWith("ai-")
+                      ? "var(--ui-button-background)"
+                      : "transparent";
+                  e.currentTarget.style.color = activeSection.startsWith("ai-")
+                    ? "var(--ui-foreground)"
+                    : "var(--ui-tab-foreground)";
                 }
               }}
             >
@@ -523,73 +666,99 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <Sparkles className="size-4" />
                 <span>AI</span>
               </div>
-              <ChevronDown className="size-3" style={{ transform: aiExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }} />
+              <ChevronDown
+                className="size-3"
+                style={{
+                  transform: aiExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+                  transition: "transform 0.2s",
+                }}
+              />
             </button>
 
             {/* AI Subsections (only when expanded) */}
-            {aiExpanded && sections.filter(s => s.id.startsWith("ai-")).map((section) => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className="w-full text-left py-2 rounded-md text-sm transition-colors flex items-center gap-2"
-                style={{
-                  paddingLeft: "2rem",
-                  backgroundColor: activeSection === section.id ? "var(--ui-button-background)" : "transparent",
-                  color: activeSection === section.id ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
-                  fontWeight: activeSection === section.id ? 500 : 400,
-                }}
-                onMouseEnter={(e) => {
-                  if (activeSection !== section.id) {
-                    e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
-                    e.currentTarget.style.color = "var(--ui-foreground)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeSection !== section.id) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "var(--ui-tab-foreground)";
-                  }
-                }}
-              >
-                {section.icon}
-                <span>{section.label}</span>
-              </button>
-            ))}
+            {aiExpanded &&
+              sections
+                .filter((s) => s.id.startsWith("ai-"))
+                .map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className="w-full text-left py-2 rounded-md text-sm transition-colors flex items-center gap-2"
+                    style={{
+                      paddingLeft: "2rem",
+                      backgroundColor:
+                        activeSection === section.id
+                          ? "var(--ui-button-background)"
+                          : "transparent",
+                      color:
+                        activeSection === section.id
+                          ? "var(--ui-foreground)"
+                          : "var(--ui-tab-foreground)",
+                      fontWeight: activeSection === section.id ? 500 : 400,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeSection !== section.id) {
+                        e.currentTarget.style.backgroundColor =
+                          "var(--ui-tab-background-active)";
+                        e.currentTarget.style.color = "var(--ui-foreground)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeSection !== section.id) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color =
+                          "var(--ui-tab-foreground)";
+                      }
+                    }}
+                  >
+                    {section.icon}
+                    <span>{section.label}</span>
+                  </button>
+                ))}
 
             {/* Git and Keybindings */}
-            {sections.filter(s => s.id === "git" || s.id === "keybindings").map((section) => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2"
-                style={{
-                  backgroundColor: activeSection === section.id ? "var(--ui-button-background)" : "transparent",
-                  color: activeSection === section.id ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
-                  fontWeight: activeSection === section.id ? 500 : 400,
-                }}
-                onMouseEnter={(e) => {
-                  if (activeSection !== section.id) {
-                    e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
-                    e.currentTarget.style.color = "var(--ui-foreground)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeSection !== section.id) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "var(--ui-tab-foreground)";
-                  }
-                }}
-              >
-                {section.icon}
-                <span>{section.label}</span>
-              </button>
-            ))}
+            {sections
+              .filter((s) => s.id === "git" || s.id === "keybindings")
+              .map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2"
+                  style={{
+                    backgroundColor:
+                      activeSection === section.id
+                        ? "var(--ui-button-background)"
+                        : "transparent",
+                    color:
+                      activeSection === section.id
+                        ? "var(--ui-foreground)"
+                        : "var(--ui-tab-foreground)",
+                    fontWeight: activeSection === section.id ? 500 : 400,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSection !== section.id) {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--ui-tab-background-active)";
+                      e.currentTarget.style.color = "var(--ui-foreground)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSection !== section.id) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "var(--ui-tab-foreground)";
+                    }
+                  }}
+                >
+                  {section.icon}
+                  <span>{section.label}</span>
+                </button>
+              ))}
           </nav>
         </div>
 
         {/* Main content area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto p-8">
+          <div className="max-w-5xl mx-auto p-8">
             {/* Close button */}
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-2xl font-bold capitalize">{activeSection}</h1>
@@ -598,7 +767,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               </Button>
             </div>
 
-    {/* Appearance Section */}
+            {/* Appearance Section */}
             {activeSection === "appearance" && (
               <div className="space-y-6">
                 {/* Theme with Preview */}
@@ -607,7 +776,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   <Select
                     value={config.appearance.theme}
                     onValueChange={(value) =>
-                      handleConfigChange({ appearance: { ...config.appearance, theme: value } })
+                      handleConfigChange({
+                        appearance: { ...config.appearance, theme: value },
+                      })
                     }
                   >
                     <SelectTrigger id="theme">
@@ -616,33 +787,94 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     <SelectContent>
                       {BUILTIN_THEMES.map((theme) => (
                         <SelectItem key={theme} value={theme}>
-                          {theme.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                          {theme
+                            .split("-")
+                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                            .join(" ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {/* Theme Preview */}
                   {previewTheme && (
-                    <div className="mt-3 p-4 rounded-md border border-border/40" style={{ backgroundColor: previewTheme.terminal.background }}>
+                    <div
+                      className="mt-3 p-4 rounded-md border border-border/40"
+                      style={{
+                        backgroundColor: previewTheme.terminal.background,
+                      }}
+                    >
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: previewTheme.terminal.red }} />
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: previewTheme.terminal.yellow }} />
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: previewTheme.terminal.green }} />
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor: previewTheme.terminal.red,
+                            }}
+                          />
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor: previewTheme.terminal.yellow,
+                            }}
+                          />
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor: previewTheme.terminal.green,
+                            }}
+                          />
                         </div>
-                        <div className="font-mono text-xs space-y-1" style={{ color: previewTheme.terminal.foreground }}>
+                        <div
+                          className="font-mono text-xs space-y-1"
+                          style={{ color: previewTheme.terminal.foreground }}
+                        >
                           <div>
-                            <span style={{ color: previewTheme.terminal.green }}>user@host</span>
-                            <span style={{ color: previewTheme.terminal.foreground }}>:</span>
-                            <span style={{ color: previewTheme.terminal.blue }}>~/project</span>
-                            <span style={{ color: previewTheme.terminal.foreground }}> $ </span>
+                            <span
+                              style={{ color: previewTheme.terminal.green }}
+                            >
+                              user@host
+                            </span>
+                            <span
+                              style={{
+                                color: previewTheme.terminal.foreground,
+                              }}
+                            >
+                              :
+                            </span>
+                            <span style={{ color: previewTheme.terminal.blue }}>
+                              ~/project
+                            </span>
+                            <span
+                              style={{
+                                color: previewTheme.terminal.foreground,
+                              }}
+                            >
+                              {" "}
+                              ${" "}
+                            </span>
                           </div>
                           <div>
-                            <span style={{ color: previewTheme.terminal.cyan }}>echo</span>
-                            <span style={{ color: previewTheme.terminal.foreground }}> </span>
-                            <span style={{ color: previewTheme.terminal.yellow }}>"Hello World"</span>
+                            <span style={{ color: previewTheme.terminal.cyan }}>
+                              echo
+                            </span>
+                            <span
+                              style={{
+                                color: previewTheme.terminal.foreground,
+                              }}
+                            >
+                              {" "}
+                            </span>
+                            <span
+                              style={{ color: previewTheme.terminal.yellow }}
+                            >
+                              "Hello World"
+                            </span>
                           </div>
-                          <div style={{ color: previewTheme.terminal.foreground }}>Hello World</div>
+                          <div
+                            style={{ color: previewTheme.terminal.foreground }}
+                          >
+                            Hello World
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -655,7 +887,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   <Select
                     value={config.appearance.fontFamily}
                     onValueChange={(value) =>
-                      handleConfigChange({ appearance: { ...config.appearance, fontFamily: value } })
+                      handleConfigChange({
+                        appearance: { ...config.appearance, fontFamily: value },
+                      })
                     }
                   >
                     <SelectTrigger id="fontFamily">
@@ -670,9 +904,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         ))
                       ) : (
                         <>
-                          <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
+                          <SelectItem value="JetBrains Mono">
+                            JetBrains Mono
+                          </SelectItem>
                           <SelectItem value="Fira Code">Fira Code</SelectItem>
-                          <SelectItem value="Cascadia Code">Cascadia Code</SelectItem>
+                          <SelectItem value="Cascadia Code">
+                            Cascadia Code
+                          </SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -683,7 +921,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <Label htmlFor="fontSize">Font Size</Label>
-                    <span className="text-sm text-muted-foreground">{config.appearance.fontSize}px</span>
+                    <span className="text-sm text-muted-foreground">
+                      {config.appearance.fontSize}px
+                    </span>
                   </div>
                   <Slider
                     id="fontSize"
@@ -692,7 +932,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     step={1}
                     value={[config.appearance.fontSize]}
                     onValueChange={([value]) =>
-                      handleConfigChange({ appearance: { ...config.appearance, fontSize: value ?? 14 } })
+                      handleConfigChange({
+                        appearance: {
+                          ...config.appearance,
+                          fontSize: value ?? 14,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -701,7 +946,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <Label htmlFor="lineHeight">Line Height</Label>
-                    <span className="text-sm text-muted-foreground">{config.appearance.lineHeight.toFixed(1)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {config.appearance.lineHeight.toFixed(1)}
+                    </span>
                   </div>
                   <Slider
                     id="lineHeight"
@@ -710,7 +957,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     step={0.1}
                     value={[config.appearance.lineHeight]}
                     onValueChange={([value]) =>
-                      handleConfigChange({ appearance: { ...config.appearance, lineHeight: value ?? 1.0 } })
+                      handleConfigChange({
+                        appearance: {
+                          ...config.appearance,
+                          lineHeight: value ?? 1.0,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -722,7 +974,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     id="ligatures"
                     checked={config.appearance.ligatures}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ appearance: { ...config.appearance, ligatures: checked } })
+                      handleConfigChange({
+                        appearance: {
+                          ...config.appearance,
+                          ligatures: checked,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -731,7 +988,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <Label htmlFor="opacity">Opacity</Label>
-                    <span className="text-sm text-muted-foreground">{Math.round(config.appearance.opacity * 100)}%</span>
+                    <span className="text-sm text-muted-foreground">
+                      {Math.round(config.appearance.opacity * 100)}%
+                    </span>
                   </div>
                   <Slider
                     id="opacity"
@@ -740,7 +999,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     step={0.05}
                     value={[config.appearance.opacity]}
                     onValueChange={([value]) =>
-                      handleConfigChange({ appearance: { ...config.appearance, opacity: value ?? 1.0 } })
+                      handleConfigChange({
+                        appearance: {
+                          ...config.appearance,
+                          opacity: value ?? 1.0,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -752,7 +1016,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     id="vibrancy"
                     checked={config.appearance.vibrancy}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ appearance: { ...config.appearance, vibrancy: checked } })
+                      handleConfigChange({
+                        appearance: { ...config.appearance, vibrancy: checked },
+                      })
                     }
                   />
                 </div>
@@ -763,28 +1029,53 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   <RadioGroup
                     value={config.appearance.cursorStyle}
                     onValueChange={(value: "block" | "underline" | "bar") =>
-                      handleConfigChange({ appearance: { ...config.appearance, cursorStyle: value } })
+                      handleConfigChange({
+                        appearance: {
+                          ...config.appearance,
+                          cursorStyle: value,
+                        },
+                      })
                     }
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="block" id="cursor-block" />
-                      <Label htmlFor="cursor-block" className="font-normal flex items-center gap-2">
+                      <Label
+                        htmlFor="cursor-block"
+                        className="font-normal flex items-center gap-2"
+                      >
                         Block
-                        <span className="inline-block w-2 h-4" style={{ backgroundColor: "var(--ui-foreground)" }}></span>
+                        <span
+                          className="inline-block w-2 h-4"
+                          style={{ backgroundColor: "var(--ui-foreground)" }}
+                        ></span>
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="underline" id="cursor-underline" />
-                      <Label htmlFor="cursor-underline" className="font-normal flex items-center gap-2">
+                      <Label
+                        htmlFor="cursor-underline"
+                        className="font-normal flex items-center gap-2"
+                      >
                         Underline
-                        <span className="inline-block w-2 h-4" style={{ borderBottom: "2px solid var(--ui-foreground)" }}></span>
+                        <span
+                          className="inline-block w-2 h-4"
+                          style={{
+                            borderBottom: "2px solid var(--ui-foreground)",
+                          }}
+                        ></span>
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="bar" id="cursor-bar" />
-                      <Label htmlFor="cursor-bar" className="font-normal flex items-center gap-2">
+                      <Label
+                        htmlFor="cursor-bar"
+                        className="font-normal flex items-center gap-2"
+                      >
                         Bar
-                        <span className="inline-block w-0.5 h-4" style={{ backgroundColor: "var(--ui-foreground)" }}></span>
+                        <span
+                          className="inline-block w-0.5 h-4"
+                          style={{ backgroundColor: "var(--ui-foreground)" }}
+                        ></span>
                       </Label>
                     </div>
                   </RadioGroup>
@@ -802,11 +1093,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     id="shell"
                     value={config.terminal.shell}
                     onChange={(e) =>
-                      handleConfigChange({ terminal: { ...config.terminal, shell: e.target.value } })
+                      handleConfigChange({
+                        terminal: { ...config.terminal, shell: e.target.value },
+                      })
                     }
                     placeholder="/bin/zsh"
                   />
-                  <p className="text-xs text-muted-foreground">Leave empty to use system default</p>
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty to use system default
+                  </p>
                 </div>
 
                 {/* Scrollback Lines */}
@@ -817,7 +1112,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     type="number"
                     value={config.terminal.scrollbackLines}
                     onChange={(e) =>
-                      handleConfigChange({ terminal: { ...config.terminal, scrollbackLines: parseInt(e.target.value) || 10000 } })
+                      handleConfigChange({
+                        terminal: {
+                          ...config.terminal,
+                          scrollbackLines: parseInt(e.target.value) || 10000,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -829,7 +1129,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     id="copyOnSelect"
                     checked={config.terminal.copyOnSelect}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ terminal: { ...config.terminal, copyOnSelect: checked } })
+                      handleConfigChange({
+                        terminal: { ...config.terminal, copyOnSelect: checked },
+                      })
                     }
                   />
                 </div>
@@ -840,20 +1142,28 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   <RadioGroup
                     value={config.terminal.bellMode}
                     onValueChange={(value: "none" | "sound" | "visual") =>
-                      handleConfigChange({ terminal: { ...config.terminal, bellMode: value } })
+                      handleConfigChange({
+                        terminal: { ...config.terminal, bellMode: value },
+                      })
                     }
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="none" id="bell-none" />
-                      <Label htmlFor="bell-none" className="font-normal">None</Label>
+                      <Label htmlFor="bell-none" className="font-normal">
+                        None
+                      </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="sound" id="bell-sound" />
-                      <Label htmlFor="bell-sound" className="font-normal">Sound</Label>
+                      <Label htmlFor="bell-sound" className="font-normal">
+                        Sound
+                      </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="visual" id="bell-visual" />
-                      <Label htmlFor="bell-visual" className="font-normal">Visual</Label>
+                      <Label htmlFor="bell-visual" className="font-normal">
+                        Visual
+                      </Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -875,13 +1185,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="detectCLI">Detect AI CLI Tools</Label>
-                    <p className="text-xs text-muted-foreground">Automatically detect Claude Code, Codex, etc.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically detect Claude Code, Codex, etc.
+                    </p>
                   </div>
                   <Switch
                     id="detectCLI"
                     checked={config.ai.detectCLI}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ ai: { ...config.ai, detectCLI: checked } })
+                      handleConfigChange({
+                        ai: { ...config.ai, detectCLI: checked },
+                      })
                     }
                   />
                 </div>
@@ -890,13 +1204,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="blockMode">AI Block Mode</Label>
-                    <p className="text-xs text-muted-foreground">Highlight and collapse AI output blocks</p>
+                    <p className="text-xs text-muted-foreground">
+                      Highlight and collapse AI output blocks
+                    </p>
                   </div>
                   <Switch
                     id="blockMode"
                     checked={config.ai.blockMode}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ ai: { ...config.ai, blockMode: checked } })
+                      handleConfigChange({
+                        ai: { ...config.ai, blockMode: checked },
+                      })
                     }
                   />
                 </div>
@@ -904,8 +1222,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 {/* Streaming Throttle */}
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <Label htmlFor="streamingThrottle">Streaming Throttle</Label>
-                    <span className="text-sm text-muted-foreground">{config.ai.streamingThrottle}ms</span>
+                    <Label htmlFor="streamingThrottle">
+                      Streaming Throttle
+                    </Label>
+                    <span className="text-sm text-muted-foreground">
+                      {config.ai.streamingThrottle}ms
+                    </span>
                   </div>
                   <Slider
                     id="streamingThrottle"
@@ -914,10 +1236,14 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     step={8}
                     value={[config.ai.streamingThrottle]}
                     onValueChange={([value]) =>
-                      handleConfigChange({ ai: { ...config.ai, streamingThrottle: value ?? 16 } })
+                      handleConfigChange({
+                        ai: { ...config.ai, streamingThrottle: value ?? 16 },
+                      })
                     }
                   />
-                  <p className="text-xs text-muted-foreground">Lower = faster updates, higher CPU usage</p>
+                  <p className="text-xs text-muted-foreground">
+                    Lower = faster updates, higher CPU usage
+                  </p>
                 </div>
               </div>
             )}
@@ -933,7 +1259,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 checkingProfile={checkingProfile}
                 onAddToProfile={async () => {
                   try {
-                    const pathDir = claudeDetection?.path?.replace(/[/\\][^/\\]+$/, '');
+                    const pathDir = claudeDetection?.path?.replace(
+                      /[/\\][^/\\]+$/,
+                      "",
+                    );
                     const line = `# Claude Code CLI\nexport PATH="$PATH:${pathDir}"`;
                     await invoke("add_to_shell_profile", { line });
                     toast.success(`Added to ${shellProfilePath}`);
@@ -958,7 +1287,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   <div className="space-y-1">
                     <h3 className="text-lg font-semibold">Codex CLI</h3>
                     <p className="text-sm text-muted-foreground">
-                      Configure OpenAI Codex CLI integration and detection settings
+                      Configure OpenAI Codex CLI integration and detection
+                      settings
                     </p>
                   </div>
                   <Button
@@ -967,8 +1297,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     onClick={detectCodexCLI}
                     disabled={detectingCodex}
                   >
-                    <RefreshCw className={`size-3 mr-2 ${detectingCodex ? 'animate-spin' : ''}`} />
-                    {detectingCodex ? 'Detecting...' : 'Re-detect'}
+                    <RefreshCw
+                      className={`size-3 mr-2 ${detectingCodex ? "animate-spin" : ""}`}
+                    />
+                    {detectingCodex ? "Detecting..." : "Re-detect"}
                   </Button>
                 </div>
 
@@ -979,8 +1311,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     <div
                       className="p-4 rounded-lg border"
                       style={{
-                        backgroundColor: codexDetection.found ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                        borderColor: codexDetection.found ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                        backgroundColor: codexDetection.found
+                          ? "rgba(34, 197, 94, 0.1)"
+                          : "rgba(239, 68, 68, 0.1)",
+                        borderColor: codexDetection.found
+                          ? "rgba(34, 197, 94, 0.3)"
+                          : "rgba(239, 68, 68, 0.3)",
                       }}
                     >
                       <div className="flex items-start gap-3">
@@ -990,18 +1326,33 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                           <AlertCircle className="size-5 text-red-500 flex-shrink-0 mt-0.5" />
                         )}
                         <div className="flex-1 space-y-2">
-                          <p className="text-sm font-medium" style={{ color: "var(--ui-foreground)" }}>
-                            {codexDetection.found ? "Codex CLI is installed" : "Codex CLI not found"}
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: "var(--ui-foreground)" }}
+                          >
+                            {codexDetection.found
+                              ? "Codex CLI is installed"
+                              : "Codex CLI not found"}
                           </p>
                           {codexDetection.found ? (
                             <>
                               {codexDetection.path && (
-                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                <p
+                                  className="text-xs"
+                                  style={{
+                                    color: "var(--ui-muted-foreground)",
+                                  }}
+                                >
                                   Path: {codexDetection.path}
                                 </p>
                               )}
                               {codexDetection.version && (
-                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                <p
+                                  className="text-xs"
+                                  style={{
+                                    color: "var(--ui-muted-foreground)",
+                                  }}
+                                >
                                   Version: {codexDetection.version}
                                 </p>
                               )}
@@ -1010,12 +1361,16 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                                   {codexDetection.authenticated ? (
                                     <>
                                       <Check className="size-4 text-green-500" />
-                                      <span className="text-xs text-green-500">Authenticated</span>
+                                      <span className="text-xs text-green-500">
+                                        Authenticated
+                                      </span>
                                     </>
                                   ) : (
                                     <>
                                       <AlertCircle className="size-4 text-yellow-500" />
-                                      <span className="text-xs text-yellow-500">Not authenticated</span>
+                                      <span className="text-xs text-yellow-500">
+                                        Not authenticated
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -1023,13 +1378,21 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             </>
                           ) : (
                             <div className="space-y-2">
-                              <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                              <p
+                                className="text-xs"
+                                style={{ color: "var(--ui-muted-foreground)" }}
+                              >
                                 Install Codex CLI to get started
                               </p>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open("https://github.com/openai/codex", "_blank")}
+                                onClick={() =>
+                                  window.open(
+                                    "https://github.com/openai/codex",
+                                    "_blank",
+                                  )
+                                }
                               >
                                 <ExternalLink className="size-3 mr-2" />
                                 Installation Guide
@@ -1044,9 +1407,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
                 {/* Configuration Placeholder */}
                 {codexDetection?.found && (
-                  <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <div
+                    className="pt-4 border-t"
+                    style={{ borderColor: "var(--ui-border)" }}
+                  >
                     <p className="text-sm text-muted-foreground">
-                      Additional Codex-specific settings will be available here in future updates.
+                      Additional Codex-specific settings will be available here
+                      in future updates.
                     </p>
                   </div>
                 )}
@@ -1061,7 +1428,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   <div className="space-y-1">
                     <h3 className="text-lg font-semibold">Gemini CLI</h3>
                     <p className="text-sm text-muted-foreground">
-                      Configure Google Gemini CLI integration and detection settings
+                      Configure Google Gemini CLI integration and detection
+                      settings
                     </p>
                   </div>
                   <Button
@@ -1070,8 +1438,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     onClick={detectGeminiCLI}
                     disabled={detectingGemini}
                   >
-                    <RefreshCw className={`size-3 mr-2 ${detectingGemini ? 'animate-spin' : ''}`} />
-                    {detectingGemini ? 'Detecting...' : 'Re-detect'}
+                    <RefreshCw
+                      className={`size-3 mr-2 ${detectingGemini ? "animate-spin" : ""}`}
+                    />
+                    {detectingGemini ? "Detecting..." : "Re-detect"}
                   </Button>
                 </div>
 
@@ -1082,8 +1452,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     <div
                       className="p-4 rounded-lg border"
                       style={{
-                        backgroundColor: geminiDetection.found ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                        borderColor: geminiDetection.found ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                        backgroundColor: geminiDetection.found
+                          ? "rgba(34, 197, 94, 0.1)"
+                          : "rgba(239, 68, 68, 0.1)",
+                        borderColor: geminiDetection.found
+                          ? "rgba(34, 197, 94, 0.3)"
+                          : "rgba(239, 68, 68, 0.3)",
                       }}
                     >
                       <div className="flex items-start gap-3">
@@ -1093,18 +1467,33 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                           <AlertCircle className="size-5 text-red-500 flex-shrink-0 mt-0.5" />
                         )}
                         <div className="flex-1 space-y-2">
-                          <p className="text-sm font-medium" style={{ color: "var(--ui-foreground)" }}>
-                            {geminiDetection.found ? "Gemini CLI is installed" : "Gemini CLI not found"}
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: "var(--ui-foreground)" }}
+                          >
+                            {geminiDetection.found
+                              ? "Gemini CLI is installed"
+                              : "Gemini CLI not found"}
                           </p>
                           {geminiDetection.found ? (
                             <>
                               {geminiDetection.path && (
-                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                <p
+                                  className="text-xs"
+                                  style={{
+                                    color: "var(--ui-muted-foreground)",
+                                  }}
+                                >
                                   Path: {geminiDetection.path}
                                 </p>
                               )}
                               {geminiDetection.version && (
-                                <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                                <p
+                                  className="text-xs"
+                                  style={{
+                                    color: "var(--ui-muted-foreground)",
+                                  }}
+                                >
                                   Version: {geminiDetection.version}
                                 </p>
                               )}
@@ -1113,12 +1502,16 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                                   {geminiDetection.authenticated ? (
                                     <>
                                       <Check className="size-4 text-green-500" />
-                                      <span className="text-xs text-green-500">Authenticated</span>
+                                      <span className="text-xs text-green-500">
+                                        Authenticated
+                                      </span>
                                     </>
                                   ) : (
                                     <>
                                       <AlertCircle className="size-4 text-yellow-500" />
-                                      <span className="text-xs text-yellow-500">Not authenticated</span>
+                                      <span className="text-xs text-yellow-500">
+                                        Not authenticated
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -1126,13 +1519,21 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             </>
                           ) : (
                             <div className="space-y-2">
-                              <p className="text-xs" style={{ color: "var(--ui-muted-foreground)" }}>
+                              <p
+                                className="text-xs"
+                                style={{ color: "var(--ui-muted-foreground)" }}
+                              >
                                 Install Gemini CLI to get started
                               </p>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open("https://github.com/google-gemini/gemini-cli", "_blank")}
+                                onClick={() =>
+                                  window.open(
+                                    "https://github.com/google-gemini/gemini-cli",
+                                    "_blank",
+                                  )
+                                }
                               >
                                 <ExternalLink className="size-3 mr-2" />
                                 Installation Guide
@@ -1147,9 +1548,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
                 {/* Configuration Placeholder */}
                 {geminiDetection?.found && (
-                  <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <div
+                    className="pt-4 border-t"
+                    style={{ borderColor: "var(--ui-border)" }}
+                  >
                     <p className="text-sm text-muted-foreground">
-                      Additional Gemini-specific settings will be available here in future updates.
+                      Additional Gemini-specific settings will be available here
+                      in future updates.
                     </p>
                   </div>
                 )}
@@ -1179,20 +1584,29 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     id="gitEnabled"
                     checked={config.git.enabled}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ git: { ...config.git, enabled: checked } })
+                      handleConfigChange({
+                        git: { ...config.git, enabled: checked },
+                      })
                     }
                   />
                 </div>
 
                 {/* Auto Fetch Interval */}
                 <div className="space-y-2">
-                  <Label htmlFor="autoFetchInterval">Auto Fetch Interval (seconds)</Label>
+                  <Label htmlFor="autoFetchInterval">
+                    Auto Fetch Interval (seconds)
+                  </Label>
                   <Input
                     id="autoFetchInterval"
                     type="number"
                     value={config.git.autoFetchInterval}
                     onChange={(e) =>
-                      handleConfigChange({ git: { ...config.git, autoFetchInterval: parseInt(e.target.value) || 300 } })
+                      handleConfigChange({
+                        git: {
+                          ...config.git,
+                          autoFetchInterval: parseInt(e.target.value) || 300,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -1204,7 +1618,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     id="showDiff"
                     checked={config.git.showDiff}
                     onCheckedChange={(checked) =>
-                      handleConfigChange({ git: { ...config.git, showDiff: checked } })
+                      handleConfigChange({
+                        git: { ...config.git, showDiff: checked },
+                      })
                     }
                   />
                 </div>
@@ -1218,12 +1634,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="autoSaveEnabled">Enable Auto-Save</Label>
-                    <p className="text-xs text-muted-foreground">Automatically save files without manual intervention</p>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically save files without manual intervention
+                    </p>
                   </div>
                   <Switch
                     id="autoSaveEnabled"
                     checked={autoSave.enabled}
-                    onCheckedChange={(checked) =>                updateAutoSave({ enabled: checked })
+                    onCheckedChange={(checked) =>
+                      updateAutoSave({ enabled: checked })
                     }
                   />
                 </div>
@@ -1232,7 +1651,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="onTabSwitch">Save on Tab Switch</Label>
-                    <p className="text-xs text-muted-foreground">Automatically save when switching to another tab</p>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically save when switching to another tab
+                    </p>
                   </div>
                   <Switch
                     id="onTabSwitch"
@@ -1247,8 +1668,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 {/* Save on Window Change */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="onWindowChange">Save on Window Change</Label>
-                    <p className="text-xs text-muted-foreground">Automatically save when the window loses focus</p>
+                    <Label htmlFor="onWindowChange">
+                      Save on Window Change
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically save when the window loses focus
+                    </p>
                   </div>
                   <Switch
                     id="onWindowChange"
@@ -1264,7 +1689,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <Label htmlFor="afterDelay">Auto-Save Delay</Label>
-                    <span className="text-sm text-muted-foreground">{autoSave.afterDelay}ms</span>
+                    <span className="text-sm text-muted-foreground">
+                      {autoSave.afterDelay}ms
+                    </span>
                   </div>
                   <Slider
                     id="afterDelay"
@@ -1277,14 +1704,20 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     }
                     disabled={!autoSave.enabled}
                   />
-                  <p className="text-xs text-muted-foreground">Time to wait after typing stops before auto-saving (0 = disabled)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Time to wait after typing stops before auto-saving (0 =
+                    disabled)
+                  </p>
                 </div>
 
                 {/* Prompt on Close */}
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="promptOnClose">Prompt on Close</Label>
-                    <p className="text-xs text-muted-foreground">Show confirmation dialog when closing tabs with unsaved changes</p>
+                    <p className="text-xs text-muted-foreground">
+                      Show confirmation dialog when closing tabs with unsaved
+                      changes
+                    </p>
                   </div>
                   <Switch
                     id="promptOnClose"
@@ -1296,7 +1729,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 </div>
 
                 {/* Recommended Presets */}
-                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                <div
+                  className="pt-4 border-t"
+                  style={{ borderColor: "var(--ui-border)" }}
+                >
                   <Label className="mb-3 block">Recommended Presets</Label>
                   <div className="grid grid-cols-3 gap-3">
                     <button
@@ -1315,7 +1751,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       <VscVscode className="text-3xl text-blue-500" />
                       <div className="text-center">
                         <div className="font-medium text-sm">VS Code</div>
-                        <div className="text-xs mt-1" style={{ color: "var(--ui-muted-foreground)" }}>
+                        <div
+                          className="text-xs mt-1"
+                          style={{ color: "var(--ui-muted-foreground)" }}
+                        >
                           1s delay
                         </div>
                       </div>
@@ -1336,7 +1775,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       <SiIntellijidea className="text-3xl text-purple-500" />
                       <div className="text-center">
                         <div className="font-medium text-sm">IntelliJ IDEA</div>
-                        <div className="text-xs mt-1" style={{ color: "var(--ui-muted-foreground)" }}>
+                        <div
+                          className="text-xs mt-1"
+                          style={{ color: "var(--ui-muted-foreground)" }}
+                        >
                           Instant
                         </div>
                       </div>
@@ -1357,7 +1799,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       <MdOutlineEditNote className="text-3xl text-gray-500" />
                       <div className="text-center">
                         <div className="font-medium text-sm">Manual</div>
-                        <div className="text-xs mt-1" style={{ color: "var(--ui-muted-foreground)" }}>
+                        <div
+                          className="text-xs mt-1"
+                          style={{ color: "var(--ui-muted-foreground)" }}
+                        >
                           Cmd+S only
                         </div>
                       </div>
@@ -1380,7 +1825,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       className="flex items-center justify-between py-2 border-b"
                       style={{ borderColor: "var(--ui-border)" }}
                     >
-                      <span className="text-sm capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</span>
+                      <span className="text-sm capitalize">
+                        {key.replace(/([A-Z])/g, " $1").trim()}
+                      </span>
                       <code
                         className="text-sm px-2 py-1 rounded"
                         style={{
@@ -1400,7 +1847,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       </div>
 
       {/* CLI Setup Wizard */}
-      <CLISetupWizard isOpen={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <CLISetupWizard
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+      />
     </div>
   );
 }

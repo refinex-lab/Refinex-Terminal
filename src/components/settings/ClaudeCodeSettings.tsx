@@ -1,11 +1,20 @@
 import { useState, useEffect } from "react";
-import { Check, RefreshCw, AlertCircle, Plus, Trash2, ExternalLink, Save } from "lucide-react";
+import { Check, RefreshCw, AlertCircle, Plus, Trash2, ExternalLink, Save, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
+import { PermissionsManager } from "./claude/PermissionsManager";
+import { HooksManager } from "./claude/HooksManager";
+import { ClaudeInstructionsManager } from "./claude/ClaudeInstructionsManager";
+import { EnvironmentManager } from "./claude/EnvironmentManager";
+import { SandboxManager } from "./claude/SandboxManager";
+import { AgentsManager } from "./claude/AgentsManager";
+import { SkillsManager } from "./claude/SkillsManager";
+import { CommandsManager } from "./claude/CommandsManager";
 
 interface ClaudeCodeSettingsProps {
   claudeDetection: { found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null;
@@ -54,7 +63,7 @@ export function ClaudeCodeSettings({
     } catch (error) {
       console.error("Failed to load Claude settings:", error);
       setClaudeSettings({
-
+        env: {},
         skipDangerousModePermissionPrompt: false,
       });
     } finally {
@@ -127,11 +136,14 @@ export function ClaudeCodeSettings({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold">Claude Code</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure Claude Code CLI integration and settings
-          </p>
+        <div className="flex items-center gap-3">
+          <Bot className="size-6" />
+          <div>
+            <h3 className="text-lg font-semibold">Claude Code</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure Claude Code CLI integration and settings
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -275,119 +287,118 @@ export function ClaudeCodeSettings({
 
       {/* Configuration Settings */}
       {claudeDetection?.found && claudeSettings && (
-        <>
-          <div className="space-y-4 pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Configuration Settings</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Manage Claude Code environment variables and permissions
-                </p>
-              </div>
-              <Button
-                onClick={saveClaudeSettings}
-                disabled={savingSettings}
-                size="sm"
-              >
-                {savingSettings ? (
-                  <>
-                    <RefreshCw className="size-3 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="size-3 mr-2" />
-                    Save Settings
-                  </>
-                )}
-              </Button>
-            </div>
+        <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="grid w-full grid-cols-9">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="permissions">Permissions</TabsTrigger>
+              <TabsTrigger value="hooks">Hooks</TabsTrigger>
+              <TabsTrigger value="instructions">Instructions</TabsTrigger>
+              <TabsTrigger value="environment">Environment</TabsTrigger>
+              <TabsTrigger value="sandbox">Sandbox</TabsTrigger>
+              <TabsTrigger value="agents">Agents</TabsTrigger>
+              <TabsTrigger value="skills">Skills</TabsTrigger>
+              <TabsTrigger value="commands">Commands</TabsTrigger>
+            </TabsList>
 
-            {/* Key Environment Variables */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Environment Variables</Label>
-              {keyEnvVars.map(({ key, label, placeholder, type }) => (
-                <div key={key} className="space-y-2">
-                  <Label htmlFor={key} className="text-xs">{label}</Label>
-                  <Input
-                    id={key}
-                    type={type || "text"}
-                    value={claudeSettings.env[key] || ""}
-                    onChange={(e) => updateEnvVar(key, e.target.value)}
-                    placeholder={placeholder}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Custom Environment Variables */}
-            <div className="space-y-3 pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-              <Label className="text-sm font-medium">Custom Environment Variables</Label>
-              {Object.entries(claudeSettings.env)
-                .filter(([key]) => !keyEnvVars.some(v => v.key === key))
-                .map(([key, value]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <Input
-                      value={key}
-                      disabled
-                      className="flex-1 font-mono text-xs"
-                    />
-                    <Input
-                      value={value}
-                      onChange={(e) => updateEnvVar(key, e.target.value)}
-                      className="flex-1 font-mono text-xs"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteEnvVar(key)}
-                    >
-                      <Trash2 className="size-4 text-red-500" />
-                    </Button>
-                  </div>
-                ))}
-
-              {/* Add New Variable */}
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Variable name"
-                  value={newEnvKey}
-                  onChange={(e) => setNewEnvKey(e.target.value)}
-                  className="flex-1 font-mono text-xs"
-                />
-                <Input
-                  placeholder="Value"
-                  value={newEnvValue}
-                  onChange={(e) => setNewEnvValue(e.target.value)}
-                  className="flex-1 font-mono text-xs"
-                />
+            {/* General Settings */}
+            <TabsContent value="general" className="space-y-4 mt-6">
+              <div className="flex items-center justify-between">
+                <Label>Basic Configuration</Label>
                 <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={addEnvVar}
+                  onClick={saveClaudeSettings}
+                  disabled={savingSettings}
+                  size="sm"
                 >
-                  <Plus className="size-4" />
+                  {savingSettings ? (
+                    <>
+                      <RefreshCw className="size-3 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-3 mr-2" />
+                      Save Settings
+                    </>
+                  )}
                 </Button>
               </div>
-            </div>
 
-            {/* Dangerous Mode */}
-            <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
-              <div>
-                <Label htmlFor="dangerousMode">Skip Dangerous Mode Permission Prompt</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enable full permissions without prompts (use with caution)
-                </p>
+              {/* Key Environment Variables */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">API Configuration</Label>
+                {keyEnvVars.map(({ key, label, placeholder, type }) => (
+                  <div key={key} className="space-y-2">
+                    <Label htmlFor={key} className="text-xs">{label}</Label>
+                    <Input
+                      id={key}
+                      type={type || "text"}
+                      value={claudeSettings.env[key] || ""}
+                      onChange={(e) => updateEnvVar(key, e.target.value)}
+                      placeholder={placeholder}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                ))}
               </div>
-              <Switch
-                id="dangerousMode"
-                checked={claudeSettings.skipDangerousModePermissionPrompt || false}
-                onCheckedChange={toggleDangerousMode}
-              />
-            </div>
-          </div>
-        </>
+
+              {/* Dangerous Mode */}
+              <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                <div>
+                  <Label htmlFor="dangerousMode">Skip Dangerous Mode Permission Prompt</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enable full permissions without prompts (use with caution)
+                  </p>
+                </div>
+                <Switch
+                  id="dangerousMode"
+                  checked={claudeSettings.skipDangerousModePermissionPrompt || false}
+                  onCheckedChange={toggleDangerousMode}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Permissions */}
+            <TabsContent value="permissions" className="mt-6">
+              <PermissionsManager />
+            </TabsContent>
+
+            {/* Hooks */}
+            <TabsContent value="hooks" className="mt-6">
+              <HooksManager />
+            </TabsContent>
+
+            {/* Instructions */}
+            <TabsContent value="instructions" className="mt-6">
+              <ClaudeInstructionsManager />
+            </TabsContent>
+
+            {/* Environment */}
+            <TabsContent value="environment" className="mt-6">
+              <EnvironmentManager />
+            </TabsContent>
+
+            {/* Sandbox */}
+            <TabsContent value="sandbox" className="mt-6">
+              <SandboxManager />
+            </TabsContent>
+
+            {/* Agents */}
+            <TabsContent value="agents" className="mt-6">
+              <AgentsManager />
+            </TabsContent>
+
+            {/* Skills */}
+            <TabsContent value="skills" className="mt-6">
+              <SkillsManager />
+            </TabsContent>
+
+            {/* Commands */}
+            <TabsContent value="commands" className="mt-6">
+              <CommandsManager />
+            </TabsContent>
+          </Tabs>
+        </div>
       )}
     </div>
   );
