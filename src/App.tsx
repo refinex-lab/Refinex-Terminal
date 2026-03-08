@@ -34,6 +34,7 @@ import { StatusBar } from "@/components/editor/StatusBar";
 import { GitGraphView } from "@/components/git/GitGraphView";
 import { GitGraphViewPanel } from "@/components/git/GitGraphViewPanel";
 import { HostSidebar } from "@/components/ssh/HostSidebar";
+import { UpdateNotification } from "@/components/UpdateNotification";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -1292,6 +1293,12 @@ function App() {
           />
         )}
       </Suspense>
+
+      {/* Update notification */}
+      <UpdateNotification />
+
+      {/* Toast notifications */}
+      <Toaster position="top-right" />
     </div>
   );
 }
