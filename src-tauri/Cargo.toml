@@ -61,6 +61,10 @@ async-trait = "0.1"
 # UUID generation
 uuid = { version = "1", features = ["v4"] }
 
+# Search functionality
+regex = "1"
+walkdir = "2"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
 objc = "0.2"

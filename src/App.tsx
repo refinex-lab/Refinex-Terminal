@@ -78,6 +78,11 @@ const CommandPalette = lazy(() =>
     default: m.CommandPalette,
   })),
 );
+const GlobalSearch = lazy(() =>
+  import("@/components/sidebar/GlobalSearch").then((m) => ({
+    default: m.GlobalSearch,
+  })),
+);
 
 function App() {
   const { sessions, addSession, activeSessionId } = useTerminalStore();
@@ -94,6 +99,8 @@ function App() {
   const [projectSwitchOpen, setProjectSwitchOpen] = useState(false);
   const [fileFinderOpen, setFileFinderOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [globalSearchShowReplace, setGlobalSearchShowReplace] = useState(false);
   const [editorWidth, setEditorWidth] = useState(600);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
@@ -135,6 +142,22 @@ function App() {
     "command_palette.open_files",
     useCallback(() => {
       setFileFinderOpen(true);
+    }, []),
+  );
+
+  useActionHandler(
+    "search.global",
+    useCallback(() => {
+      setGlobalSearchShowReplace(false);
+      setGlobalSearchOpen(true);
+    }, []),
+  );
+
+  useActionHandler(
+    "search.global_replace",
+    useCallback(() => {
+      setGlobalSearchShowReplace(true);
+      setGlobalSearchOpen(true);
     }, []),
   );
 
@@ -1249,6 +1272,15 @@ function App() {
           <FuzzyFileFinder
             isOpen={fileFinderOpen}
             onClose={() => setFileFinderOpen(false)}
+          />
+        )}
+
+        {/* Global Search */}
+        {globalSearchOpen && (
+          <GlobalSearch
+            isOpen={globalSearchOpen}
+            onClose={() => setGlobalSearchOpen(false)}
+            showReplace={globalSearchShowReplace}
           />
         )}
 

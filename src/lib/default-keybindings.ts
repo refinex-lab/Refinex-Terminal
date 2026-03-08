@@ -48,7 +48,6 @@ export const globalKeybindings: KeybindingMap = {
   // Sidebar
   "Cmd+B": "sidebar.toggle",
   "Cmd+Shift+E": "sidebar.focus_explorer",
-  "Cmd+Shift+F": "sidebar.focus_search",
 
   // File Editor
   "Cmd+S": "editor.save",
@@ -69,11 +68,15 @@ export const globalKeybindings: KeybindingMap = {
   // Application
   "Cmd+Q": "app.quit",
   "Cmd+R": "app.reload",
-  "Cmd+Shift+R": "app.hard_reload",
+  "Cmd+Alt+R": "app.hard_reload",
 
   // Window Management
   "Cmd+Enter": "window.toggle_fullscreen",
   "F11": "window.toggle_fullscreen",
+
+  // Global Search
+  "Cmd+Shift+F": "search.global",
+  "Cmd+Shift+H": "search.global_replace",
 };
 
 /**

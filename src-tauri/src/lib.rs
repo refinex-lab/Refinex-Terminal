@@ -7,6 +7,7 @@ mod fs;
 mod git;
 mod logging;
 mod ssh;
+mod search;
 
 use pty::PtyManager;
 use commands::{pty_spawn, pty_write, pty_resize, pty_kill, get_config, update_config, reset_config, get_config_file_path, read_theme_file, list_fonts, set_title_bar_theme, set_window_opacity, set_window_vibrancy, toggle_fullscreen, set_always_on_top, get_window_state, restore_window_state, ConfigState};
@@ -174,7 +175,9 @@ pub fn run() {
             ssh::sftp_upload_directory,
             ssh::sftp_cancel_transfer,
             ssh::sftp_pause_transfer,
-            ssh::sftp_resume_transfer
+            ssh::sftp_resume_transfer,
+            search::global_search,
+            search::replace_in_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

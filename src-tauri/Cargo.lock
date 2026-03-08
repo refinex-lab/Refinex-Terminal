@@ -4152,6 +4152,7 @@ dependencies = [
  "notify-debouncer-full",
  "objc",
  "portable-pty",
+ "regex",
  "russh",
  "russh-keys",
  "russh-sftp",
@@ -4173,6 +4174,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]

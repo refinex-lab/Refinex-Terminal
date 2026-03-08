@@ -30,6 +30,7 @@ interface FileEditorStore {
   closeTabsToRight: (id: string) => void;
   reorderTabs: (oldIndex: number, newIndex: number) => void;
   openFile: (file: { path: string; name?: string; content: string; language: string; metadata?: string }) => void;
+  openFileAtLine: (path: string, lineNumber: number) => void;
 }
 
 /**
@@ -220,4 +221,19 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
         tabs: newTabs,
       };
     }),
+
+  openFileAtLine: (path, lineNumber) => {
+    const fileName = path.split('/').pop() || path;
+
+    // First, open or activate the tab
+    get().addTab(path, fileName);
+
+    // Emit a custom event to notify the editor to scroll to the line
+    // The FilePreview component will listen for this event
+    window.dispatchEvent(
+      new CustomEvent('editor-goto-line', {
+        detail: { path, lineNumber },
+      })
+    );
+  },
 }));
