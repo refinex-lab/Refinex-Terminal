@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, ChevronDown, Palette, Terminal, FileText, GitBranch, Keyboard, Sparkles, Settings } from "lucide-react";
 import { VscVscode } from "react-icons/vsc";
 import { SiIntellijidea } from "react-icons/si";
 import { MdOutlineEditNote } from "react-icons/md";
+import claudeIcon from "@/assets/icons/claude.svg";
+import codexIcon from "@/assets/icons/codex.svg";
+import geminiIcon from "@/assets/icons/gemini.svg";
+import copilotIcon from "@/assets/icons/copilot.svg";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -22,13 +26,14 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
-type SettingsSection = "appearance" | "terminal" | "ai" | "git" | "keybindings" | "editor";
+type SettingsSection = "appearance" | "terminal" | "ai" | "ai-general" | "ai-claude" | "ai-codex" | "ai-gemini" | "ai-copilot" | "git" | "keybindings" | "editor";
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [aiExpanded, setAiExpanded] = useState(false);
   const { config, updateConfig } = useConfigStore();
   const { autoSave, updateAutoSave } = useSettingsStore();
 
@@ -131,13 +136,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     }
   };
 
-  const sections: { id: SettingsSection; label: string }[] = [
-    { id: "appearance", label: "Appearance" },
-    { id: "terminal", label: "Terminal" },
-    { id: "editor", label: "File Editor" },
-    { id: "ai", label: "AI" },
-    { id: "git", label: "Git" },
-    { id: "keybindings", label: "Keybindings" },
+  const sections: { id: SettingsSection; label: string; icon?: React.ReactNode; indent?: boolean }[] = [
+    { id: "appearance", label: "Appearance", icon: <Palette className="size-4" /> },
+    { id: "terminal", label: "Terminal", icon: <Terminal className="size-4" /> },
+    { id: "editor", label: "File Editor", icon: <FileText className="size-4" /> },
+    { id: "git", label: "Git", icon: <GitBranch className="size-4" /> },
+    { id: "ai-general", label: "General", icon: <Settings className="size-4" />, indent: true },
+    { id: "ai-claude", label: "Claude Code", icon: <img src={claudeIcon} className="size-4" alt="Claude" />, indent: true },
+    { id: "ai-codex", label: "Codex CLI", icon: <img src={codexIcon} className="size-4" alt="Codex" />, indent: true },
+    { id: "ai-gemini", label: "Gemini CLI", icon: <img src={geminiIcon} className="size-4" alt="Gemini" />, indent: true },
+    { id: "ai-copilot", label: "GitHub Copilot", icon: <img src={copilotIcon} className="size-4" alt="Copilot" />, indent: true },
+    { id: "keybindings", label: "Keybindings", icon: <Keyboard className="size-4" /> },
   ];
 
   return (
@@ -164,11 +173,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             <h2 className="text-lg font-semibold">Settings</h2>
           </div>
           <nav className="space-y-1">
-            {sections.map((section) => (
+            {/* Render sections, inserting AI before Git */}
+            {sections.filter(s => !s.id.startsWith("ai-") && s.id !== "git" && s.id !== "keybindings").map((section) => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors"
+                className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2"
                 style={{
                   backgroundColor: activeSection === section.id ? "var(--ui-button-background)" : "transparent",
                   color: activeSection === section.id ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
@@ -187,7 +197,101 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   }
                 }}
               >
-                {section.label}
+                {section.icon}
+                <span>{section.label}</span>
+              </button>
+            ))}
+
+            {/* AI Parent Item */}
+            <button
+              onClick={() => {
+                setAiExpanded(!aiExpanded);
+                if (!aiExpanded) {
+                  setActiveSection("ai-general");
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between"
+              style={{
+                backgroundColor: activeSection.startsWith("ai-") ? "var(--ui-button-background)" : "transparent",
+                color: activeSection.startsWith("ai-") ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
+                fontWeight: activeSection.startsWith("ai-") ? 500 : 400,
+              }}
+              onMouseEnter={(e) => {
+                if (!activeSection.startsWith("ai-")) {
+                  e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+                  e.currentTarget.style.color = "var(--ui-foreground)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!activeSection.startsWith("ai-")) {
+                  e.currentTarget.style.backgroundColor = activeSection.startsWith("ai-") ? "var(--ui-button-background)" : "transparent";
+                  e.currentTarget.style.color = activeSection.startsWith("ai-") ? "var(--ui-foreground)" : "var(--ui-tab-foreground)";
+                }
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4" />
+                <span>AI</span>
+              </div>
+              <ChevronDown className="size-3" style={{ transform: aiExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }} />
+            </button>
+
+            {/* AI Subsections (only when expanded) */}
+            {aiExpanded && sections.filter(s => s.id.startsWith("ai-")).map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className="w-full text-left py-2 rounded-md text-sm transition-colors flex items-center gap-2"
+                style={{
+                  paddingLeft: "2rem",
+                  backgroundColor: activeSection === section.id ? "var(--ui-button-background)" : "transparent",
+                  color: activeSection === section.id ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
+                  fontWeight: activeSection === section.id ? 500 : 400,
+                }}
+                onMouseEnter={(e) => {
+                  if (activeSection !== section.id) {
+                    e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+                    e.currentTarget.style.color = "var(--ui-foreground)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeSection !== section.id) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "var(--ui-tab-foreground)";
+                  }
+                }}
+              >
+                {section.icon}
+                <span>{section.label}</span>
+              </button>
+            ))}
+
+            {/* Git and Keybindings */}
+            {sections.filter(s => s.id === "git" || s.id === "keybindings").map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2"
+                style={{
+                  backgroundColor: activeSection === section.id ? "var(--ui-button-background)" : "transparent",
+                  color: activeSection === section.id ? "var(--ui-foreground)" : "var(--ui-tab-foreground)",
+                  fontWeight: activeSection === section.id ? 500 : 400,
+                }}
+                onMouseEnter={(e) => {
+                  if (activeSection !== section.id) {
+                    e.currentTarget.style.backgroundColor = "var(--ui-tab-background-active)";
+                    e.currentTarget.style.color = "var(--ui-foreground)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeSection !== section.id) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "var(--ui-tab-foreground)";
+                  }
+                }}
+              >
+                {section.icon}
+                <span>{section.label}</span>
               </button>
             ))}
           </nav>
@@ -474,8 +578,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               </div>
             )}
 
-            {/* AI Section */}
-            {activeSection === "ai" && (
+            {/* AI General Section */}
+            {activeSection === "ai-general" && (
               <div className="space-y-6">
                 {/* Detect CLI */}
                 <div className="flex items-center justify-between">
@@ -525,17 +629,124 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   />
                   <p className="text-xs text-muted-foreground">Lower = faster updates, higher CPU usage</p>
                 </div>
+              </div>
+            )}
 
-                {/* CLI Setup Wizard Button */}
-                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+            {/* AI - Claude Code Section */}
+            {activeSection === "ai-claude" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Claude Code</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure Claude Code CLI integration and detection settings.
+                  </p>
+                </div>
+
+                <div className="pt-4">
                   <Button
                     onClick={() => setWizardOpen(true)}
                     className="w-full"
                   >
-                    Configure AI CLI Tools
+                    Configure Claude Code
                   </Button>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Set up Claude Code, GitHub Copilot, and other AI CLI tools
+                    Detect installation, check authentication, and configure shell integration
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <p className="text-sm text-muted-foreground">
+                    Additional Claude Code-specific settings will be available here in future updates.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* AI - Codex CLI Section */}
+            {activeSection === "ai-codex" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Codex CLI</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure OpenAI Codex CLI integration and detection settings.
+                  </p>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    onClick={() => setWizardOpen(true)}
+                    className="w-full"
+                  >
+                    Configure Codex CLI
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Detect installation, check authentication, and configure shell integration
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <p className="text-sm text-muted-foreground">
+                    Additional Codex-specific settings will be available here in future updates.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* AI - Gemini CLI Section */}
+            {activeSection === "ai-gemini" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Gemini CLI</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure Google Gemini CLI integration and detection settings.
+                  </p>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    onClick={() => setWizardOpen(true)}
+                    className="w-full"
+                  >
+                    Configure Gemini CLI
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Detect installation, check authentication, and configure shell integration
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <p className="text-sm text-muted-foreground">
+                    Additional Gemini-specific settings will be available here in future updates.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* AI - GitHub Copilot Section */}
+            {activeSection === "ai-copilot" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">GitHub Copilot CLI</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure GitHub Copilot CLI integration and detection settings.
+                  </p>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    onClick={() => setWizardOpen(true)}
+                    className="w-full"
+                  >
+                    Configure GitHub Copilot
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Detect installation, check authentication, and configure shell integration
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+                  <p className="text-sm text-muted-foreground">
+                    Additional Copilot-specific settings will be available here in future updates.
                   </p>
                 </div>
               </div>

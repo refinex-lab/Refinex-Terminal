@@ -294,15 +294,18 @@ fn check_claude_auth() -> Option<bool> {
     let home = dirs::home_dir()?;
     let claude_dir = home.join(".claude");
 
-    // Check if credentials file exists
+    // Check if credentials file exists (faster than running claude doctor)
     if claude_dir.exists() {
-        // Try running claude doctor
-        let output = Command::new("claude")
-            .arg("doctor")
-            .output()
-            .ok()?;
+        // Check for common credential files
+        let cred_file = claude_dir.join("credentials.json");
+        let config_file = claude_dir.join("config.json");
 
-        return Some(output.status.success());
+        if cred_file.exists() || config_file.exists() {
+            return Some(true);
+        }
+
+        // If directory exists but no credential files, assume not authenticated
+        return Some(false);
     }
 
     Some(false)
