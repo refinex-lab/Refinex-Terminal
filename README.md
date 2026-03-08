@@ -12,6 +12,8 @@ Optimized for Claude Code, GitHub Copilot CLI, Codex CLI, and Gemini CLI
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
+[English](README.md) · [中文](README.zh-CN.md)
+
 [Features](#-features) · [Quick Start](#-quick-start) · [Documentation](#-documentation) · [Contributing](#-contributing)
 
 </div>
@@ -300,9 +302,9 @@ Then reference it in your config: `theme = "/path/to/my-theme.toml"`
 ## 📚 Documentation
 
 - **[Setup Guide](docs/SETUP.md)** - Detailed environment setup instructions
-- **[Auto-Updater](docs/AUTO_UPDATER.md)** - Configure automatic updates
-- **[macOS Signing](docs/MACOS_SIGNING.md)** - Code signing and notarization guide
-- **[Windows Installer](docs/WINDOWS_INSTALLER.md)** - Windows installer configuration
+- **[Auto-Updater](docs/AUTO_UPDATER.md)** ([中文](docs/AUTO_UPDATER.zh-CN.md)) - Configure automatic updates
+- **[macOS Signing](docs/MACOS_SIGNING.md)** ([中文](docs/MACOS_SIGNING.zh-CN.md)) - Code signing and notarization guide
+- **[Windows Installer](docs/WINDOWS_INSTALLER.md)** ([中文](docs/WINDOWS_INSTALLER.zh-CN.md)) - Windows installer configuration
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
 - **[Contributing](CONTRIBUTING.md)** - Contribution guidelines
 

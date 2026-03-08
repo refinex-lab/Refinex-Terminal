@@ -12,6 +12,8 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
+[English](README.md) · [中文](README.zh-CN.md)
+
 [功能特性](#-功能特性) · [快速开始](#-快速开始) · [文档](#-文档) · [参与贡献](#-参与贡献)
 
 </div>
@@ -300,9 +302,9 @@ border = "#292e42"
 ## 📚 文档
 
 - **[环境配置指南](docs/SETUP.md)** - 详细的环境配置说明
-- **[自动更新器](docs/AUTO_UPDATER.md)** - 配置自动更新
-- **[macOS 签名](docs/MACOS_SIGNING.md)** - 代码签名和公证指南
-- **[Windows 安装程序](docs/WINDOWS_INSTALLER.md)** - Windows 安装程序配置
+- **[自动更新器](docs/AUTO_UPDATER.zh-CN.md)** ([English](docs/AUTO_UPDATER.md)) - 配置自动更新
+- **[macOS 签名](docs/MACOS_SIGNING.zh-CN.md)** ([English](docs/MACOS_SIGNING.md)) - 代码签名和公证指南
+- **[Windows 安装程序](docs/WINDOWS_INSTALLER.zh-CN.md)** ([English](docs/WINDOWS_INSTALLER.md)) - Windows 安装程序配置
 - **[更新日志](CHANGELOG.md)** - 版本历史和发布说明
 - **[贡献指南](CONTRIBUTING.md)** - 贡献指南
 
