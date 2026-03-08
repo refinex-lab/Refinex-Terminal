@@ -44,6 +44,39 @@
       "entitlements": null,
       "exceptionDomain": null,
       "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "en-US",
+        "template": null,
+        "fragmentPaths": [],
+        "componentRefs": [],
+        "featureRefs": [],
+        "mergeRefs": [],
+        "skipWebviewInstall": false,
+        "license": null,
+        "enableElevatedUpdateInstall": false,
+        "bannerPath": null,
+        "dialogImagePath": null
+      },
+      "nsis": {
+        "template": null,
+        "license": null,
+        "headerImage": null,
+        "sidebarImage": null,
+        "installerIcon": null,
+        "installMode": "perUser",
+        "languages": ["en-US"],
+        "displayLanguageSelector": false,
+        "compression": "lzma",
+        "startMenuFolder": "Refinex Terminal",
+        "installerHooks": "installer/installer-hooks.nsi",
+        "allowDowngrades": false,
+        "allowToChangeInstallationDirectory": true
+      }
     }
   },
   "plugins": {

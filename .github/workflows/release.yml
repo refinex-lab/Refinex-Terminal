@@ -136,6 +136,37 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm tauri build
 
+      - name: Sign Windows installer
+        if: matrix.platform.os == 'windows-latest' && secrets.WINDOWS_CERTIFICATE
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          # Decode certificate
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          $certPath = Join-Path $env:RUNNER_TEMP "certificate.pfx"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+
+          # Find installers
+          $msiFiles = Get-ChildItem -Path "src-tauri\target\release\bundle\msi" -Filter "*.msi" -ErrorAction SilentlyContinue
+          $exeFiles = Get-ChildItem -Path "src-tauri\target\release\bundle\nsis" -Filter "*.exe" -ErrorAction SilentlyContinue
+
+          # Sign MSI files
+          foreach ($file in $msiFiles) {
+            Write-Host "Signing MSI: $($file.FullName)"
+            & signtool sign /f $certPath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $file.FullName
+          }
+
+          # Sign EXE files
+          foreach ($file in $exeFiles) {
+            Write-Host "Signing EXE: $($file.FullName)"
+            & signtool sign /f $certPath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $file.FullName
+          }
+
+          # Clean up certificate
+          Remove-Item $certPath
+
       - name: Clean up keychain (macOS)
         if: matrix.platform.os == 'macos-latest' && secrets.APPLE_CERTIFICATE && always()
         run: |

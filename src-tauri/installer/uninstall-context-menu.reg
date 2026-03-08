@@ -1,0 +1,10 @@
+Windows Registry Editor Version 5.00
+
+; Remove "Open Refinex Terminal here" from folder context menu
+[-HKEY_CLASSES_ROOT\Directory\shell\RefinexTerminal]
+
+; Remove "Open Refinex Terminal here" from folder background context menu
+[-HKEY_CLASSES_ROOT\Directory\Background\shell\RefinexTerminal]
+
+; Remove "Open Refinex Terminal here" from drive context menu
+[-HKEY_CLASSES_ROOT\Drive\shell\RefinexTerminal]

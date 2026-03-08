@@ -1,0 +1,25 @@
+Windows Registry Editor Version 5.00
+
+; Add "Open Refinex Terminal here" to folder context menu
+[HKEY_CLASSES_ROOT\Directory\shell\RefinexTerminal]
+@="Open Refinex Terminal here"
+"Icon"="C:\\Program Files\\Refinex Terminal\\refinex-terminal.exe"
+
+[HKEY_CLASSES_ROOT\Directory\shell\RefinexTerminal\command]
+@="\"C:\\Program Files\\Refinex Terminal\\refinex-terminal.exe\" \"%V\""
+
+; Add "Open Refinex Terminal here" to folder background context menu
+[HKEY_CLASSES_ROOT\Directory\Background\shell\RefinexTerminal]
+@="Open Refinex Terminal here"
+"Icon"="C:\\Program Files\\Refinex Terminal\\refinex-terminal.exe"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\RefinexTerminal\command]
+@="\"C:\\Program Files\\Refinex Terminal\\refinex-terminal.exe\" \"%V\""
+
+; Add "Open Refinex Terminal here" to drive context menu
+[HKEY_CLASSES_ROOT\Drive\shell\RefinexTerminal]
+@="Open Refinex Terminal here"
+"Icon"="C:\\Program Files\\Refinex Terminal\\refinex-terminal.exe"
+
+[HKEY_CLASSES_ROOT\Drive\shell\RefinexTerminal\command]
+@="\"C:\\Program Files\\Refinex Terminal\\refinex-terminal.exe\" \"%V\""
