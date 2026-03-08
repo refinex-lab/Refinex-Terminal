@@ -67,10 +67,18 @@ export function MCPServerManager() {
   const openEditDialog = (serverName?: string) => {
     if (serverName) {
       const server = mcpConfig.mcpServers[serverName];
-      setEditingServer({
-        name: serverName,
-        ...server,
-      });
+      if (server) {
+        setEditingServer({
+          name: serverName,
+          type: server.type || "local",
+          command: server.command,
+          args: server.args,
+          tools: server.tools || [],
+          env: server.env,
+          url: server.url,
+          headers: server.headers,
+        });
+      }
     } else {
       setEditingServer({
         name: "",

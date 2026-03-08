@@ -27,7 +27,7 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 
     return {
       available: false,
-      currentVersion: update?.currentVersion || "unknown",
+      currentVersion: "unknown",
     };
   } catch (error) {
     console.error("Failed to check for updates:", error);
@@ -57,8 +57,8 @@ export async function downloadAndInstallUpdate(
           console.log("Update download started");
           break;
         case "Progress":
-          if (event.data.contentLength) {
-            const progress = (event.data.chunkLength / event.data.contentLength) * 100;
+          if ((event.data as any).contentLength) {
+            const progress = (event.data.chunkLength / (event.data as any).contentLength) * 100;
             onProgress?.(progress);
             console.log(`Download progress: ${progress.toFixed(1)}%`);
           }

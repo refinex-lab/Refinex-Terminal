@@ -44,7 +44,8 @@ export function useTerminalTransport(config: TerminalTransportConfig): TerminalT
 
     return {
       write: async (data: string) => {
-        await ptyWrite(config.localPtyId!, data);
+        const encoder = new TextEncoder();
+        await ptyWrite(config.localPtyId!, encoder.encode(data));
       },
 
       resize: async (cols: number, rows: number) => {

@@ -195,7 +195,7 @@ export function GlobalSearch({ isOpen, onClose, showReplace = false }: GlobalSea
               <span className="truncate">{node.name}</span>
             </button>
           </div>
-          {isExpanded && hasChildren && (
+          {isExpanded && hasChildren && node.children && (
             <div>{renderDirectoryTree(node.children, depth + 1)}</div>
           )}
         </div>
@@ -248,7 +248,7 @@ export function GlobalSearch({ isOpen, onClose, showReplace = false }: GlobalSea
       setResults(searchResults);
 
       // Auto-expand first file if results exist
-      if (searchResults.length > 0) {
+      if (searchResults.length > 0 && searchResults[0]) {
         setExpandedFiles(new Set([searchResults[0].filePath]));
       }
     } catch (error) {

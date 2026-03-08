@@ -222,7 +222,9 @@ function App() {
     // Auto-open last project if available
     if (projectHistory.length > 0 && !useSidebarStore.getState().activeProject) {
       const lastProject = projectHistory[0];
-      addProject(lastProject.path);
+      if (lastProject) {
+        addProject(lastProject.path);
+      }
     }
   }, []);
 

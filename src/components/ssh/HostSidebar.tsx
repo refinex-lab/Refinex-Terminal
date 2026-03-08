@@ -22,6 +22,7 @@ export function HostSidebar() {
     isHostConnected,
     addConnection,
     updateHost,
+    deleteHost,
   } = useSshStore();
 
   const { addSession, setActiveSession } = useTerminalStore();

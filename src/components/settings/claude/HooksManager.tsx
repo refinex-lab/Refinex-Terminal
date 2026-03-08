@@ -162,7 +162,10 @@ export function HooksManager() {
   const updateHook = (index: number, updates: Partial<Hook>) => {
     if (!editingMatcher) return;
     const newHooks = [...editingMatcher.hooks];
-    newHooks[index] = { ...newHooks[index], ...updates };
+    const currentHook = newHooks[index];
+    if (currentHook) {
+      newHooks[index] = { ...currentHook, ...updates } as Hook;
+    }
     setEditingMatcher({
       ...editingMatcher,
       hooks: newHooks,

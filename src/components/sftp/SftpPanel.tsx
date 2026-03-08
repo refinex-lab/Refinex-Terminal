@@ -455,6 +455,7 @@ export function SftpPanel({
           setConflictDialog({
             open: true,
             fileName,
+            showApplyToAll: false,
             onResolve: async (action) => {
               if (action === "overwrite") {
                 await sftpDownload(sessionId, remoteFilePath, localFilePath);

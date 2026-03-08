@@ -63,7 +63,7 @@ export function GitGraphViewPanel({
   useEffect(() => {
     // Auto-load commits for the current branch when branches are loaded
     if (branches.length > 0 && !selectedBranch) {
-      const currentBranch = branches.find(b => b.is_head || (b as any).is_current);
+      const currentBranch = branches.find(b => (b as any).is_head || (b as any).is_current);
       if (currentBranch) {
         loadCommits(currentBranch.name);
       }
@@ -234,7 +234,7 @@ export function GitGraphViewPanel({
                 Local
               </div>
               {localBranches.map((branch) => {
-                const isCurrentBranch = branch.is_head || (branch as any).is_current;
+                const isCurrentBranch = (branch as any).is_head || (branch as any).is_current;
                 return (
                   <div
                     key={branch.name}
@@ -467,7 +467,7 @@ export function GitGraphViewPanel({
           <button
             onClick={() => handleCheckoutBranch(contextMenu.branch.name)}
             className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-colors"
-            disabled={contextMenu.branch.is_head || (contextMenu.branch as any).is_current}
+            disabled={(contextMenu.branch as any).is_head || (contextMenu.branch as any).is_current}
           >
             Checkout
           </button>

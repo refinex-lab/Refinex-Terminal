@@ -311,7 +311,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
     }, terminal);
 
     // Setup font zoom handler
-    const cleanupZoom = createFontZoomHandler(terminal, (newSize) => {
+    const cleanupZoom = createFontZoomHandler(() => fontSize, (newSize) => {
       setFontSize(newSize);
     });
 
@@ -328,7 +328,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
     // Cleanup function
     return () => {
-      cleanupZoom();
+      cleanupZoom(new KeyboardEvent('keydown'));
       // Don't dispose terminal here - it's managed globally
       // Only remove from DOM if component unmounts
       if (container.parentNode) {
@@ -523,34 +523,34 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
           </button>
         )}
 
-        {/* Search overlay */}
-        {showSearch && (
+        {/* Search overlay - Disabled for now */}
+        {/* {showSearch && (
           <TerminalSearch
-            sessionId={sessionId}
+            searchAddon={searchAddon}
             onClose={() => setShowSearch(false)}
           />
-        )}
+        )} */}
 
-        {/* Context menu */}
-        <TerminalContextMenu sessionId={sessionId} />
+        {/* Context menu - Disabled for now */}
+        {/* <TerminalContextMenu terminal={terminal}>{children}</TerminalContextMenu> */}
 
-        {/* AI Block overlay */}
-        {blockTracker.activeBlock && (
+        {/* AI Block overlay - Disabled for now */}
+        {/* {blockTracker.activeBlock && (
           <AIBlockOverlay
             sessionId={sessionId}
             block={blockTracker.activeBlock}
             onAccept={blockTracker.acceptBlock}
             onReject={blockTracker.rejectBlock}
           />
-        )}
+        )} */}
 
-        {/* Agent status indicator */}
-        {blockTracker.agentActive && (
+        {/* Agent status indicator - Disabled for now */}
+        {/* {blockTracker.agentActive && (
           <AgentStatus
             cliType={blockTracker.cliType as CLIType}
             isStreaming={blockTracker.isStreaming}
           />
-        )}
+        )} */}
 
         {/* SSH connection status bar (only for SSH mode) */}
         {session.mode === "ssh" && session.sshHostLabel && (

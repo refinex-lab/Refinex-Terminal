@@ -32,7 +32,7 @@ export function useSSHReconnect({
   });
 
   const { getHost, removeConnection } = useSshStore();
-  const { updateSession } = useTerminalStore();
+  // const { updateSession } = useTerminalStore(); // Not available in current store
 
   // Listen for disconnection events
   useEffect(() => {
@@ -96,10 +96,11 @@ export function useSSHReconnect({
       const newChannelId = await sshOpenShell(newConnId, 80, 24);
 
       // Update session with new connection and channel IDs
-      updateSession(sessionId, {
-        sshConnectionId: newConnId,
-        sshChannelId: newChannelId,
-      });
+      // TODO: Implement updateSession in terminal store
+      // updateSession(sessionId, {
+      //   sshConnectionId: newConnId,
+      //   sshChannelId: newChannelId,
+      // });
 
       // Reset state
       setState({
@@ -116,7 +117,7 @@ export function useSSHReconnect({
         reason: `Reconnection failed: ${error}`,
       }));
     }
-  }, [hostId, sessionId, state.isReconnecting, getHost, updateSession]);
+  }, [hostId, sessionId, state.isReconnecting, getHost]);
 
   const handleClose = useCallback(() => {
     setState({

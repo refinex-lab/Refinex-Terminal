@@ -81,7 +81,7 @@ export function FileRow({
         onContextMenu={handleContextMenu}
         {...attributes}
       >
-        <td className="px-4 py-2" {...dragHandleListeners}>
+        <td className="px-4 py-2" {...(dragHandleListeners as any)}>
           <div className="flex items-center gap-2">
             <Icon className="size-4 text-[var(--ui-muted-foreground)]" />
             <span className="text-[var(--ui-foreground)] truncate">{file.name}</span>
