@@ -9,6 +9,7 @@ use super::connection::SshConnectionManager;
 
 /// Remote file entry information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RemoteFileEntry {
     pub name: String,
     pub path: String,

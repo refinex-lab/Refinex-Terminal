@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::{Mutex, Semaphore, Notify};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -38,6 +38,8 @@ pub struct TransferProgress {
 /// Active transfer info
 struct ActiveTransfer {
     cancel_token: CancellationToken,
+    pause_notify: Arc<Notify>,
+    is_paused: Arc<Mutex<bool>>,
 }
 
 /// Transfer manager
@@ -67,6 +69,8 @@ impl TransferManager {
     ) -> Result<String, String> {
         let transfer_id = Uuid::new_v4().to_string();
         let cancel_token = CancellationToken::new();
+        let pause_notify = Arc::new(Notify::new());
+        let is_paused = Arc::new(Mutex::new(false));
 
         // Register transfer
         {
@@ -75,6 +79,8 @@ impl TransferManager {
                 transfer_id.clone(),
                 ActiveTransfer {
                     cancel_token: cancel_token.clone(),
+                    pause_notify: pause_notify.clone(),
+                    is_paused: is_paused.clone(),
                 },
             );
         }
@@ -99,6 +105,8 @@ impl TransferManager {
                 remote_path,
                 transfer_id_clone.clone(),
                 cancel_token,
+                pause_notify,
+                is_paused,
             )
             .await;
 
@@ -127,6 +135,8 @@ impl TransferManager {
         remote_path: String,
         transfer_id: String,
         cancel_token: CancellationToken,
+        pause_notify: Arc<Notify>,
+        is_paused: Arc<Mutex<bool>>,
     ) -> Result<(), String> {
         // Open local file
         let mut local_file = File::open(&local_path)
@@ -176,6 +186,14 @@ impl TransferManager {
             // Check cancellation
             if cancel_token.is_cancelled() {
                 return Err("Transfer cancelled".to_string());
+            }
+
+            // Check if paused
+            let paused = *is_paused.lock().await;
+            if paused {
+                // Wait for resume notification
+                pause_notify.notified().await;
+                continue;
             }
 
             // Read chunk from local file
@@ -254,6 +272,8 @@ impl TransferManager {
     ) -> Result<String, String> {
         let transfer_id = Uuid::new_v4().to_string();
         let cancel_token = CancellationToken::new();
+        let pause_notify = Arc::new(Notify::new());
+        let is_paused = Arc::new(Mutex::new(false));
 
         // Register transfer
         {
@@ -262,6 +282,8 @@ impl TransferManager {
                 transfer_id.clone(),
                 ActiveTransfer {
                     cancel_token: cancel_token.clone(),
+                    pause_notify: pause_notify.clone(),
+                    is_paused: is_paused.clone(),
                 },
             );
         }
@@ -286,6 +308,8 @@ impl TransferManager {
                 local_path,
                 transfer_id_clone.clone(),
                 cancel_token,
+                pause_notify,
+                is_paused,
             )
             .await;
 
@@ -314,6 +338,8 @@ impl TransferManager {
         local_path: String,
         transfer_id: String,
         cancel_token: CancellationToken,
+        pause_notify: Arc<Notify>,
+        is_paused: Arc<Mutex<bool>>,
     ) -> Result<(), String> {
         // Get file name
         let file_name = Path::new(&remote_path)
@@ -365,6 +391,14 @@ impl TransferManager {
             // Check cancellation
             if cancel_token.is_cancelled() {
                 return Err("Transfer cancelled".to_string());
+            }
+
+            // Check if paused
+            let paused = *is_paused.lock().await;
+            if paused {
+                // Wait for resume notification
+                pause_notify.notified().await;
+                continue;
             }
 
             // Read chunk from remote file
@@ -441,13 +475,169 @@ impl TransferManager {
         local_dir: String,
         remote_dir: String,
     ) -> Result<Vec<String>, String> {
-        let mut transfer_ids = Vec::new();
+        let transfer_id = Uuid::new_v4().to_string();
+        let cancel_token = CancellationToken::new();
+        let pause_notify = Arc::new(Notify::new());
+        let is_paused = Arc::new(Mutex::new(false));
+
+        // Register transfer
+        {
+            let mut transfers = self.active_transfers.lock().await;
+            transfers.insert(
+                transfer_id.clone(),
+                ActiveTransfer {
+                    cancel_token: cancel_token.clone(),
+                    pause_notify: pause_notify.clone(),
+                    is_paused: is_paused.clone(),
+                },
+            );
+        }
+
+        // Acquire semaphore permit
+        let permit = self.semaphore.clone().acquire_owned().await.map_err(|e| {
+            format!("Failed to acquire transfer slot: {}", e)
+        })?;
+
+        // Spawn transfer task
+        let transfer_id_clone = transfer_id.clone();
+        let sftp_manager = self.sftp_manager.clone();
+        let app_handle = self.app_handle.clone();
+        let active_transfers = self.active_transfers.clone();
+
+        tokio::spawn(async move {
+            let result = Self::upload_directory_impl(
+                sftp_manager,
+                app_handle.clone(),
+                session_id,
+                local_dir.clone(),
+                remote_dir,
+                transfer_id_clone.clone(),
+                cancel_token,
+                pause_notify,
+                is_paused,
+            )
+            .await;
+
+            // Remove from active transfers
+            active_transfers.lock().await.remove(&transfer_id_clone);
+
+            // Drop permit to allow next transfer
+            drop(permit);
+
+            if let Err(e) = result {
+                let _ = app_handle.emit(
+                    &format!("sftp-error-{}", transfer_id_clone),
+                    e,
+                );
+            }
+        });
+
+        Ok(vec![transfer_id])
+    }
+
+    async fn upload_directory_impl(
+        sftp_manager: Arc<SftpManager>,
+        app_handle: AppHandle,
+        session_id: String,
+        local_dir: String,
+        remote_dir: String,
+        transfer_id: String,
+        cancel_token: CancellationToken,
+        pause_notify: Arc<Notify>,
+        is_paused: Arc<Mutex<bool>>,
+    ) -> Result<(), String> {
+        // Get directory name for display
+        let dir_name = Path::new(&local_dir)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        // Calculate total size of directory
+        let total_bytes = Self::calculate_dir_size(&local_dir).await?;
+        let mut bytes_transferred = 0u64;
+        let start_time = Instant::now();
 
         // Create remote directory if it doesn't exist
-        self.sftp_manager
+        sftp_manager
             .mkdir(session_id.clone(), remote_dir.clone())
             .await
             .ok(); // Ignore error if directory already exists
+
+        // Upload directory recursively
+        Box::pin(Self::upload_directory_recursive(
+            sftp_manager,
+            app_handle.clone(),
+            session_id,
+            local_dir,
+            remote_dir,
+            transfer_id.clone(),
+            dir_name,
+            &mut bytes_transferred,
+            total_bytes,
+            start_time,
+            cancel_token,
+            pause_notify,
+            is_paused,
+        ))
+        .await
+    }
+
+    async fn calculate_dir_size(dir_path: &str) -> Result<u64, String> {
+        let mut total_size = 0u64;
+        let mut entries = tokio::fs::read_dir(dir_path)
+            .await
+            .map_err(|e| format!("Failed to read directory: {}", e))?;
+
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| format!("Failed to read directory entry: {}", e))?
+        {
+            let metadata = entry
+                .metadata()
+                .await
+                .map_err(|e| format!("Failed to get metadata: {}", e))?;
+
+            if metadata.is_dir() {
+                total_size += Box::pin(Self::calculate_dir_size(
+                    &entry.path().to_string_lossy().to_string(),
+                ))
+                .await?;
+            } else {
+                total_size += metadata.len();
+            }
+        }
+
+        Ok(total_size)
+    }
+
+    async fn upload_directory_recursive(
+        sftp_manager: Arc<SftpManager>,
+        app_handle: AppHandle,
+        session_id: String,
+        local_dir: String,
+        remote_dir: String,
+        transfer_id: String,
+        dir_name: String,
+        bytes_transferred: &mut u64,
+        total_bytes: u64,
+        start_time: Instant,
+        cancel_token: CancellationToken,
+        pause_notify: Arc<Notify>,
+        is_paused: Arc<Mutex<bool>>,
+    ) -> Result<(), String> {
+        // Check cancellation
+        if cancel_token.is_cancelled() {
+            return Err("Transfer cancelled".to_string());
+        }
+
+        // Check if paused
+        let paused = *is_paused.lock().await;
+        if paused {
+            // Wait for resume notification
+            pause_notify.notified().await;
+        }
 
         // Read local directory
         let mut entries = tokio::fs::read_dir(&local_dir)
@@ -477,28 +667,167 @@ impl TransferManager {
                 .map_err(|e| format!("Failed to get file metadata: {}", e))?;
 
             if metadata.is_dir() {
+                // Create remote subdirectory
+                sftp_manager
+                    .mkdir(session_id.clone(), remote_path.clone())
+                    .await
+                    .ok();
+
                 // Recursively upload subdirectory
-                let sub_ids = Box::pin(self.upload_directory(
+                Box::pin(Self::upload_directory_recursive(
+                    sftp_manager.clone(),
+                    app_handle.clone(),
                     session_id.clone(),
                     path.to_string_lossy().to_string(),
                     remote_path,
+                    transfer_id.clone(),
+                    dir_name.clone(),
+                    bytes_transferred,
+                    total_bytes,
+                    start_time,
+                    cancel_token.clone(),
+                    pause_notify.clone(),
+                    is_paused.clone(),
                 ))
                 .await?;
-                transfer_ids.extend(sub_ids);
             } else {
-                // Upload file
-                let transfer_id = self
-                    .upload(
-                        session_id.clone(),
-                        path.to_string_lossy().to_string(),
-                        remote_path,
-                    )
-                    .await?;
-                transfer_ids.push(transfer_id);
+                // Upload file with progress tracking
+                Box::pin(Self::upload_file_with_progress(
+                    sftp_manager.clone(),
+                    app_handle.clone(),
+                    session_id.clone(),
+                    path.to_string_lossy().to_string(),
+                    remote_path,
+                    transfer_id.clone(),
+                    dir_name.clone(),
+                    bytes_transferred,
+                    total_bytes,
+                    start_time,
+                    cancel_token.clone(),
+                    pause_notify.clone(),
+                    is_paused.clone(),
+                ))
+                .await?;
             }
         }
 
-        Ok(transfer_ids)
+        Ok(())
+    }
+
+    async fn upload_file_with_progress(
+        sftp_manager: Arc<SftpManager>,
+        app_handle: AppHandle,
+        session_id: String,
+        local_path: String,
+        remote_path: String,
+        transfer_id: String,
+        dir_name: String,
+        bytes_transferred: &mut u64,
+        total_bytes: u64,
+        start_time: Instant,
+        cancel_token: CancellationToken,
+        pause_notify: Arc<Notify>,
+        is_paused: Arc<Mutex<bool>>,
+    ) -> Result<(), String> {
+        // Check cancellation
+        if cancel_token.is_cancelled() {
+            return Err("Transfer cancelled".to_string());
+        }
+
+        // Check if paused
+        let paused = *is_paused.lock().await;
+        if paused {
+            // Wait for resume notification
+            pause_notify.notified().await;
+        }
+
+        // Open local file
+        let mut local_file = File::open(&local_path)
+            .await
+            .map_err(|e| format!("Failed to open local file: {}", e))?;
+
+        // Get SFTP session
+        let sessions = sftp_manager.sessions.lock().await;
+        let wrapper = sessions
+            .get(&session_id)
+            .ok_or_else(|| format!("SFTP session not found: {}", session_id))?
+            .clone();
+        drop(sessions);
+
+        let session = wrapper.lock().await;
+
+        // Create remote file
+        let mut remote_file = session
+            .session
+            .create(&remote_path)
+            .await
+            .map_err(|e| format!("Failed to create remote file: {}", e))?;
+
+        drop(session); // Release lock during transfer
+
+        // Transfer file
+        let mut buffer = vec![0u8; CHUNK_SIZE];
+
+        loop {
+            // Check cancellation
+            if cancel_token.is_cancelled() {
+                return Err("Transfer cancelled".to_string());
+            }
+
+            // Check if paused
+            let paused = *is_paused.lock().await;
+            if paused {
+                // Wait for resume notification
+                pause_notify.notified().await;
+                continue;
+            }
+
+            // Read chunk from local file
+            let n = local_file
+                .read(&mut buffer)
+                .await
+                .map_err(|e| format!("Failed to read local file: {}", e))?;
+
+            if n == 0 {
+                break; // EOF
+            }
+
+            // Write chunk to remote file
+            remote_file
+                .write_all(&buffer[..n])
+                .await
+                .map_err(|e| format!("Failed to write to remote file: {}", e))?;
+
+            *bytes_transferred += n as u64;
+
+            // Calculate speed
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let speed = if elapsed > 0.0 {
+                *bytes_transferred as f64 / elapsed
+            } else {
+                0.0
+            };
+
+            // Emit progress event for the entire directory
+            let progress = TransferProgress {
+                transfer_id: transfer_id.clone(),
+                direction: TransferDirection::Upload,
+                file_name: dir_name.clone(),
+                bytes_transferred: *bytes_transferred,
+                total_bytes,
+                speed,
+            };
+
+            let _ = app_handle.emit("sftp-progress", &progress);
+        }
+
+        // Flush remote file
+        remote_file
+            .flush()
+            .await
+            .map_err(|e| format!("Failed to flush remote file: {}", e))?;
+
+        Ok(())
     }
 
     /// Cancel transfer
@@ -506,6 +835,31 @@ impl TransferManager {
         let transfers = self.active_transfers.lock().await;
         if let Some(transfer) = transfers.get(&transfer_id) {
             transfer.cancel_token.cancel();
+            Ok(())
+        } else {
+            Err(format!("Transfer not found: {}", transfer_id))
+        }
+    }
+
+    /// Pause transfer
+    pub async fn pause_transfer(&self, transfer_id: String) -> Result<(), String> {
+        let transfers = self.active_transfers.lock().await;
+        if let Some(transfer) = transfers.get(&transfer_id) {
+            let mut is_paused = transfer.is_paused.lock().await;
+            *is_paused = true;
+            Ok(())
+        } else {
+            Err(format!("Transfer not found: {}", transfer_id))
+        }
+    }
+
+    /// Resume transfer
+    pub async fn resume_transfer(&self, transfer_id: String) -> Result<(), String> {
+        let transfers = self.active_transfers.lock().await;
+        if let Some(transfer) = transfers.get(&transfer_id) {
+            let mut is_paused = transfer.is_paused.lock().await;
+            *is_paused = false;
+            transfer.pause_notify.notify_one();
             Ok(())
         } else {
             Err(format!("Transfer not found: {}", transfer_id))

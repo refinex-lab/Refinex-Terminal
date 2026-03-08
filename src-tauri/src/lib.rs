@@ -126,6 +126,7 @@ pub fn run() {
             fs::writer::write_file,
             fs::reveal::reveal_in_finder,
             fs::metadata::get_file_metadata,
+            fs::metadata::fs_exists,
             fs::watcher::watch_directory,
             fs::watcher::unwatch_directory,
             fs::watcher::get_watched_directory,
@@ -171,7 +172,9 @@ pub fn run() {
             ssh::sftp_upload,
             ssh::sftp_download,
             ssh::sftp_upload_directory,
-            ssh::sftp_cancel_transfer
+            ssh::sftp_cancel_transfer,
+            ssh::sftp_pause_transfer,
+            ssh::sftp_resume_transfer
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

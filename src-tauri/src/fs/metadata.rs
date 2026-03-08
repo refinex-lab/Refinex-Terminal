@@ -34,3 +34,10 @@ pub async fn get_file_metadata(path: String) -> Result<FileMetadata, String> {
         modified,
     })
 }
+
+/// Check if a file or directory exists
+#[tauri::command]
+pub async fn fs_exists(path: String) -> Result<bool, String> {
+    let file_path = Path::new(&path);
+    Ok(file_path.exists())
+}

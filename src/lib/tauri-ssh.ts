@@ -61,13 +61,6 @@ export async function sshExecCommand(connId: string, command: string): Promise<s
 }
 
 /**
- * List all active SSH connections
- */
-export async function sshListConnections(): Promise<SSHConnectionInfo[]> {
-  return await invoke<SSHConnectionInfo[]>("ssh_list_connections");
-}
-
-/**
  * Open a shell channel on an SSH connection
  */
 export async function sshOpenShell(
@@ -297,5 +290,19 @@ export async function sftpUploadDirectory(
  */
 export async function sftpCancelTransfer(transferId: string): Promise<void> {
   await invoke("sftp_cancel_transfer", { transferId });
+}
+
+/**
+ * Pause transfer
+ */
+export async function sftpPauseTransfer(transferId: string): Promise<void> {
+  await invoke("sftp_pause_transfer", { transferId });
+}
+
+/**
+ * Resume transfer
+ */
+export async function sftpResumeTransfer(transferId: string): Promise<void> {
+  await invoke("sftp_resume_transfer", { transferId });
 }
 

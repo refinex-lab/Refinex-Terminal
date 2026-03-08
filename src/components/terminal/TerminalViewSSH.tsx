@@ -39,8 +39,9 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
   const [showSearch, setShowSearch] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const [sessionEnded, setSessionEnded] = useState(false);
-  const [sftpPanelWidth, setSftpPanelWidth] = useState(50); // percentage
+  const [sftpPanelHeight, setSftpPanelHeight] = useState(50); // percentage
   const [isResizingSftp, setIsResizingSftp] = useState(false);
+  const [sftpLocalPath, setSftpLocalPath] = useState<string | null>(null);
   const { config } = useConfigStore();
   const blockTracker = useBlockTracker(sessionId);
   const sessions = useTerminalStore((state) => state.sessions);
@@ -384,36 +385,68 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
 
   // Handle SFTP panel toggle
   const handleToggleSftp = async () => {
-    if (!session || session.mode !== "ssh" || !session.sshConnectionId) return;
+    if (!session || session.mode !== "ssh" || !session.sshConnectionId) {
+      console.error("[TerminalViewSSH] Cannot toggle SFTP: invalid session state");
+      return;
+    }
+
+    console.log("[TerminalViewSSH] handleToggleSftp called:", {
+      sessionId,
+      sftpPanelOpen: session.sftpPanelOpen,
+      sftpSessionId: session.sftpSessionId,
+      sshConnectionId: session.sshConnectionId,
+    });
 
     if (session.sftpPanelOpen) {
       // Close SFTP panel
+      console.log("[TerminalViewSSH] Closing SFTP panel");
       if (session.sftpSessionId) {
         try {
           await sftpClose(session.sftpSessionId);
+          console.log("[TerminalViewSSH] SFTP session closed");
         } catch (error) {
-          console.error("Failed to close SFTP session:", error);
+          console.error("[TerminalViewSSH] Failed to close SFTP session:", error);
         }
         setSftpSessionId(sessionId, undefined);
       }
       toggleSftpPanel(sessionId);
     } else {
       // Open SFTP panel
+      console.log("[TerminalViewSSH] Opening SFTP panel");
       try {
+        console.log("[TerminalViewSSH] Calling sftpOpen...");
         const sftpSid = await sftpOpen(session.sshConnectionId);
+        console.log("[TerminalViewSSH] sftpOpen success:", sftpSid);
         setSftpSessionId(sessionId, sftpSid);
-        toggleSftpPanel(sessionId);
 
-        // Get current working directory from terminal
+        // Get local home directory using Tauri API
+        console.log("[TerminalViewSSH] Getting local home directory...");
         try {
-          const pwd = await sshExecCommand(session.sshConnectionId, "pwd");
-          // Store pwd for SFTP panel to use
-          (window as any).__sftpInitialPath = pwd;
+          const { homeDir } = await import("@tauri-apps/api/path");
+          const localHome = await homeDir();
+          console.log("[TerminalViewSSH] Local home directory:", localHome);
+          setSftpLocalPath(localHome);
         } catch (error) {
-          console.error("Failed to get current directory:", error);
+          console.error("[TerminalViewSSH] Failed to get local home directory:", error);
+          // Fallback to a reasonable default based on platform
+          const platform = navigator.platform.toLowerCase();
+          let fallbackPath = "/";
+          if (platform.includes("mac") || platform.includes("darwin")) {
+            fallbackPath = "/Users";
+          } else if (platform.includes("win")) {
+            fallbackPath = "C:\\Users";
+          } else {
+            fallbackPath = "/home";
+          }
+          console.log("[TerminalViewSSH] Using fallback path:", fallbackPath);
+          setSftpLocalPath(fallbackPath);
         }
+
+        console.log("[TerminalViewSSH] Toggling SFTP panel state");
+        toggleSftpPanel(sessionId);
+        console.log("[TerminalViewSSH] SFTP panel opened successfully");
       } catch (error) {
-        console.error("Failed to open SFTP session:", error);
+        console.error("[TerminalViewSSH] Failed to open SFTP session:", error);
         alert(`Failed to open SFTP: ${error}`);
       }
     }
@@ -428,8 +461,8 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
-      const newRatio = ((rect.right - e.clientX) / rect.width) * 100;
-      setSftpPanelWidth(Math.max(30, Math.min(70, newRatio)));
+      const newRatio = ((rect.bottom - e.clientY) / rect.height) * 100;
+      setSftpPanelHeight(Math.max(30, Math.min(70, newRatio)));
     };
 
     const handleMouseUp = () => {
@@ -458,7 +491,7 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
   return (
     <div
       id={`terminal-container-${sessionId}`}
-      className="relative w-full h-full flex"
+      className="relative w-full h-full flex flex-col"
       style={{
         display: isVisible ? "flex" : "none",
       }}
@@ -467,8 +500,8 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
       <div
         className="relative"
         style={{
-          width: session.sftpPanelOpen ? `${100 - sftpPanelWidth}%` : "100%",
-          transition: isResizingSftp ? "none" : "width 0.2s ease",
+          height: session.sftpPanelOpen ? `${100 - sftpPanelHeight}%` : "100%",
+          transition: isResizingSftp ? "none" : "height 0.2s ease",
         }}
       >
         {/* Terminal mount point */}
@@ -583,12 +616,12 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
         )}
       </div>
 
-      {/* SFTP Panel (slide out from right) */}
-      {session.sftpPanelOpen && session.sftpSessionId && session.sshConnectionId && (
+      {/* SFTP Panel (slide up from bottom) */}
+      {session.sftpPanelOpen && session.sftpSessionId && session.sshConnectionId && sftpLocalPath && (
         <>
           {/* Resize handle */}
           <div
-            className="w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
+            className="h-1 cursor-row-resize hover:bg-blue-500 transition-colors"
             style={{ backgroundColor: "var(--ui-border)" }}
             onMouseDown={() => setIsResizingSftp(true)}
           />
@@ -596,14 +629,14 @@ const TerminalViewComponent = ({ sessionId, className = "", forceVisible = false
           {/* SFTP Panel */}
           <div
             style={{
-              width: `${sftpPanelWidth}%`,
-              transition: isResizingSftp ? "none" : "width 0.2s ease",
+              height: `${sftpPanelHeight}%`,
+              transition: isResizingSftp ? "none" : "height 0.2s ease",
             }}
           >
             <SftpPanel
               connectionId={session.sshConnectionId}
               hostLabel={session.sshHostLabel || "Remote"}
-              projectPath={(window as any).__sftpInitialPath || "/"}
+              projectPath={sftpLocalPath || "/"}
               onClose={() => toggleSftpPanel(sessionId)}
               onOpenInTerminal={handleOpenInTerminal}
             />

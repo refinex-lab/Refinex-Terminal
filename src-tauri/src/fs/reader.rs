@@ -48,10 +48,21 @@ fn should_ignore(name: &str) -> bool {
 /// Read directory contents and return sorted file entries
 #[tauri::command]
 pub async fn read_directory(path: String) -> Result<Vec<FileEntry>, String> {
-    let dir_path = Path::new(&path);
+    // Expand ~ to home directory
+    let expanded_path = if path.starts_with("~") {
+        if let Some(home) = dirs::home_dir() {
+            path.replacen("~", &home.to_string_lossy(), 1)
+        } else {
+            path.clone()
+        }
+    } else {
+        path.clone()
+    };
+
+    let dir_path = Path::new(&expanded_path);
 
     if !dir_path.exists() {
-        return Err(format!("Path does not exist: {}", path));
+        return Err(format!("Path does not exist: {}", expanded_path));
     }
 
     if !dir_path.is_dir() {

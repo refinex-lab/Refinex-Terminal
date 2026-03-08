@@ -43,3 +43,21 @@ pub async fn sftp_cancel_transfer(
 ) -> Result<(), String> {
     state.transfer_manager.cancel_transfer(transfer_id).await
 }
+
+/// Pause transfer
+#[tauri::command]
+pub async fn sftp_pause_transfer(
+    transfer_id: String,
+    state: State<'_, SshManagerState>,
+) -> Result<(), String> {
+    state.transfer_manager.pause_transfer(transfer_id).await
+}
+
+/// Resume transfer
+#[tauri::command]
+pub async fn sftp_resume_transfer(
+    transfer_id: String,
+    state: State<'_, SshManagerState>,
+) -> Result<(), String> {
+    state.transfer_manager.resume_transfer(transfer_id).await
+}

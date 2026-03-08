@@ -275,16 +275,16 @@ export function HostSidebar() {
               >
                 {hosts.length}
               </span>
-              <button
+              <div
                 onClick={(e) => {
                   e.stopPropagation();
                   handleGroupContextMenu(e, group, hosts.length);
                 }}
-                className="opacity-0 group-hover/header:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded"
+                className="opacity-0 group-hover/header:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded cursor-pointer"
                 style={{ color: "var(--ui-muted-foreground)" }}
               >
                 <MoreVertical className="size-3.5" />
-              </button>
+              </div>
             </button>
 
             {/* Hosts in Group */}

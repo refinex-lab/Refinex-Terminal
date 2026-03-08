@@ -1216,35 +1216,6 @@ function App() {
                 </div>
               )}
             </div>
-
-            {/* SFTP Browser (Right) */}
-            <div
-              style={{
-                width: "320px",
-                borderLeft: "1px solid var(--ui-border)",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "100%",
-                  color: "var(--ui-muted-foreground)",
-                  fontSize: "14px",
-                  padding: "20px",
-                  textAlign: "center",
-                  gap: "8px",
-                }}
-              >
-                <div>SFTP Browser</div>
-                <div style={{ fontSize: "12px", opacity: 0.7 }}>
-                  Available after connecting to a host
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
