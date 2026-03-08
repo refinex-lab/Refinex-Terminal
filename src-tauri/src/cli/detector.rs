@@ -112,9 +112,48 @@ fn detect_cli_detailed(name: &str, binary_name: &str, install_url: &str, docs_ur
     }
 }
 
-/// Detect GitHub Copilot CLI (gh extension)
+/// Detect GitHub Copilot CLI (standalone or gh extension)
 fn detect_gh_copilot(_install_url: &str, _docs_url: &str) -> CLIDetectionResult {
-    // First check if gh is installed
+    // First priority: Check for standalone 'copilot' binary
+    if let Some(copilot_path) = find_in_path("copilot") {
+        // Get version from standalone copilot
+        let version = Command::new("copilot")
+            .arg("-v")
+            .output()
+            .ok()
+            .and_then(|v| {
+                if v.status.success() {
+                    let output = String::from_utf8_lossy(&v.stdout).trim().to_string();
+                    // Extract version from output like "GitHub Copilot CLI 0.0.421."
+                    Some(output.lines().next().unwrap_or(&output).to_string())
+                } else {
+                    None
+                }
+            });
+
+        // For standalone copilot, check if gh is authenticated (if gh exists)
+        let authenticated = if find_in_path("gh").is_some() {
+            Command::new("gh")
+                .args(&["auth", "status"])
+                .output()
+                .ok()
+                .map(|a| a.status.success())
+        } else {
+            // If gh is not installed, we can't verify auth, assume true if copilot works
+            Some(true)
+        };
+
+        return CLIDetectionResult {
+            name: "gh-copilot".to_string(),
+            found: true,
+            path: Some(copilot_path.to_string_lossy().to_string()),
+            version,
+            authenticated,
+            error: None,
+        };
+    }
+
+    // Fallback: Check for gh-copilot extension
     let gh_path = find_in_path("gh");
     if gh_path.is_none() {
         return CLIDetectionResult {
@@ -123,7 +162,7 @@ fn detect_gh_copilot(_install_url: &str, _docs_url: &str) -> CLIDetectionResult 
             path: None,
             version: None,
             authenticated: None,
-            error: Some("GitHub CLI (gh) not found".to_string()),
+            error: Some("GitHub Copilot CLI not found (neither 'copilot' nor 'gh' found)".to_string()),
         };
     }
 
