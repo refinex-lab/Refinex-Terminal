@@ -6,9 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
+import { MCPServerManager } from "@/components/settings/copilot/MCPServerManager";
+import { CustomInstructionsManager } from "@/components/settings/copilot/CustomInstructionsManager";
+import { CustomAgentsManager } from "@/components/settings/copilot/CustomAgentsManager";
+import { SkillsManager } from "@/components/settings/copilot/SkillsManager";
 
 interface CopilotSettingsProps {
   copilotDetection: { found: boolean; path: string | null; version: string | null; authenticated: boolean | null } | null;
@@ -350,8 +355,16 @@ export function CopilotSettings({
 
       {/* Configuration Settings */}
       {copilotDetection?.found && (
-        <>
-          <div className="space-y-4 pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+        <Tabs defaultValue="general" className="pt-4 border-t" style={{ borderColor: "var(--ui-border)" }}>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="mcp">MCP Servers</TabsTrigger>
+            <TabsTrigger value="instructions">Instructions</TabsTrigger>
+            <TabsTrigger value="agents">Agents</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <Label>Configuration Settings</Label>
@@ -679,8 +692,24 @@ export function CopilotSettings({
                 </Select>
               </div>
             </div>
-          </div>
-        </>
+          </TabsContent>
+
+          <TabsContent value="mcp">
+            <MCPServerManager />
+          </TabsContent>
+
+          <TabsContent value="instructions">
+            <CustomInstructionsManager />
+          </TabsContent>
+
+          <TabsContent value="agents">
+            <CustomAgentsManager />
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <SkillsManager />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

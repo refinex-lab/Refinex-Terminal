@@ -596,6 +596,297 @@ pub fn write_copilot_config(content: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Read GitHub Copilot MCP config
+#[tauri::command]
+pub fn read_copilot_mcp_config() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let config_path = home.join(".copilot").join("mcp-config.json");
+
+    if !config_path.exists() {
+        return Ok(r#"{"mcpServers":{}}"#.to_string());
+    }
+
+    std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read MCP config: {}", e))
+}
+
+/// Write GitHub Copilot MCP config
+#[tauri::command]
+pub fn write_copilot_mcp_config(content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let copilot_dir = home.join(".copilot");
+    let config_path = copilot_dir.join("mcp-config.json");
+
+    if !copilot_dir.exists() {
+        std::fs::create_dir_all(&copilot_dir)
+            .map_err(|e| format!("Failed to create .copilot directory: {}", e))?;
+    }
+
+    std::fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to write MCP config: {}", e))?;
+
+    Ok(())
+}
+
+/// Read GitHub Copilot custom instructions
+#[tauri::command]
+pub fn read_copilot_instructions() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let instructions_path = home.join(".copilot").join("copilot-instructions.md");
+
+    if !instructions_path.exists() {
+        return Ok(String::new());
+    }
+
+    std::fs::read_to_string(&instructions_path)
+        .map_err(|e| format!("Failed to read instructions: {}", e))
+}
+
+/// Write GitHub Copilot custom instructions
+#[tauri::command]
+pub fn write_copilot_instructions(content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let copilot_dir = home.join(".copilot");
+    let instructions_path = copilot_dir.join("copilot-instructions.md");
+
+    if !copilot_dir.exists() {
+        std::fs::create_dir_all(&copilot_dir)
+            .map_err(|e| format!("Failed to create .copilot directory: {}", e))?;
+    }
+
+    std::fs::write(&instructions_path, content)
+        .map_err(|e| format!("Failed to write instructions: {}", e))?;
+
+    Ok(())
+}
+
+/// List GitHub Copilot custom agents
+#[tauri::command]
+pub fn list_copilot_agents() -> Result<Vec<serde_json::Value>, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let agents_dir = home.join(".copilot").join("agents");
+
+    if !agents_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut agents = Vec::new();
+    let entries = std::fs::read_dir(&agents_dir)
+        .map_err(|e| format!("Failed to read agents directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.extension().and_then(|s| s.to_str()) == Some("md")
+            && path.file_name().and_then(|s| s.to_str()).map(|s| s.ends_with(".agent.md")).unwrap_or(false) {
+
+            let content = std::fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read agent file: {}", e))?;
+
+            let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+
+            // Parse frontmatter and content
+            let (frontmatter, body) = parse_markdown_frontmatter(&content)?;
+
+            agents.push(serde_json::json!({
+                "fileName": file_name,
+                "name": file_name.replace(".agent.md", ""),
+                "frontmatter": frontmatter,
+                "content": body,
+            }));
+        }
+    }
+
+    Ok(agents)
+}
+
+/// List GitHub Copilot skills
+#[tauri::command]
+pub fn list_copilot_skills() -> Result<Vec<serde_json::Value>, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let skills_dir = home.join(".copilot").join("skills");
+
+    if !skills_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut skills = Vec::new();
+    let entries = std::fs::read_dir(&skills_dir)
+        .map_err(|e| format!("Failed to read skills directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            let skill_file = path.join("SKILL.md");
+            if skill_file.exists() {
+                let content = std::fs::read_to_string(&skill_file)
+                    .map_err(|e| format!("Failed to read skill file: {}", e))?;
+
+                let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
+
+                // Parse frontmatter and content
+                let (frontmatter, body) = parse_markdown_frontmatter(&content)?;
+
+                skills.push(serde_json::json!({
+                    "dirName": dir_name,
+                    "name": dir_name.clone(),
+                    "frontmatter": frontmatter,
+                    "content": body,
+                }));
+            }
+        }
+    }
+
+    Ok(skills)
+}
+
+/// Save GitHub Copilot agent
+#[tauri::command]
+pub fn save_copilot_agent(file_name: String, frontmatter: serde_json::Value, content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let agents_dir = home.join(".copilot").join("agents");
+
+    // Create agents directory if it doesn't exist
+    if !agents_dir.exists() {
+        std::fs::create_dir_all(&agents_dir)
+            .map_err(|e| format!("Failed to create agents directory: {}", e))?;
+    }
+
+    // Ensure file with .agent.md
+    let file_name = if file_name.ends_with(".agent.md") {
+        file_name
+    } else {
+        format!("{}.agent.md", file_name)
+    };
+
+    let agent_path = agents_dir.join(&file_name);
+
+    // Convert frontmatter to YAML
+    let yaml_frontmatter = serde_yaml::to_string(&frontmatter)
+        .map_err(|e| format!("Failed to serialize frontmatter: {}", e))?;
+
+    // Construct full markdown file with frontmatter
+    let full_content = format!("---\n{}---\n\n{}", yaml_frontmatter, content);
+
+    // Write to file
+    std::fs::write(&agent_path, full_content)
+        .map_err(|e| format!("Failed to write agent file: {}", e))?;
+
+    Ok(())
+}
+
+/// Delete GitHub Copilot agent
+#[tauri::command]
+pub fn delete_copilot_agent(file_name: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let agents_dir = home.join(".copilot").join("agents");
+
+    let agent_path = agents_dir.join(&file_name);
+
+    if !agent_path.exists() {
+        return Err(format!("Agent file not found: {}", file_name));
+    }
+
+    std::fs::remove_file(&agent_path)
+        .map_err(|e| format!("Failed to delete agent file: {}", e))?;
+
+    Ok(())
+}
+
+/// Save GitHub Copilot skill
+#[tauri::command]
+pub fn save_copilot_skill(dir_name: String, frontmatter: serde_json::Value, content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let skills_dir = home.join(".copilot").join("skills");
+
+    // Create skills directory if it doesn't exist
+    if !skills_dir.exists() {
+        std::fs::create_dir_all(&skills_dir)
+            .map_err(|e| format!("Failed to create skills directory: {}", e))?;
+    }
+
+    // Create skill directory
+    let skill_dir = skills_dir.join(&dir_name);
+    if !skill_dir.exists() {
+        std::fs::create_dir_all(&skill_dir)
+            .map_err(|e| format!("Failed to create skill directory: {}", e))?;
+    }
+
+    let skill_file = skill_dir.join("SKILL.md");
+
+    // Convert frontmatter to YAML
+    let yaml_frontmatter = serde_yaml::to_string(&frontmatter)
+        .map_err(|e| format!("Failed to serialize frontmatter: {}", e))?;
+
+    // Construct full markdown file with frontmatter
+    let full_content = format!("---\n{}---\n\n{}", yaml_frontmatter, content);
+
+    // Write to file
+    std::fs::write(&skill_file, full_content)
+        .map_err(|e| format!("Failed to write skill file: {}", e))?;
+
+    Ok(())
+}
+
+/// Delete GitHub Copilot skill
+#[tauri::command]
+pub fn delete_copilot_skill(dir_name: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let skills_dir = home.join(".copilot").join("skills");
+
+    let skill_dir = skills_dir.join(&dir_name);
+
+    if !skill_dir.exists() {
+        return Err(format!("Skill directory not found: {}", dir_name));
+    }
+
+    std::fs::remove_dir_all(&skill_dir)
+        .map_err(|e| format!("Failed to delete skill directory: {}", e))?;
+
+    Ok(())
+}
+
+/// Parse Markdown frontmatter (YAML between --- delimiters)
+fn parse_markdown_frontmatter(content: &str) -> Result<(serde_json::Value, String), String> {
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Check if content starts with ---
+    if lines.is_empty() || lines[0] != "---" {
+        return Ok((serde_json::json!({}), content.to_string()));
+    }
+
+    // Find the closing ---
+    let mut frontmatter_end = None;
+    for (i, line) in lines.iter().enumerate().skip(1) {
+        if *line == "---" {
+            frontmatter_end = Some(i);
+            break;
+        }
+    }
+
+    let frontmatter_end = match frontmatter_end {
+        Some(end) => end,
+        None => return Ok((serde_json::json!({}), content.to_string())),
+    };
+
+    // Extract frontmatter YAML
+    let frontmatter_lines = &lines[1..frontmatter_end];
+    let frontmatter_yaml = frontmatter_lines.join("\n");
+
+    // Parse YAML to JSON
+    let frontmatter: serde_json::Value = serde_yaml::from_str(&frontmatter_yaml)
+        .map_err(|e| format!("Failed to parse frontmatter YAML: {}", e))?;
+
+    // Extract body content (everything after the closing ---)
+    let body_lines = &lines[(frontmatter_end + 1)..];
+    let body = body_lines.join("\n").trim().to_string();
+
+    Ok((frontmatter, body))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
