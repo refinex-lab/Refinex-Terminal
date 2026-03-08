@@ -37,7 +37,14 @@
       "icons/icon.ico"
     ],
     "publisher": "Refinex",
-    "homepage": "https://github.com/refinex/refinex-terminal"
+    "homepage": "https://github.com/refinex/refinex-terminal",
+    "macOS": {
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null,
+      "exceptionDomain": null,
+      "minimumSystemVersion": "10.15"
+    }
   },
   "plugins": {
     "updater": {
