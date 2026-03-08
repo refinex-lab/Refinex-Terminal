@@ -561,6 +561,41 @@ pub fn write_claude_settings(content: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Read GitHub Copilot CLI config.json
+#[tauri::command]
+pub fn read_copilot_config() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let config_path = home.join(".copilot").join("config.json");
+
+    if !config_path.exists() {
+        // Return empty JSON object if config doesn't exist
+        return Ok("{}".to_string());
+    }
+
+    std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read config: {}", e))
+}
+
+/// Write GitHub Copilot CLI config.json
+#[tauri::command]
+pub fn write_copilot_config(content: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let copilot_dir = home.join(".copilot");
+    let config_path = copilot_dir.join("config.json");
+
+    // Create .copilot directory if it doesn't exist
+    if !copilot_dir.exists() {
+        std::fs::create_dir_all(&copilot_dir)
+            .map_err(|e| format!("Failed to create .copilot directory: {}", e))?;
+    }
+
+    // Write config
+    std::fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to write config: {}", e))?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
